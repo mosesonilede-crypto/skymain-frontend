@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CONTACT_DEMO, CONTACT_GENERAL, CONTACT_PARTNERSHIPS, CONTACT_SUPPORT } from "@/lib/routes";
+import { CONTACT_DEMO, CONTACT_PARTNERSHIPS, CONTACT_SUPPORT } from "@/lib/routes";
 
 type Stat = { value: string; label: string };
 type Capability = { title: string; description: string; href: string };
@@ -153,39 +153,6 @@ const faqs: { q: string; a: string }[] = [
 export default function GetStartedPage() {
     return (
         <div className="min-h-screen bg-white text-slate-900">
-            {/* TOP NAV */}
-            <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur">
-                <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-                    <Link href="/" className="flex items-center gap-3">
-                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white">
-                            <ShieldIcon className="h-5 w-5 text-blue-600" />
-                        </span>
-                        <span className="text-lg font-semibold tracking-tight">SkyMaintain</span>
-                    </Link>
-
-                    <nav className="hidden items-center gap-6 md:flex">
-                        <Link href="/signin" className="text-sm font-medium text-slate-700 hover:text-slate-900">
-                            Sign In
-                        </Link>
-                        <Link
-                            href="/get-started"
-                            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/20"
-                        >
-                            Get Started
-                        </Link>
-                    </nav>
-
-                    <div className="md:hidden">
-                        <Link
-                            href="/signin"
-                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
-                        >
-                            Sign In
-                        </Link>
-                    </div>
-                </div>
-            </header>
-
             <main>
                 {/* HERO (purple) */}
                 <section className="relative overflow-hidden">
@@ -587,14 +554,6 @@ function Dot() {
 }
 
 /* ---------------- icons (no external deps) ---------------- */
-
-function ShieldIcon({ className }: { className?: string }) {
-    return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M12 2l7 4v6c0 5-3 9-7 10-4-1-7-5-7-10V6l7-4z" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    );
-}
 
 function WaveIcon({ className }: { className?: string }) {
     return (

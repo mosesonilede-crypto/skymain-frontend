@@ -42,7 +42,6 @@ const imgIconChevronDown = "https://www.figma.com/api/mcp/asset/9ab302e9-d5e0-4f
 const imgIconRocket = "https://www.figma.com/api/mcp/asset/bd1ba56e-d28a-4810-aa2a-845297a7db12";
 const imgIconArrowRightPurple = "https://www.figma.com/api/mcp/asset/cd4faa9f-ceb9-43a7-89d2-ca98828b9b23";
 const imgIconCheckPurple = "https://www.figma.com/api/mcp/asset/fec8ffb4-c986-4e61-aed7-e35a89fb33c3";
-const imgIconArrowRightNav = "https://www.figma.com/api/mcp/asset/4e87d1ff-7a89-425f-a8e6-f0e69aaf17bc";
 
 // Vector/SVG assets for icons
 const imgVectorBrain1 = "https://www.figma.com/api/mcp/asset/7a735ab8-3e48-4302-bdde-f6192625c0e5";
@@ -50,7 +49,6 @@ const imgVectorShield = "https://www.figma.com/api/mcp/asset/8f399e4d-0727-4359-
 const imgVectorWifi = "https://www.figma.com/api/mcp/asset/b6434d70-8f6e-4cc6-ba21-10408a0b83f4";
 const imgVectorClipboard = "https://www.figma.com/api/mcp/asset/bb86cace-10ad-4b7b-a4fb-ce0ec35f72c0";
 const imgVectorPlane = "https://www.figma.com/api/mcp/asset/a22f6b9d-0688-4024-949a-209d7b261e7a";
-const imgVectorPlaneHeader = "https://www.figma.com/api/mcp/asset/5f6a056f-c94a-40a3-a63b-7f86e62d7a81";
 
 // Login modal assets (node 1:1128)
 const imgLoginVector = "https://www.figma.com/api/mcp/asset/86dd66a3-8408-45bb-8d8e-410300189295";
@@ -63,7 +61,7 @@ const imgLoginDemoA = "https://www.figma.com/api/mcp/asset/56ba247a-9a2d-484a-b2
 const imgLoginDemoB = "https://www.figma.com/api/mcp/asset/69bbe477-5fe5-4ed8-9492-cf58425f4516";
 
 export default function PreLoginPage() {
-    const [showLogin, setShowLogin] = useState(false);
+    const [showLogin, setShowLogin] = useState(true);
     const [email, setEmail] = useState("");
     const [organization, setOrganization] = useState("");
     const [password, setPassword] = useState("");
@@ -87,51 +85,6 @@ export default function PreLoginPage() {
 
     return (
         <div className="bg-white relative w-full min-h-screen" data-name="SkyMaintain Login Page" data-node-id="1:566">
-            {/* Navigation Header */}
-            <header
-                className="fixed top-0 left-0 right-0 z-40 bg-white/95 border-b border-[#e5e7eb] shadow-sm"
-                data-name="ProfessionalLandingPage"
-                data-node-id="11:8760"
-            >
-                <div className="max-w-[1148px] mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between h-12">
-                        {/* Logo */}
-                        <Link href="/" className="flex items-center gap-3">
-                            <div
-                                className="size-12 rounded-[14px] shadow-lg flex items-center justify-center"
-                                style={{ background: "linear-gradient(135deg, #155dfc 0%, #1447e6 100%)" }}
-                            >
-                                <div className="size-7 overflow-hidden">
-                                    <img alt="SkyMaintain" className="size-full object-contain" src={imgVectorPlaneHeader} />
-                                </div>
-                            </div>
-                            <div>
-                                <p className="font-bold text-2xl text-[#101828] leading-tight">SkyMaintain</p>
-                                <p className="text-xs text-[#4a5565]">Regulatory-Compliant AI Platform</p>
-                            </div>
-                        </Link>
-
-                        {/* Nav Actions */}
-                        <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setShowLogin(true)}
-                                className="px-4 py-2 text-sm text-[#364153] hover:text-[#101828] transition-colors"
-                            >
-                                Sign In
-                            </button>
-                            <Link
-                                href="/get-started"
-                                className="flex items-center gap-1 px-4 py-2 bg-[#155dfc] text-white text-sm rounded-lg hover:bg-[#1447e6] transition-colors"
-                            >
-                                Get Started
-                                <img alt="" className="size-4" src={imgIconArrowRightNav} />
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
             {showLogin && (
                 <div
                     className="fixed inset-0 z-50 bg-[rgba(0,0,0,0.6)] flex items-center justify-center"

@@ -48,43 +48,6 @@ async function verify2faRequest(code: string) {
     }
 }
 
-function PublicHeader() {
-    return (
-        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-                <Link href="/" className="flex items-center gap-2">
-                    <div className="h-9 w-9 rounded-xl bg-slate-900" aria-hidden="true" />
-                    <div className="text-lg font-semibold text-slate-900">SkyMaintain</div>
-                </Link>
-
-                <nav className="hidden items-center gap-6 md:flex">
-                    <Link href="/platform-features" className="text-sm font-medium text-slate-700 hover:text-slate-900">
-                        Platform
-                    </Link>
-                    <Link href="/compliance" className="text-sm font-medium text-slate-700 hover:text-slate-900">
-                        Compliance
-                    </Link>
-                    <Link href="/security" className="text-sm font-medium text-slate-700 hover:text-slate-900">
-                        Security
-                    </Link>
-                    <Link href="/contact" className="text-sm font-medium text-slate-700 hover:text-slate-900">
-                        Contact
-                    </Link>
-                    <Link href="/signin" className="text-sm font-medium text-slate-700 hover:text-slate-900">
-                        Sign In
-                    </Link>
-                    <Link
-                        href="/contact?intent=demo"
-                        className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                    >
-                        Request Demo
-                    </Link>
-                </nav>
-            </div>
-        </header>
-    );
-}
-
 function HelpCenterFab() {
     // Route all help into /contact unless a dedicated page exists
     return (
@@ -180,8 +143,6 @@ export default function TwoFactorPage() {
 
     return (
         <div className="min-h-dvh bg-white text-slate-900">
-            <PublicHeader />
-
             <main className="mx-auto max-w-5xl px-6 py-10">
                 <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
                     <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Two-Factor Authentication</h1>
