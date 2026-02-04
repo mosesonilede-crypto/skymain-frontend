@@ -1,0 +1,57 @@
+{
+    "version": 1,
+    "source": {
+        "fileKey": "qz3ERP8jfbTpTHQrdPSawI",
+        "nodeId": "2:2700",
+        "fetchedAt": "2026-02-02T00:00:00Z"
+    },
+    "frame": {
+        "name": "Predictive Alerts",
+        "width": 0,
+        "height": 0,
+        "layout": {
+            "type": "auto",
+            "direction": "vertical",
+            "padding": {
+                "t": 0,
+                "r": 0,
+                "b": 0,
+                "l": 0
+            },
+            "gap": 0,
+            "align": "stretch"
+        }
+    },
+    "tokensUsed": [],
+    "tree": {
+        "type": "Frame",
+        "id": "root",
+        "children": []
+    },
+    "constraints": {
+        "breakpoints": {
+            "sm": 640,
+            "md": 768,
+            "lg": 1024,
+            "xl": 1280
+        },
+        "responsiveRules": [
+            "container.maxWidth=1280",
+            "text.maxLine=72ch"
+        ]
+    },
+    "accessibility": {
+        "required": [
+            "aria-labels",
+            "focus-visible",
+            "min-contrast-AA"
+        ]
+    },
+    "security": {
+        "required": [
+            "no-dangerouslySetInnerHTML",
+            "CSP-compatible"
+        ]
+    },
+    "hash": "sha256:68cfbaa617ec8f0afa3fee5ac40cc57eac58f985ee925ef2cb8df2bcd327a19d"
+}

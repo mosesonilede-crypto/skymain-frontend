@@ -1,0 +1,57 @@
+{
+    "version": 1,
+    "source": {
+        "fileKey": "qz3ERP8jfbTpTHQrdPSawI",
+        "nodeId": "11:8217",
+        "fetchedAt": "2026-02-02T00:00:00Z"
+    },
+    "frame": {
+        "name": "Pre-Login Page",
+        "width": 1148,
+        "height": 8888,
+        "layout": {
+            "type": "auto",
+            "direction": "vertical",
+            "padding": {
+                "t": 0,
+                "r": 0,
+                "b": 0,
+                "l": 0
+            },
+            "gap": 0,
+            "align": "stretch"
+        }
+    },
+    "tokensUsed": [],
+    "tree": {
+        "type": "Frame",
+        "id": "root",
+        "children": []
+    },
+    "constraints": {
+        "breakpoints": {
+            "sm": 640,
+            "md": 768,
+            "lg": 1024,
+            "xl": 1280
+        },
+        "responsiveRules": [
+            "container.maxWidth=1148",
+            "text.maxLine=72ch"
+        ]
+    },
+    "accessibility": {
+        "required": [
+            "aria-labels",
+            "focus-visible",
+            "min-contrast-AA"
+        ]
+    },
+    "security": {
+        "required": [
+            "no-dangerouslySetInnerHTML",
+            "CSP-compatible"
+        ]
+    },
+    "hash": "sha256:86f2ca21f1c729484705ff6d3e6995afcf5dae27240d3eccae2a0e66e4ed2d21"
+}

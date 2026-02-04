@@ -1,0 +1,57 @@
+{
+  "accessibility": {
+    "required": [
+      "aria-labels",
+      "focus-visible",
+      "min-contrast-AA"
+    ]
+  },
+  "constraints": {
+    "breakpoints": {
+      "lg": 1024,
+      "md": 768,
+      "sm": 640,
+      "xl": 1280
+    },
+    "responsiveRules": [
+      "container.maxWidth=1280",
+      "text.maxLine=72ch"
+    ]
+  },
+  "frame": {
+    "height": 8888,
+    "layout": {
+      "align": "stretch",
+      "direction": "vertical",
+      "gap": 0,
+      "padding": {
+        "b": 0,
+        "l": 0,
+        "r": 0,
+        "t": 0
+      },
+      "type": "auto"
+    },
+    "name": "SkyMaintain Login Page",
+    "width": 1148
+  },
+  "hash": "sha256:9429a994ddb4dc42279c29bca1bff1286f48b34c987fbfe4d98c3491123dfaf1",
+  "security": {
+    "required": [
+      "no-dangerouslySetInnerHTML",
+      "CSP-compatible"
+    ]
+  },
+  "source": {
+    "fetchedAt": "2026-02-02T13:23:51Z",
+    "fileKey": "qz3ERP8jfbTpTHQrdPSawI",
+    "nodeId": "1:566"
+  },
+  "tokensUsed": [],
+  "tree": {
+    "children": [],
+    "id": "root",
+    "type": "FRAME"
+  },
+  "version": 1
+}

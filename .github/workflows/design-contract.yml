@@ -1,0 +1,37 @@
+name: Design Contract
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  design-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      # TODO: Restore when tools/design/ scripts are recovered
+      # - name: Compile tokens (check)
+      #   run: python tools/design/compile_tokens.py --check
+
+      # - name: Verify tokens hash
+      #   run: python tools/design/verify_tokens.py
+
+      # - name: Verify design specs
+      #   run: python tools/design/verify_specs.py
+
+      - name: Playwright install
+        run: npx playwright install --with-deps
+
+      - name: Playwright tests
+        env:
+          NEXT_PUBLIC_DATA_MODE: mock
+        run: npx playwright test tests/e2e/design.visual.spec.ts
