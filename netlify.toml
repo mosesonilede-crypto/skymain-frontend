@@ -1,0 +1,27 @@
+[build]
+command = "npm run build"
+publish = ".next"
+functions = "functions"
+
+[[redirects]]
+from = "/*"
+to = "/.netlify/functions/index"
+status = 200
+
+[functions]
+node_bundler = "esbuild"
+
+[[headers]]
+for = "/_next/static/*"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "/images/*"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "/*"
+[headers.values]
+Cache-Control = "public, max-age=3600, must-revalidate"
