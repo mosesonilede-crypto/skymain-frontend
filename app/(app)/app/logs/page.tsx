@@ -52,16 +52,16 @@ export default function MaintenanceLogsPage() {
             dateISO: new Date(log.date).toISOString().split('T')[0],
             durationHours: 0,
         })) ?? [
-            {
-                id: "log-a-check",
-                title: "A-Check Inspection",
-                status: "COMPLETED" as const,
-                description: "Loading...",
-                technician: "Loading...",
-                dateISO: new Date().toISOString().split('T')[0],
-                durationHours: 0,
-            },
-        ],
+                {
+                    id: "log-a-check",
+                    title: "A-Check Inspection",
+                    status: "COMPLETED" as const,
+                    description: "Loading...",
+                    technician: "Loading...",
+                    dateISO: new Date().toISOString().split('T')[0],
+                    durationHours: 0,
+                },
+            ],
         [logsData]
     );
 
