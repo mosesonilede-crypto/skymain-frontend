@@ -27,6 +27,9 @@ export default function PublicChrome({ children }: { children: React.ReactNode }
                             <Link href="/compliance" className="text-base text-slate-600 hover:text-slate-900">
                                 Compliance
                             </Link>
+                            <Link href="/regulatory-governance-accountability" className="text-base text-slate-600 hover:text-slate-900">
+                                Governance
+                            </Link>
                             <Link href="/security" className="text-base text-slate-600 hover:text-slate-900">
                                 Security
                             </Link>
@@ -71,6 +74,9 @@ export default function PublicChrome({ children }: { children: React.ReactNode }
                             </Link>
                             <Link href="/compliance" className="hover:text-slate-200">
                                 Compliance
+                            </Link>
+                            <Link href="/regulatory-governance-accountability" className="hover:text-slate-200">
+                                Governance
                             </Link>
                             <Link href="/security" className="hover:text-slate-200">
                                 Security

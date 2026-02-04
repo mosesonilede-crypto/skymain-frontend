@@ -53,7 +53,7 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const [aiContext, setAiContext] = useState<string | undefined>(undefined);
     const pathname = usePathname();
     const router = useRouter();
-    const { logout, user } = useAuth();
+    const { logout } = useAuth();
     const contentRef = useRef<HTMLDivElement>(null);
 
     // Scroll to top when route changes

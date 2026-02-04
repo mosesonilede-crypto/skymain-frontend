@@ -29,6 +29,8 @@ Global: Help Center FAB (bottom-right) should appear on all public pages.
 
 /regulatory-compliance-automation
 
+/regulatory-governance-accountability
+
 /about
 
 ### Other public flow pages
