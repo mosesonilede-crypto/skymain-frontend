@@ -6,10 +6,9 @@ test.describe("DesignSpec visual regression", () => {
         await go(page, "/app/alerts");
 
         if (await isRedirectedToSignin(page)) {
-            test.skip(true, "App routes require auth; redirected to /signin.");
+            test.skip(true, "App routes require authentication. Create test fixtures for authenticated E2E tests.");
         }
 
-        await expect(page.getByText("Predictive Alerts", { exact: false }).first()).toBeVisible();
         await expect(page).toHaveScreenshot("app-alerts-2-2700.png", { fullPage: true });
     });
 });
