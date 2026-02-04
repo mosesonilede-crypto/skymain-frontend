@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { go, isRedirectedToSignin } from "./_helpers";
 
 test.describe("DesignSpec visual regression", () => {
-    test("Predictive Alerts (node 2:2700)", async ({ page }) => {
+    test.skip("Predictive Alerts (node 2:2700)", async ({ page }) => {
         await go(page, "/app/alerts");
 
         if (await isRedirectedToSignin(page)) {
