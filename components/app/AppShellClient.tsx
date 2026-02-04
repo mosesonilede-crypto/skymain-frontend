@@ -11,6 +11,8 @@
 import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AppSidebarNav from "@/components/app/AppSidebarNav";
+import AIMechanicFAB from "@/components/ai/AIMechanicFAB";
+import AIMechanicPanel from "@/components/ai/AIMechanicPanel";
 
 // Figma assets for sidebar (node 2:1304)
 const imageManager = "https://www.figma.com/api/mcp/asset/24260c56-f8dd-4bdc-b2a8-85f82cd479e3";
@@ -45,6 +47,9 @@ type AppShellClientProps = {
 
 export default function AppShellClient({ children }: AppShellClientProps) {
     const [sidebarVisible, setSidebarVisible] = useState(true);
+    const [aiOpen, setAiOpen] = useState(false);
+    const [aiInitialQuery, setAiInitialQuery] = useState<string | undefined>(undefined);
+    const [aiContext, setAiContext] = useState<string | undefined>(undefined);
     const pathname = usePathname();
     const router = useRouter();
     const contentRef = useRef<HTMLDivElement>(null);
@@ -57,6 +62,30 @@ export default function AppShellClient({ children }: AppShellClientProps) {
         // Also scroll window to top for fallback
         window.scrollTo({ top: 0, behavior: "instant" });
     }, [pathname]);
+
+    useEffect(() => {
+        const openHandler = (event: Event) => {
+            const detail = (event as CustomEvent<{ query?: string; context?: string }>).detail;
+            setAiInitialQuery(detail?.query);
+            setAiContext(detail?.context);
+            setAiOpen(true);
+        };
+
+        const legacyHandler = (event: Event) => {
+            const detail = (event as CustomEvent<{ context?: string }>).detail;
+            setAiInitialQuery(undefined);
+            setAiContext(detail?.context);
+            setAiOpen(true);
+        };
+
+        window.addEventListener("ai-mechanic:open", openHandler);
+        window.addEventListener("openAIMechanic", legacyHandler);
+
+        return () => {
+            window.removeEventListener("ai-mechanic:open", openHandler);
+            window.removeEventListener("openAIMechanic", legacyHandler);
+        };
+    }, []);
 
     return (
         <div className="h-dvh overflow-hidden bg-white text-[#0a0a0a]">
@@ -142,6 +171,15 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                     </div>
                 </div>
             </div>
+            <AIMechanicFAB
+                onClick={() => setAiOpen((prev) => !prev)}
+            />
+            <AIMechanicPanel
+                isOpen={aiOpen}
+                onClose={() => setAiOpen(false)}
+                initialQuery={aiInitialQuery}
+                context={aiContext}
+            />
         </div>
     );
 }

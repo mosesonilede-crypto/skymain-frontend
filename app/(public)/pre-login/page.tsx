@@ -751,7 +751,7 @@ export default function PreLoginPage() {
                                 },
                                 {
                                     question: "Can SkyMaintain give answers without manuals?",
-                                    answer: "No.\nSkyMaintain enforces a strict \"No Docs, No Answer\" rule.\n\nIf no applicable, authorized manual is available, the SkyMaintain AI Mechanic's Assistant will refuse to answer and will instead tell the user which documents are required to proceed. However, it can still reference official regulatory sources (FAA, EASA, ICAO) for general compliance guidance.",
+                                    answer: "No.\nSkyMaintain enforces a strict \"No Docs, No Answer\" rule.\n\nIf no applicable, authorized manual is available, the SkyMaintain AI Assistant will refuse to answer and will instead tell the user which documents are required to proceed. However, it can still reference official regulatory sources (FAA, EASA, ICAO) for general compliance guidance.",
                                     expanded: true
                                 },
                             ].map((faq, idx) => (

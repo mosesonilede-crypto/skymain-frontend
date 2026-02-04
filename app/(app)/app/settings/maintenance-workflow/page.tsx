@@ -13,7 +13,7 @@ import React, { useEffect, useMemo, useState } from "react";
  * - PUT  /v1/settings/workflow
  *
  * Notes:
- * - Footer + AI Mechanic FAB must be owned by the app shell layout, not page components.
+ * - Footer + AI Assistant FAB must be owned by the app shell layout, not page components.
  * - Status lifecycle is read-only (standard Part 145 progression) per prototype.
  */
 

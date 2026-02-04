@@ -193,7 +193,7 @@ export default function SettingsPage() {
         averageVersions: 3.2,
     }), []);
 
-    // AI Mechanic recommendations for Documents & Records
+    // AI Assistant recommendations for Documents & Records
     const aiDocumentRecommendations = useMemo(() => [
         {
             id: "DOC-001",
@@ -302,7 +302,7 @@ export default function SettingsPage() {
         lastUpdated: new Date().toLocaleString(),
     }), []);
 
-    // AI Mechanic recommendations for Aircraft & Fleet
+    // AI Assistant recommendations for Aircraft & Fleet
     const aiFleetRecommendations = useMemo(() => [
         {
             id: "REC-001",
@@ -348,7 +348,7 @@ export default function SettingsPage() {
         lastAuditDate: "2026-01-15",
     }), []);
 
-    // AI Mechanic recommendations for Regulatory Compliance
+    // AI Assistant recommendations for Regulatory Compliance
     const aiComplianceRecommendations = useMemo(() => [
         {
             id: "COMP-001",
@@ -395,7 +395,7 @@ export default function SettingsPage() {
         lastAlertTime: "2 mins ago",
     }), []);
 
-    // AI Mechanic recommendations for Notifications & Alerts
+    // AI Assistant recommendations for Notifications & Alerts
     const aiNotificationRecommendations = useMemo(() => [
         {
             id: "NOTIF-001",
@@ -457,7 +457,7 @@ export default function SettingsPage() {
         inferenceLatency: "45ms",
     }), []);
 
-    // AI Mechanic recommendations for AI Settings
+    // AI Assistant recommendations for AI Settings
     const aiSettingsRecommendations = useMemo(() => [
         {
             id: "AI-001",
@@ -512,7 +512,7 @@ export default function SettingsPage() {
         overdueTasksCount: 3,
     }), []);
 
-    // AI Mechanic recommendations for Maintenance Workflow
+    // AI Assistant recommendations for Maintenance Workflow
     const aiWorkflowRecommendations = useMemo(() => [
         {
             id: "WF-001",
@@ -1145,7 +1145,7 @@ export default function SettingsPage() {
                                         </div>
                                         <div>
                                             <span className="text-sm font-bold" style={{ color: "#9810fa" }}>
-                                                AI Mechanic Recommendations
+                                                AI Assistant Recommendations
                                             </span>
                                             <p className="text-xs" style={{ color: "#6b7280" }}>
                                                 Based on your fleet&apos;s usage patterns

@@ -95,7 +95,7 @@ const PLANS: Plan[] = [
         savings: 2998,
         features: [
             "Unlimited aircraft",
-            "Advanced AI mechanic",
+            "Advanced AI assistant",
             "24/7 dedicated support",
             "Custom integrations",
             "White-label options",

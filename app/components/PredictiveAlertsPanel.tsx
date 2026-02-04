@@ -106,7 +106,7 @@ export function PredictiveAlertsPanel({ aircraft }: PredictiveAlertsPanelProps) 
         return () => window.removeEventListener("skymaintain:aircraft-changed", handler);
     }, []);
 
-    // Listen for new predictions from AI Mechanic
+    // Listen for new predictions from AI Assistant
     React.useEffect(() => {
         const handler = (event: Event) => {
             const detail = (event as CustomEvent<{ alerts: PredictedAlert[] }>).detail;

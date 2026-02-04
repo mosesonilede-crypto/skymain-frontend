@@ -84,7 +84,7 @@ function SeverityBadge({ severity }: { severity: PredictedAlert["severity"] }) {
 
 function AlertCard({ alert }: { alert: PredictedAlert }) {
     const handleViewDetails = () => {
-        // Open AI Mechanic with context about this alert
+        // Open AI Assistant with context about this alert
         if (typeof window === "undefined") return;
         window.dispatchEvent(
             new CustomEvent("ai-mechanic:open", {
@@ -165,7 +165,7 @@ export default function PredictiveAlertsPage() {
         return () => window.removeEventListener("skymaintain:aircraft-changed", handler);
     }, []);
 
-    // Listen for new predictions from AI Mechanic
+    // Listen for new predictions from AI Assistant
     React.useEffect(() => {
         const handler = (event: Event) => {
             const detail = (event as CustomEvent<{ alerts: PredictedAlert[] }>).detail;
@@ -278,15 +278,15 @@ export default function PredictiveAlertsPage() {
                                 type="button"
                                 onClick={() => setFilter(f)}
                                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filter === f
-                                        ? "bg-[#eff6ff] text-[#1447e6]"
-                                        : "bg-white text-slate-600 hover:bg-slate-50"
+                                    ? "bg-[#eff6ff] text-[#1447e6]"
+                                    : "bg-white text-slate-600 hover:bg-slate-50"
                                     }`}
                             >
                                 {f.charAt(0).toUpperCase() + f.slice(1)}
                                 {alertCounts[f] > 0 && (
                                     <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${filter === f
-                                            ? "bg-[#1447e6] text-white"
-                                            : "bg-slate-100 text-slate-600"
+                                        ? "bg-[#1447e6] text-white"
+                                        : "bg-slate-100 text-slate-600"
                                         }`}>
                                         {alertCounts[f]}
                                     </span>

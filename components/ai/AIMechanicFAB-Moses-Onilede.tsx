@@ -31,8 +31,8 @@ export default function AIMechanicFAB({
                         : "bg-indigo-600 text-white hover:bg-indigo-500"
                 )}
                 onClick={() => setActive((v) => !v)}
-                title="SkyMaintain AI Mechanic's Assistant"
-                aria-label="SkyMaintain AI Mechanic's Assistant"
+                title="SkyMaintain AI Assistant"
+                aria-label="SkyMaintain AI Assistant"
             >
                 <span aria-hidden="true">⚙️</span>
                 AI Assistant

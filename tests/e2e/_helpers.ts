@@ -34,10 +34,10 @@ export async function expectHelpCenterRoutes(page: Page) {
     await expect(page).toHaveURL("/terms");
 }
 
-export async function expectAIMechanicPresent(page: Page) {
+export async function expectAIAssistantPresent(page: Page) {
     // Your UI shows "AI Assistant" label on the FAB.
     // Use a robust check: any visible element containing "AI Assistant".
-    const aiBtn = page.locator('button[title="AI Assistant"], button[aria-label="AI Assistant"], button[title*="AI Mechanic"], button[aria-label*="AI Mechanic"]');
+    const aiBtn = page.locator('button[title="AI Assistant"], button[aria-label="AI Assistant"]');
     await expect(aiBtn.first()).toBeVisible();
 }
 

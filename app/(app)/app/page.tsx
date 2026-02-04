@@ -6,6 +6,6 @@ export const metadata: Metadata = {
 };
 
 export default function AppEntryPage() {
-    // Redirect to dashboard as the default landing page within the app
-    redirect("/app/dashboard");
+    // Redirect to welcome as the first page after authentication
+    redirect("/app/welcome");
 }

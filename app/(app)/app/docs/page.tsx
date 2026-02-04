@@ -18,6 +18,8 @@ type Discrepancy = {
 
 export default function DocumentationPage() {
     const aircraftReg = "N123AB";
+    const MANUAL_STORAGE_KEY = "skymaintain.uploadedManuals";
+    const DOC_DRAFT_KEY = "skymaintain.documentationDraft";
 
     const uploadedDocs: UploadedDoc[] = useMemo(
         () => [
@@ -78,6 +80,52 @@ export default function DocumentationPage() {
     const [discDesc, setDiscDesc] = useState("");
     const [discRemedy, setDiscRemedy] = useState("");
     const [discManual, setDiscManual] = useState("");
+
+    function saveDocumentationToReservoir() {
+        if (typeof window === "undefined") return;
+
+        const draft = {
+            aircraftRegistration,
+            totalCycles,
+            timeInService,
+            timeSinceNew,
+            timeSinceOverhaul,
+            lastMaintenanceType,
+            techFirst,
+            techLast,
+            techCert,
+            maintenanceDate,
+            discDesc,
+            discRemedy,
+            discManual,
+        };
+
+        window.localStorage.setItem(DOC_DRAFT_KEY, JSON.stringify(draft));
+
+        const existing = (() => {
+            try {
+                const raw = window.localStorage.getItem(MANUAL_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        })();
+
+        const merged = [...uploadedDocs, ...existing]
+            .filter((doc) => doc && doc.filename)
+            .filter(
+                (doc, idx, arr) =>
+                    arr.findIndex((d) => d.filename === doc.filename) === idx
+            );
+
+        window.localStorage.setItem(MANUAL_STORAGE_KEY, JSON.stringify(merged));
+    }
+
+    function handleSubmitDocumentation() {
+        saveDocumentationToReservoir();
+        alert("Documentation saved for AI predictive analysis.");
+    }
 
     function resetMaintenanceForm() {
         setAircraftRegistration(aircraftReg);
@@ -184,19 +232,15 @@ export default function DocumentationPage() {
                                 placeholder="e.g., A&P-12345678"
                             />
 
-                            <SelectField
+                            <DateField
                                 label="Maintenance Date"
                                 value={maintenanceDate}
                                 onChange={setMaintenanceDate}
-                                placeholder="Select maintenance date..."
-                                options={["2025-01-19", "2025-01-17", "2025-01-14"]}
                             />
 
                             <div className="mt-2 flex flex-wrap gap-3">
                                 <PrimaryButton
-                                    onClick={() =>
-                                        alert("Submit Documentation (wire to backend endpoint + audit trail)")
-                                    }
+                                    onClick={handleSubmitDocumentation}
                                 >
                                     Submit Documentation
                                 </PrimaryButton>
@@ -349,6 +393,28 @@ function Field({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
+            />
+        </label>
+    );
+}
+
+function DateField({
+    label,
+    value,
+    onChange,
+}: {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+}) {
+    return (
+        <label className="block">
+            <div className="text-xs font-semibold text-slate-600">{label}</div>
+            <input
+                type="date"
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-600 focus:ring-2"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
             />
         </label>
     );

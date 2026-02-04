@@ -504,7 +504,7 @@ export default function RegisterAircraftPage() {
     }
 
     function handleAIMechanicClick() {
-        // Dispatch custom event to open AI Mechanic panel
+        // Dispatch custom event to open AI Assistant panel
         if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("openAIMechanic", { detail: { context: "aircraft-registration" } }));
         }
@@ -2072,7 +2072,7 @@ export default function RegisterAircraftPage() {
                 </div>
             )}
 
-            {/* SkyMaintain AI Mechanic's Assistant FAB - Matches Figma node 6:6064 */}
+            {/* SkyMaintain AI Assistant FAB - Matches Figma node 6:6064 */}
             <button
                 type="button"
                 onClick={handleAIMechanicClick}

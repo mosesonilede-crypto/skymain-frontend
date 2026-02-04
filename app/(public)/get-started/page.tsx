@@ -95,7 +95,7 @@ const faqs: FAQ[] = [
     },
     {
         question: "Can SkyMaintain give answers without manuals?",
-        answer: "No.\n\nSkyMaintain enforces a strict \"No Docs, No Answer\" rule.\n\nIf no applicable, authorized manual is available, the AI Mechanic will refuse to answer and will instead tell the user which documents are required to proceed.",
+        answer: "No.\n\nSkyMaintain enforces a strict \"No Docs, No Answer\" rule.\n\nIf no applicable, authorized manual is available, the AI Assistant will refuse to answer and will instead tell the user which documents are required to proceed.",
         expanded: true,
     },
     {

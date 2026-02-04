@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import {
     expectHelpCenterPresent,
-    expectAIMechanicPresent,
+    expectAIAssistantPresent,
     go,
     isRedirectedToSignin,
 } from "./_helpers";
@@ -30,7 +30,7 @@ const APP_ROUTES = [
 ];
 
 test.describe("App flow contract (authenticated shell)", () => {
-    test("App routes render and show Help Center + AI Mechanic (or redirect to /signin)", async ({ page }) => {
+    test("App routes render and show Help Center + AI Assistant (or redirect to /signin)", async ({ page }) => {
         // Start at /app
         await go(page, "/app");
 
@@ -47,7 +47,7 @@ test.describe("App flow contract (authenticated shell)", () => {
             await go(page, route);
 
             await expectHelpCenterPresent(page);
-            await expectAIMechanicPresent(page);
+            await expectAIAssistantPresent(page);
 
             // No 404 markers
             await expect(page.getByText("404").first()).toHaveCount(0);
@@ -64,6 +64,6 @@ test.describe("App flow contract (authenticated shell)", () => {
             );
         }
         await expectHelpCenterPresent(page);
-        await expectAIMechanicPresent(page);
+        await expectAIAssistantPresent(page);
     });
 });

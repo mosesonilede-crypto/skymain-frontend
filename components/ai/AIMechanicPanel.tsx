@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-// Figma assets for SkyMaintain AI Mechanic's Assistant Panel - Updated to match Figma design node 131:1308
+// Figma assets for SkyMaintain AI Assistant Panel - Updated to match Figma design node 131:1308
 const iconBot = (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12 4C11.4477 4 11 4.44772 11 5V6H13V5C13 4.44772 12.5523 4 12 4Z" fill="white" />
@@ -89,7 +89,7 @@ const DEFAULT_MESSAGE: Message = {
     type: "assistant",
     content: "",
     summary:
-        "SkyMaintain AI Mechanic's Assistant initialized. I am your intelligent technical decision support system with access to FAA, EASA, ICAO, and Transport Canada regulatory databases, manufacturer documentation, and engineering best practices. I work with your uploaded maintenance manuals to provide precise, evidence-based technical guidance.",
+        "SkyMaintain AI Assistant initialized. I am your intelligent technical decision support system with access to FAA, EASA, ICAO, and Transport Canada regulatory databases, manufacturer documentation, and engineering best practices. I work with your uploaded maintenance manuals to provide precise, evidence-based technical guidance.",
     recommendation:
         "Ask me technical questions about aircraft systems, troubleshooting procedures, maintenance intervals, regulatory compliance, or predictive maintenance. I will reference your uploaded manuals and official sources (faa.gov, easa.europa.eu, icao.int) to provide accurate technical answers. All guidance is advisory—final authority remains with certified maintenance personnel.",
     confidence: 100,
@@ -367,7 +367,7 @@ function generatePredictiveAlerts(
                 id: `ai-inspection-${idx}-${Date.now()}`,
                 severity: "info",
                 title: "Scheduled Inspection Reminder",
-                description: `SkyMaintain AI Mechanic's Assistant recommends reviewing ${manual.filename} for upcoming scheduled maintenance items based on current flight hours.`,
+                description: `SkyMaintain AI Assistant recommends reviewing ${manual.filename} for upcoming scheduled maintenance items based on current flight hours.`,
                 component: "General - Scheduled Maintenance",
                 predictedDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
                 confidence: 85,
@@ -580,7 +580,7 @@ export default function AIMechanicPanel({
         setMessages((prev) => {
             if (!prev.length) return prev;
             const [first, ...rest] = prev;
-            if (first.summary?.startsWith("SkyMaintain AI Mechanic's Assistant initialized")) {
+            if (first.summary?.startsWith("SkyMaintain AI Assistant initialized")) {
                 return [
                     {
                         ...first,
@@ -654,7 +654,7 @@ export default function AIMechanicPanel({
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-label="SkyMaintain AI Mechanic's Assistant"
+            aria-label="SkyMaintain AI Assistant"
             className="fixed z-[100] flex flex-col overflow-hidden rounded-[14px] w-[calc(100vw-32px)] sm:w-[400px] md:w-[440px] lg:w-[480px] max-w-[480px] h-[calc(100vh-180px)] sm:h-auto sm:max-h-[600px] right-4 sm:right-6 bottom-[120px] sm:bottom-[140px]"
             style={{
                 border: "1.6px solid #bedbff",
@@ -688,7 +688,7 @@ export default function AIMechanicPanel({
                     <div className="flex flex-col gap-1.5 sm:gap-2 min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                             <span className="text-sm sm:text-base lg:text-lg font-bold text-white truncate" style={{ fontFamily: "Arial, sans-serif" }}>
-                                SkyMaintain AI Mechanic&apos;s Assistant
+                                SkyMaintain AI Assistant
                             </span>
                             {/* Info icon */}
                             <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-80 shrink-0">
@@ -725,7 +725,7 @@ export default function AIMechanicPanel({
                     <button
                         type="button"
                         onClick={onClose}
-                        aria-label="Close SkyMaintain AI Mechanic's Assistant (ESC)"
+                        aria-label="Close SkyMaintain AI Assistant (ESC)"
                         className="flex h-7 w-8 sm:h-8 sm:w-9 items-center justify-center rounded-lg hover:bg-white/20 transition-colors pointer-events-auto"
                         title="Close (ESC)"
                     >
@@ -749,7 +749,7 @@ export default function AIMechanicPanel({
                 </div>
                 <div className="flex-1 text-xs sm:text-sm leading-relaxed min-w-0" style={{ color: "#1e2939" }}>
                     <span className="font-bold">
-                        SkyMaintain AI Mechanic&apos;s Assistant uses only the manuals you are authorized to
+                        SkyMaintain AI Assistant uses only the manuals you are authorized to
                         upload, combined with official regulatory sources (FAA, EASA, ICAO, Transport Canada).
                     </span>{" "}
                     <span className="hidden sm:inline">All answers are grounded in your documents with full revision traceability for technical accuracy.</span>

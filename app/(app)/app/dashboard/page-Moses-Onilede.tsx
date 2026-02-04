@@ -26,7 +26,7 @@ const iconAlert = "https://www.figma.com/api/mcp/asset/9128e105-d040-4a6a-8152-f
 const iconSchedule = "https://www.figma.com/api/mcp/asset/c9ed0a59-d8ea-4f18-aed7-c3ab52e6ee1f";
 const iconHealth = "https://www.figma.com/api/mcp/asset/b0f48e57-c0a8-48d7-80f9-59e9b61b3c0e";
 
-// AI Mechanic Button
+// AI Assistant Button
 const iconAIMechanic = "https://www.figma.com/api/mcp/asset/08664ca8-e181-414c-a9b1-059aeb35b9b4";
 
 // Additional Icons
@@ -814,7 +814,7 @@ export default function DashboardPage() {
                 © 2026 <span style={{ color: "#1447e6" }}>SkyMaintain</span> - All Rights Reserved | Regulatory-Compliant Aircraft Maintenance Platform
             </footer>
 
-            {/* AI Mechanic Floating Button - Matches node 2:2086 */}
+            {/* AI Assistant Floating Button - Matches node 2:2086 */}
             <Link
                 href="/app/insights"
                 className="fixed bottom-6 right-6 flex h-10 items-center gap-2 rounded-full px-4 shadow-lg"

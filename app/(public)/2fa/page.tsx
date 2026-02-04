@@ -159,8 +159,8 @@ export default function TwoFactorPage() {
             return;
         }
 
-        // Chronology: 2FA -> /app (zero-state entry; user then chooses a menu)
-        router.push("/app");
+        // Chronology: 2FA -> welcome (post-login landing)
+        router.push("/app/welcome");
     }
 
     return (
