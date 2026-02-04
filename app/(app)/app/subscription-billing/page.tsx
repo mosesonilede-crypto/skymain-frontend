@@ -146,14 +146,14 @@ function mockPayload(): SubscriptionBillingPayload {
 }
 
 async function fetchLive(baseUrl: string): Promise<SubscriptionBillingPayload> {
-    const url = `${baseUrl.replace(/\/+$/, "")}/v1/admin/billing/summary`;
+    // Use local API endpoint
+    const url = "/api/billing";
     const res = await fetch(url, {
         method: "GET",
-        credentials: "include",
         headers: { Accept: "application/json" },
     });
 
-    if (!res.ok) throw new Error(`GET /v1/admin/billing/summary failed: ${res.status}`);
+    if (!res.ok) throw new Error(`GET /api/billing failed: ${res.status}`);
 
     const data = (await res.json()) as Partial<SubscriptionBillingPayload>;
     if (

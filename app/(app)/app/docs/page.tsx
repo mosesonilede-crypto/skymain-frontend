@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 
 type UploadedDoc = {
     filename: string;
@@ -21,8 +21,31 @@ export default function DocumentationPage() {
     const MANUAL_STORAGE_KEY = "skymaintain.uploadedManuals";
     const DOC_DRAFT_KEY = "skymaintain.documentationDraft";
 
+    const [docsData, setDocsData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Fetch live docs data
+    async function fetchDocsData() {
+        setIsLoading(true);
+        try {
+            const response = await fetch(`/api/docs`);
+            if (response.ok) {
+                const data = await response.json();
+                setDocsData(data);
+            }
+        } catch (error) {
+            console.error("Error fetching docs:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        fetchDocsData();
+    }, []);
+
     const uploadedDocs: UploadedDoc[] = useMemo(
-        () => [
+        () => docsData?.uploadedDocs || [
             {
                 filename: "Engine_Inspection_Report_2025.pdf",
                 date: "1/19/2025",
@@ -42,11 +65,11 @@ export default function DocumentationPage() {
                 category: "Compliance",
             },
         ],
-        []
+        [docsData]
     );
 
     const discrepancyReports: Discrepancy[] = useMemo(
-        () => [
+        () => docsData?.discrepancies || [
             {
                 title: "Hydraulic fluid leak detected on left main landing gear",
                 date: "1/19/2025",
@@ -62,7 +85,7 @@ export default function DocumentationPage() {
                 status: "In Progress",
             },
         ],
-        []
+        [docsData]
     );
 
     const [aircraftRegistration, setAircraftRegistration] = useState(aircraftReg);

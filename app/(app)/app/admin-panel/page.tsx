@@ -81,14 +81,14 @@ function mockPayload(): AdminPanelPayload {
 }
 
 async function fetchLive(baseUrl: string): Promise<AdminPanelPayload> {
-    const url = `${baseUrl.replace(/\/+$/, "")}/v1/admin/panel/overview`;
+    // Use local API endpoint
+    const url = "/api/admin";
     const res = await fetch(url, {
         method: "GET",
-        credentials: "include",
         headers: { Accept: "application/json" },
     });
 
-    if (!res.ok) throw new Error(`GET /v1/admin/panel/overview failed: ${res.status}`);
+    if (!res.ok) throw new Error(`GET /api/admin failed: ${res.status}`);
 
     const data = (await res.json()) as Partial<AdminPanelPayload>;
     if (
