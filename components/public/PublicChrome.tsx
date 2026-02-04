@@ -21,7 +21,7 @@ export default function PublicChrome({ children }: { children: React.ReactNode }
                         </Link>
 
                         <nav className="hidden items-center gap-6 md:flex">
-                            <Link href="/platform-features" className="text-base text-slate-600 hover:text-slate-900">
+                            <Link href="/app/welcome" className="text-base text-slate-600 hover:text-slate-900">
                                 Platform
                             </Link>
                             <Link href="/compliance" className="text-base text-slate-600 hover:text-slate-900">

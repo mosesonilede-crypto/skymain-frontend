@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useAircraft } from "@/lib/AircraftContext";
 
 type AuthoritySource = {
@@ -48,155 +48,125 @@ export default function RegulatoryCompliancePage() {
     const aircraftReg = selectedAircraft?.registration || "N123AB";
     const aircraftModel = selectedAircraft?.model || "Boeing 737-800";
 
-    const [lastChecked, setLastChecked] = useState("1/30/2026 at 2:44:37 PM");
+    const [lastChecked, setLastChecked] = useState("Loading...");
+    const [isLoading, setIsLoading] = useState(false);
+    const [complianceData, setComplianceData] = useState<any>(null);
 
-    const airworthiness = useMemo(
-        () => ({
-            status: "Airworthy",
-            certificate: "AWC-2018-N123AB",
-            certificateStatus: "Valid",
-            certificateExpiry: "6/14/2026",
-            registration: "Valid",
-            annualInspection: "Current",
-            issuingAuthority: "FAA",
-            nextRenewal: "6/9/2026",
-        }),
-        []
-    );
+    // Real data structures for live compliance data
+    const [airworthiness, setAirworthiness] = useState({
+        status: "Airworthy",
+        certificate: "AWC-2018-N123AB",
+        certificateStatus: "Valid",
+        certificateExpiry: "6/14/2026",
+        registration: "Valid",
+        annualInspection: "Current",
+        issuingAuthority: "FAA",
+        nextRenewal: "6/9/2026",
+    });
 
-    const authoritySources: AuthoritySource[] = useMemo(
-        () => [
-            {
-                label: "FAA (Federal Aviation Administration)",
-                countryOrRegion: "United States",
-                links: [
-                    { label: "Airworthiness Directives Database" },
-                    { label: "Regulatory & Guidance Library" },
-                    { label: "AD Search Tool" },
-                ],
-            },
-            {
-                label: "EASA (European Aviation Safety Agency)",
-                countryOrRegion: "European Union",
-                links: [
-                    { label: "Airworthiness Directives Portal" },
-                    { label: "AD Document Library" },
-                    { label: "Safety Publications" },
-                ],
-            },
-        ],
-        []
-    );
+    const [complianceScore, setComplianceScore] = useState({
+        percent: 67,
+        compliant: 2,
+        pending: 1,
+        overdue: 0,
+    });
 
-    const otherResources = useMemo(
-        () => ["FAA Safety Alerts", "EASA Safety Management", "ICAO Safety Standards"],
-        []
-    );
+    const [ads, setAds] = useState<ADItem[]>([
+        {
+            id: "FAA-2025-0234",
+            title: "Wing Spar Inspection",
+            authority: "FAA",
+            effective: "4/14/2025",
+            complianceDate: "4/11/2025",
+            status: "Compliant",
+        },
+    ]);
 
-    const complianceScore = useMemo(
-        () => ({
-            percent: 67,
-            compliant: 2,
-            pending: 1,
-            overdue: 0,
-        }),
-        []
-    );
+    const [sbs, setSbs] = useState<SBItem[]>([
+        {
+            id: "SB-737-32-1234",
+            title: "Hydraulic System Enhancement",
+            category: "Mandatory",
+            issueDate: "6/14/2025",
+            compliance: "8/19/2025",
+            status: "Compliant",
+        },
+        {
+            id: "SB-737-28-5678",
+            title: "Fuel Tank Access Panel Inspection",
+            category: "Recommended",
+            issueDate: "10/31/2025",
+            compliance: "—",
+            status: "Pending",
+        },
+    ]);
 
-    const applicableUpdates: RegulatoryUpdate[] = useMemo(
-        () => [
-            {
-                kind: "New AD",
-                date: "2026-01-20",
-                effective: "2026-02-15",
-                title: "New Airworthiness Directive FAA-2026-0124",
-                subtitle: "Wing spar inspection requirement for Boeing 737-800 series",
-            },
-            {
-                kind: "SB Update",
-                date: "2026-01-18",
-                effective: "2026-02-01",
-                title: "Service Bulletin Update: Hydraulic System Enhancement",
-                subtitle: "Updated procedures for hydraulic seal replacement",
-            },
-        ],
-        []
-    );
+    const [certificates, setCertificates] = useState<CertificateItem[]>([
+        {
+            type: "airworthiness Certificate",
+            status: "Valid",
+            number: "AWC-2018-N123AB",
+            expires: "6/14/2026",
+            authority: "FAA",
+        },
+        {
+            type: "registration Certificate",
+            status: "Valid",
+            number: "REG-N123AB",
+            expires: "6/9/2029",
+            authority: "FAA",
+        },
+        {
+            type: "insurance Certificate",
+            status: "Expiring Soon",
+            number: "INS-SKY-2025-1234",
+            expires: "12/31/2025",
+            authority: "SkyInsure LLC",
+        },
+    ]);
 
-    const ads: ADItem[] = useMemo(
-        () => [
-            {
-                id: "FAA-2025-0234",
-                title: "Wing Spar Inspection",
-                authority: "FAA",
-                effective: "4/14/2025",
-                complianceDate: "4/11/2025",
-                status: "Compliant",
-            },
-        ],
-        []
-    );
+    const [applicableUpdates, setApplicableUpdates] = useState<RegulatoryUpdate[]>([
+        {
+            kind: "New AD",
+            date: "2026-01-20",
+            effective: "2026-02-15",
+            title: "New Airworthiness Directive FAA-2026-0124",
+            subtitle: "Wing spar inspection requirement for Boeing 737-800 series",
+        },
+        {
+            kind: "SB Update",
+            date: "2026-01-18",
+            effective: "2026-02-01",
+            title: "Service Bulletin Update: Hydraulic System Enhancement",
+            subtitle: "Updated procedures for hydraulic seal replacement",
+        },
+    ]);
 
-    const sbs: SBItem[] = useMemo(
-        () => [
-            {
-                id: "SB-737-32-1234",
-                title: "Hydraulic System Enhancement",
-                category: "Mandatory",
-                issueDate: "6/14/2025",
-                compliance: "8/19/2025",
-                status: "Compliant",
-            },
-            {
-                id: "SB-737-28-5678",
-                title: "Fuel Tank Access Panel Inspection",
-                category: "Recommended",
-                issueDate: "10/31/2025",
-                compliance: "—",
-                status: "Pending",
-            },
-        ],
-        []
-    );
+    // Fetch real compliance data
+    async function fetchComplianceData() {
+        setIsLoading(true);
+        try {
+            // Replace with your actual API endpoint
+            const response = await fetch(`/api/compliance/${aircraftReg}`);
+            if (response.ok) {
+                const data = await response.json();
+                setAirworthiness(data.airworthiness);
+                setComplianceScore(data.score);
+                setAds(data.ads);
+                setSbs(data.sbs);
+                setCertificates(data.certificates);
+                setApplicableUpdates(data.updates);
+            }
+        } catch (error) {
+            console.error("Error fetching compliance data:", error);
+        } finally {
+            setIsLoading(false);
+            updateLastChecked();
+        }
+    }
 
-    const certificates: CertificateItem[] = useMemo(
-        () => [
-            {
-                type: "airworthiness Certificate",
-                status: "Valid",
-                number: "AWC-2018-N123AB",
-                expires: "6/14/2026",
-                authority: "FAA",
-            },
-            {
-                type: "registration Certificate",
-                status: "Valid",
-                number: "REG-N123AB",
-                expires: "6/9/2029",
-                authority: "FAA",
-            },
-            {
-                type: "insurance Certificate",
-                status: "Expiring Soon",
-                number: "INS-SKY-2025-1234",
-                expires: "12/31/2025",
-                authority: "SkyInsure LLC",
-            },
-        ],
-        []
-    );
-
-    const annualInspection = useMemo(
-        () => ({
-            status: "Current",
-            last: "6/9/2025",
-            nextDue: "6/9/2026",
-            inspector: "Michael Roberts (FAA IA-45678)",
-        }),
-        []
-    );
-
-    function refresh() {
+    // Update last checked timestamp
+    function updateLastChecked() {
         const now = new Date();
         const mm = String(now.getMonth() + 1);
         const dd = String(now.getDate());
@@ -204,6 +174,50 @@ export default function RegulatoryCompliancePage() {
         const time = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
         setLastChecked(`${mm}/${dd}/${yyyy} at ${time}`);
     }
+
+    // Refresh handler
+    async function refresh() {
+        await fetchComplianceData();
+    }
+
+    // Initial load
+    useEffect(() => {
+        updateLastChecked();
+        fetchComplianceData();
+    }, [aircraftReg]);
+
+    const authoritySources: AuthoritySource[] = useMemo(
+        () => [
+            {
+                label: "FAA (Federal Aviation Administration)",
+                countryOrRegion: "United States",
+                links: [
+                    { label: "Airworthiness Directives Database", href: "https://ad.faa.gov/" },
+                    { label: "Regulatory & Guidance Library", href: "https://www.faa.gov/regulations_policies/" },
+                    { label: "AD Search Tool", href: "https://ad.faa.gov/ad/" },
+                ],
+            },
+            {
+                label: "EASA (European Aviation Safety Agency)",
+                countryOrRegion: "European Union",
+                links: [
+                    { label: "Airworthiness Directives Portal", href: "https://www.easa.europa.eu/en/document-library?type=airworthiness_directives" },
+                    { label: "AD Document Library", href: "https://www.easa.europa.eu/documents" },
+                    { label: "Safety Publications", href: "https://www.easa.europa.eu/eaer/library" },
+                ],
+            },
+        ],
+        []
+    );
+
+    const otherResources = useMemo(
+        () => [
+            { label: "FAA Safety Alerts", href: "https://www.faa.gov/hazmat/safety-alerts/" },
+            { label: "EASA Safety Management", href: "https://www.easa.europa.eu/safety-and-performance/safety-management" },
+            { label: "ICAO Safety Standards", href: "https://www.icao.int/safety/" },
+        ],
+        []
+    );
 
     return (
         <section className="flex flex-col gap-6">
@@ -244,10 +258,17 @@ export default function RegulatoryCompliancePage() {
 
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                     <div className="text-xs font-semibold text-slate-600">Other Regulatory Resources</div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-700">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                         {otherResources.map((r, i) => (
-                            <span key={r} className="inline-flex items-center gap-2">
-                                {r}
+                            <span key={r.label} className="inline-flex items-center gap-2">
+                                <a
+                                    href={r.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                    {r.label}
+                                </a>
                                 {i !== otherResources.length - 1 ? <span className="text-slate-300">•</span> : null}
                             </span>
                         ))}
@@ -259,11 +280,12 @@ export default function RegulatoryCompliancePage() {
                         </div>
                         <button
                             type="button"
-                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                            disabled={isLoading}
+                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={refresh}
                         >
-                            <RefreshIcon />
-                            Refresh
+                            <RefreshIcon animate={isLoading} />
+                            {isLoading ? "Refreshing..." : "Refresh"}
                         </button>
                     </div>
                 </div>
@@ -451,15 +473,16 @@ function AuthorityCard({ src }: { src: AuthoritySource }) {
 
             <div className="mt-4 space-y-2">
                 {src.links.map((l) => (
-                    <button
+                    <a
                         key={l.label}
-                        type="button"
+                        href={l.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                        onClick={() => alert(`Open: ${l.label}`)}
                     >
                         <span className="truncate">{l.label}</span>
                         <ExternalLinkIcon />
-                    </button>
+                    </a>
                 ))}
             </div>
         </div>
@@ -539,10 +562,26 @@ function UpdateCard({ update }: { update: RegulatoryUpdate }) {
 }
 
 function ADRow({ item }: { item: ADItem }) {
+    const [status, setStatus] = React.useState(item.status);
+    const [isLoading, setIsLoading] = React.useState(false);
+
+    async function handleStatusChange(newStatus: "Compliant" | "Pending" | "Overdue") {
+        setIsLoading(true);
+        try {
+            // TODO: Call API to update status
+            // await fetch(`/api/compliance/ad/${item.id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+            setStatus(newStatus);
+        } catch (error) {
+            console.error("Error updating AD status:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="flex-1">
                     <div className="text-sm font-semibold text-slate-900">{item.id}</div>
                     <div className="mt-1 text-sm text-slate-600">{item.title}</div>
                     <div className="mt-2 text-xs text-slate-600">
@@ -550,18 +589,50 @@ function ADRow({ item }: { item: ADItem }) {
                         <span className="font-semibold text-slate-900"> {item.effective}</span> • Compliance Date:{" "}
                         <span className="font-semibold text-slate-900">{item.complianceDate}</span>
                     </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        {["Compliant", "Pending", "Overdue"].map((s) => (
+                            <button
+                                key={s}
+                                disabled={isLoading}
+                                onClick={() => handleStatusChange(s as "Compliant" | "Pending" | "Overdue")}
+                                className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                                    status === s
+                                        ? "bg-blue-600 text-white"
+                                        : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                                } disabled:opacity-50`}
+                            >
+                                {s}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                <SmallStatus status={item.status} />
+                <SmallStatus status={status} />
             </div>
         </div>
     );
 }
 
 function SBRow({ item }: { item: SBItem }) {
+    const [status, setStatus] = React.useState(item.status);
+    const [isLoading, setIsLoading] = React.useState(false);
+
+    async function handleStatusChange(newStatus: "Compliant" | "Pending" | "Overdue") {
+        setIsLoading(true);
+        try {
+            // TODO: Call API to update status
+            // await fetch(`/api/compliance/sb/${item.id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+            setStatus(newStatus);
+        } catch (error) {
+            console.error("Error updating SB status:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="text-sm font-semibold text-slate-900">{item.id}</div>
                         <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
@@ -573,18 +644,50 @@ function SBRow({ item }: { item: SBItem }) {
                         Issue Date: <span className="font-semibold text-slate-900">{item.issueDate}</span> • Compliance:{" "}
                         <span className="font-semibold text-slate-900"> {item.compliance}</span>
                     </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        {["Compliant", "Pending", "Overdue"].map((s) => (
+                            <button
+                                key={s}
+                                disabled={isLoading}
+                                onClick={() => handleStatusChange(s as "Compliant" | "Pending" | "Overdue")}
+                                className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                                    status === s
+                                        ? "bg-blue-600 text-white"
+                                        : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                                } disabled:opacity-50`}
+                            >
+                                {s}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                <SmallStatus status={item.status} />
+                <SmallStatus status={status} />
             </div>
         </div>
     );
 }
 
 function CertRow({ item }: { item: CertificateItem }) {
+    const [status, setStatus] = React.useState(item.status);
+    const [isLoading, setIsLoading] = React.useState(false);
+
+    async function handleRenewal() {
+        setIsLoading(true);
+        try {
+            // TODO: Call API to initiate renewal
+            // await fetch(`/api/compliance/certificate/${item.number}`, { method: 'POST', body: JSON.stringify({ action: 'renew' }) });
+            setStatus("Valid");
+        } catch (error) {
+            console.error("Error renewing certificate:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="flex-1">
                     <div className="text-sm font-semibold text-slate-900">{item.type}</div>
                     <div className="mt-2 text-sm text-slate-600">
                         Number: <span className="font-semibold text-slate-900">{item.number}</span>
@@ -595,8 +698,17 @@ function CertRow({ item }: { item: CertificateItem }) {
                     <div className="mt-1 text-sm text-slate-600">
                         Authority: <span className="font-semibold text-slate-900">{item.authority}</span>
                     </div>
+                    {status !== "Valid" && (
+                        <button
+                            disabled={isLoading}
+                            onClick={handleRenewal}
+                            className="mt-3 rounded-lg bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            {isLoading ? "Initiating..." : "Initiate Renewal"}
+                        </button>
+                    )}
                 </div>
-                <CertStatus status={item.status} />
+                <CertStatus status={status} />
             </div>
         </div>
     );
@@ -644,9 +756,15 @@ function ExternalLinkIcon() {
     );
 }
 
-function RefreshIcon() {
+function RefreshIcon({ animate }: { animate?: boolean }) {
     return (
-        <svg viewBox="0 0 24 24" className="h-4 w-4 text-slate-700" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <svg 
+            viewBox="0 0 24 24" 
+            className={`h-4 w-4 text-slate-700 ${animate ? "animate-spin" : ""}`}
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="1.8"
+        >
             <path d="M20 12a8 8 0 1 1-2.3-5.7" />
             <path d="M20 4v6h-6" />
         </svg>
