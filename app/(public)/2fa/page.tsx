@@ -16,12 +16,13 @@ function getApiBaseUrl(): string {
     return (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim().replace(/\/+$/, "");
 }
 
-async function verify2faRequest(code: string) {
+async function verify2faRequest(code: string, mockOTP?: string) {
     const mode = getDataMode();
 
     // Deterministic prototype behavior for local testing
     if (mode === "mock") {
-        return { ok: code === "612843", error: code === "612843" ? null : "Invalid code. Use 612843 for testing." };
+        const isValid = mockOTP ? code === mockOTP : false;
+        return { ok: isValid, error: isValid ? null : `Invalid code. Use ${mockOTP || 'the displayed code'} for testing.` };
     }
 
     const base = getApiBaseUrl();
@@ -89,12 +90,21 @@ function HelpCenterFab() {
     );
 }
 
+// Generate a random 6-digit OTP
+function generateOTP(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 export default function TwoFactorPage() {
     const router = useRouter();
     const mode = getDataMode();
 
     const [method, setMethod] = React.useState<"email" | "sms" | "authenticator">("email");
     const [email] = React.useState("manager@skywings.com");
+
+    // Generate OTP once on component mount
+    const [mockOTP] = React.useState(() => generateOTP());
+    const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
     const [code, setCode] = React.useState("");
     const [submitting, setSubmitting] = React.useState(false);
@@ -107,6 +117,18 @@ export default function TwoFactorPage() {
         const digits = code.replace(/\D/g, "").padEnd(6, " ").split("").slice(0, 6);
         digits[index] = d || " ";
         setCode(digits.join("").replace(/\s/g, ""));
+
+        // Auto-focus next input when digit is entered
+        if (d && index < 5) {
+            inputRefs.current[index + 1]?.focus();
+        }
+    }
+
+    function handleKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+        // Move to previous input on backspace if current is empty
+        if (e.key === "Backspace" && !code[index] && index > 0) {
+            inputRefs.current[index - 1]?.focus();
+        }
     }
 
     function onPaste(e: React.ClipboardEvent) {
@@ -129,7 +151,7 @@ export default function TwoFactorPage() {
         }
 
         setSubmitting(true);
-        const result = await verify2faRequest(normalized);
+        const result = await verify2faRequest(normalized, mockOTP);
         setSubmitting(false);
 
         if (!result.ok) {
@@ -235,11 +257,13 @@ export default function TwoFactorPage() {
                                 return (
                                     <input
                                         key={i}
+                                        ref={(el) => { inputRefs.current[i] = el; }}
                                         inputMode="numeric"
                                         pattern="[0-9]*"
                                         maxLength={1}
                                         value={digit.trim()}
                                         onChange={(e) => setDigit(i, e.target.value)}
+                                        onKeyDown={(e) => handleKeyDown(i, e)}
                                         className="h-14 w-14 rounded-2xl border border-slate-200 bg-white text-center text-xl font-semibold text-slate-900 outline-none focus:border-slate-400"
                                         aria-label={`Digit ${i + 1}`}
                                     />
@@ -256,14 +280,14 @@ export default function TwoFactorPage() {
                                 <button
                                     type="button"
                                     className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                                    onClick={() => setCode("612843")}
+                                    onClick={() => setCode(mockOTP)}
                                 >
-                                    Use 612843
+                                    Use {mockOTP}
                                 </button>
                             </div>
 
                             <div className="mt-4 rounded-2xl bg-slate-900 px-6 py-4 text-center text-2xl font-bold tracking-widest text-white">
-                                612843
+                                {mockOTP}
                             </div>
 
                             <div className="mt-3 text-xs text-slate-500">

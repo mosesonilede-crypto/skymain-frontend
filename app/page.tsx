@@ -1,5 +1,5 @@
-import PreLoginPage from "./(public)/pre-login/page";
+import MainLandingPage from "./(public)/page";
 
 export default function Home() {
-  return <PreLoginPage />;
+  return <MainLandingPage />;
 }
