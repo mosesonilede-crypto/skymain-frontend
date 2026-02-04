@@ -1,11 +1,12 @@
 {
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "nodeVersion": "20.x",
-  "env": {
-    "NEXT_PUBLIC_DATA_MODE": "mock",
-    "NEXT_PUBLIC_API_BASE_URL": "http://localhost:8000"
-  }
+    "buildCommand": "npm run build",
+    "devCommand": "npm run dev",
+    "installCommand": "npm install",
+    "framework": "nextjs",
+    "nodeVersion": "20.x",
+    "env": {
+        "NEXT_PUBLIC_DATA_MODE": "mock",
+        "NEXT_PUBLIC_API_BASE_URL": "http://localhost:8000"
+    },
+    "_comment": "Alternative deployment config. For Cloudflare Pages, use wrangler.toml instead."
 }

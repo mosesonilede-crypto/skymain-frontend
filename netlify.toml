@@ -1,3 +1,7 @@
+# Netlify Configuration (Alternative)
+# For Cloudflare Pages, use wrangler.toml instead
+# This file is kept as an alternative deployment option
+
 [build]
 command = "npm run build"
 publish = ".next"
