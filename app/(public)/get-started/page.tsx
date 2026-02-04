@@ -243,10 +243,10 @@ export default function GetStartedPage() {
                                         <Check className="h-4 w-4" /> ISO Certified
                                     </span>
                                 </div>
-                                <button className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#1c398e] hover:bg-gray-50 transition-colors">
+                                <Link href="/contact" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#1c398e] hover:bg-gray-50 transition-colors">
                                     Learn More
                                     <ExternalLink className="h-4 w-4" />
-                                </button>
+                                </Link>
                             </div>
 
                             {/* Right Image */}
@@ -306,10 +306,10 @@ export default function GetStartedPage() {
                                     </div>
                                     <h3 className="text-2xl font-bold text-[#101828] md:text-3xl">{cap.title}</h3>
                                     <p className="text-lg text-[#4a5565]">{cap.description}</p>
-                                    <button className="inline-flex items-center gap-2 rounded-lg bg-[#155dfc] px-4 py-2 text-sm font-medium text-white hover:bg-[#1447e6] transition-colors">
+                                    <Link href={idx === 0 ? "/platform-features" : idx === 1 ? "/regulatory-compliance-automation" : "/platform-features"} className="inline-flex items-center gap-2 rounded-lg bg-[#155dfc] px-4 py-2 text-sm font-medium text-white hover:bg-[#1447e6] transition-colors">
                                         Learn More
                                         <ArrowRight className="h-4 w-4" />
-                                    </button>
+                                    </Link>
                                 </div>
 
                                 {/* Image */}
@@ -472,9 +472,9 @@ export default function GetStartedPage() {
                             <p className="mt-6 text-center text-[#364153]">
                                 Advanced diagnostic tools and predictive analytics for modern aircraft fleets.
                             </p>
-                            <button className="mt-6 w-full rounded-lg bg-[#155dfc] py-3 text-sm font-medium text-white hover:bg-[#1447e6] transition-colors">
+                            <Link href="/contact" className="mt-6 inline-flex w-full justify-center rounded-lg bg-[#155dfc] py-3 text-sm font-medium text-white hover:bg-[#1447e6] transition-colors">
                                 Learn More <ArrowRight className="inline h-4 w-4 ml-1" />
-                            </button>
+                            </Link>
                             <p className="mt-3 text-center text-xs text-[#6a7282]">
                                 Sponsored content. SkyMaintain does not endorse products.
                             </p>
