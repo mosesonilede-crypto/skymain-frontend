@@ -39,10 +39,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                             Sign In
                         </Link>
                         <Link
-                            href="/contact?intent=demo"
+                            href="/get-started"
                             className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
                         >
-                            Request Demo
+                            Get Started
                         </Link>
                     </nav>
                 </div>

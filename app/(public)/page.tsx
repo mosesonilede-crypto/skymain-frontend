@@ -81,17 +81,17 @@ export default function MainLandingPage() {
                 {/* CTA Buttons */}
                 <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                     <Link
-                        href="/contact?intent=demo"
+                        href="/get-started"
                         className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-8 py-5 text-lg font-medium text-white transition-colors hover:bg-slate-800"
                     >
-                        Request Enterprise Demo
+                        Get Started
                         <img src={imgArrowIcon} alt="" className="h-4 w-4" />
                     </Link>
                     <Link
-                        href="/platform-features"
+                        href="/contact?intent=demo"
                         className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-8 py-5 text-lg font-medium text-slate-900 transition-colors hover:bg-slate-50"
                     >
-                        View Platform Capabilities
+                        Request Enterprise Demo
                     </Link>
                 </div>
             </section>

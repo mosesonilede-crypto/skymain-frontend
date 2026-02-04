@@ -9,7 +9,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import AppSidebarNav from "@/components/app/AppSidebarNav";
 
 // Figma assets for sidebar (node 2:1304)
@@ -46,6 +46,7 @@ type AppShellClientProps = {
 export default function AppShellClient({ children }: AppShellClientProps) {
     const [sidebarVisible, setSidebarVisible] = useState(true);
     const pathname = usePathname();
+    const router = useRouter();
     const contentRef = useRef<HTMLDivElement>(null);
 
     // Scroll to top when route changes
@@ -103,7 +104,8 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                                 </div>
                                 <button
                                     type="button"
-                                    className="mt-3 flex h-8 w-full items-center justify-center gap-2 rounded-[8px] border border-black/10 bg-white text-[14px] text-[#0a0a0a]"
+                                    onClick={() => router.push("/")}
+                                    className="mt-3 flex h-8 w-full items-center justify-center gap-2 rounded-[8px] border border-black/10 bg-white text-[14px] text-[#0a0a0a] hover:bg-gray-50"
                                 >
                                     <img src={iconLogout} alt="" className="h-4 w-4" />
                                     Logout

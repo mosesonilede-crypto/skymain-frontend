@@ -178,7 +178,7 @@ export default function GetStartedPage() {
 
                                 <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                                     <Link
-                                        href="/trial"
+                                        href="/signin"
                                         className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-6 py-4 text-base font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/20 sm:w-auto"
                                     >
                                         Start Your Free Trial
