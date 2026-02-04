@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useMemo } from "react";
+import BackToHub from "@/components/app/BackToHub";
+import { useAircraft } from "@/lib/AircraftContext";
 
 type KV = { k: string; v: React.ReactNode };
 type HealthTile = { label: string; value: number };
 
 export default function ReportsAnalyticsPage() {
-    const aircraftReg = "N123AB";
-    const model = "Boeing 737-800";
+    const { selectedAircraft } = useAircraft();
+    const aircraftReg = selectedAircraft?.registration || "N123AB";
+    const model = selectedAircraft?.model || "Boeing 737-800";
 
     const aircraftOverview: KV[] = useMemo(
         () => [
@@ -45,6 +48,7 @@ export default function ReportsAnalyticsPage() {
 
     return (
         <section className="flex flex-col gap-6">
+            <BackToHub title="Reports & Analytics" />
             <div className="pt-1">
                 <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
                     Reports &amp; Analytics - {aircraftReg}
@@ -74,16 +78,6 @@ export default function ReportsAnalyticsPage() {
             <footer className="mt-auto border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
                 © 2026 SkyMaintain — All Rights Reserved | Regulatory-Compliant Aircraft Maintenance Platform
             </footer>
-
-            <button
-                type="button"
-                aria-label="AI Assistant"
-                className="fixed bottom-6 right-6 flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:opacity-90"
-                onClick={() => alert("AI Assistant panel (to be wired)")}
-            >
-                <RobotIcon />
-                AI Assistant
-            </button>
         </section>
     );
 }

@@ -1,5 +1,10 @@
 import AppShellClient from "@/components/app/AppShellClient";
+import { AircraftProvider } from "@/lib/AircraftContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-    return <AppShellClient>{children}</AppShellClient>;
+    return (
+        <AircraftProvider>
+            <AppShellClient>{children}</AppShellClient>
+        </AircraftProvider>
+    );
 }

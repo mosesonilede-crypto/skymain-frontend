@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import BackToHub from "@/components/app/BackToHub";
+import { useAircraft } from "@/lib/AircraftContext";
 
 type PredictiveAlert = {
     severity: "Critical" | "Warning" | "Info";
@@ -15,7 +17,7 @@ type PredictiveAlert = {
 export default function AIInsightsPage() {
     const [advancedOpen, setAdvancedOpen] = useState(false);
 
-    const alert: PredictiveAlert = useMemo(
+    const predictiveAlert: PredictiveAlert = useMemo(
         () => ({
             severity: "Critical",
             title: "Hydraulic System - Left Main Gear",
@@ -30,6 +32,7 @@ export default function AIInsightsPage() {
 
     return (
         <section className="flex flex-col gap-6">
+            <BackToHub title="AI Insights" />
             <div className="pt-1">
                 <h1 className="text-2xl font-semibold tracking-tight text-slate-900">AI Insights</h1>
             </div>
@@ -76,33 +79,33 @@ export default function AIInsightsPage() {
 
                 <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50/60 p-5">
                     <div className="flex flex-wrap items-center gap-2">
-                        <div className="text-sm font-semibold text-slate-900">{alert.title}</div>
+                        <div className="text-sm font-semibold text-slate-900">{predictiveAlert.title}</div>
                         <span className="inline-flex items-center rounded-full bg-rose-600 px-3 py-1 text-xs font-semibold text-white">
-                            {alert.probabilityPct}% Probability
+                            {predictiveAlert.probabilityPct}% Probability
                         </span>
                     </div>
 
-                    <div className="mt-2 text-sm text-slate-700">{alert.summary}</div>
+                    <div className="mt-2 text-sm text-slate-700">{predictiveAlert.summary}</div>
 
                     <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-700">
                         <span className="inline-flex items-center gap-2">
                             <ClockIcon />
                             <span>
-                                Timeframe: <span className="font-semibold text-slate-900">{alert.timeframe}</span>
+                                Timeframe: <span className="font-semibold text-slate-900">{predictiveAlert.timeframe}</span>
                             </span>
                         </span>
 
                         <span className="inline-flex items-center gap-2">
                             <BarIcon />
                             <span>
-                                Data Sources: <span className="font-semibold text-slate-900">{alert.dataSources}</span>
+                                Data Sources: <span className="font-semibold text-slate-900">{predictiveAlert.dataSources}</span>
                             </span>
                         </span>
                     </div>
 
                     <div className="mt-4 rounded-2xl border border-rose-200 bg-white p-4">
                         <div className="text-xs font-semibold text-slate-700">Recommended Action:</div>
-                        <div className="mt-2 text-sm text-slate-900">{alert.recommendedAction}</div>
+                        <div className="mt-2 text-sm text-slate-900">{predictiveAlert.recommendedAction}</div>
                     </div>
                 </div>
 
@@ -129,16 +132,6 @@ export default function AIInsightsPage() {
             <footer className="mt-auto border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
                 © 2026 SkyMaintain — All Rights Reserved | Regulatory-Compliant Aircraft Maintenance Platform
             </footer>
-
-            <button
-                type="button"
-                aria-label="AI Assistant"
-                className="fixed bottom-6 right-6 flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:opacity-90"
-                onClick={() => alert("AI Assistant panel (wire to governed assistant)")}
-            >
-                <RobotIcon />
-                AI Assistant
-            </button>
         </section>
     );
 }

@@ -1,7 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useAircraft } from "@/lib/AircraftContext";
+import BackToHub from "@/components/app/BackToHub";
 
 const headerMenuIcon = "https://www.figma.com/api/mcp/asset/1ba02178-1448-48df-9234-3cb753a781f9";
 const headerAirlineIcon = "https://www.figma.com/api/mcp/asset/c5e0050e-5e2b-46dd-aaff-bc62e8570799";
@@ -10,6 +12,22 @@ const headerChevronIcon = "https://www.figma.com/api/mcp/asset/e61bf922-5b7b-446
 const headerPrintIcon = "https://www.figma.com/api/mcp/asset/f060b66f-c7c9-45f0-bc6f-aed7233cfe64";
 const headerPrivacyIcon = "https://www.figma.com/api/mcp/asset/85dff433-29e0-4aae-bd2a-afc2ec938029";
 const headerBellIcon = "https://www.figma.com/api/mcp/asset/98216d52-73a3-4ff1-a1af-8de593febec3";
+
+// Mock data for aircraft selection
+const MOCK_AIRCRAFT = [
+    { id: 1, tailNumber: "N123AB", model: "Boeing 737-800", airline: "SkyWings Airlines" },
+    { id: 2, tailNumber: "N456CD", model: "Boeing 787-9", airline: "SkyWings Airlines" },
+    { id: 3, tailNumber: "N789EF", model: "Airbus A320", airline: "SkyWings Airlines" },
+    { id: 4, tailNumber: "N101GH", model: "Boeing 777-300ER", airline: "SkyWings Airlines" },
+];
+
+const MOCK_NOTIFICATIONS = [
+    { id: 1, text: "Critical hydraulic system alert", severity: "critical" },
+    { id: 2, text: "A-Check due in 50 days", severity: "warning" },
+    { id: 3, text: "Avionics software update available", severity: "info" },
+    { id: 4, text: "Engine oil change recommended", severity: "warning" },
+    { id: 5, text: "Landing gear inspection passed", severity: "success" },
+];
 
 const kpiCriticalVector = "https://www.figma.com/api/mcp/asset/0434e497-f396-4a32-97ac-dc557bc87b82";
 const kpiCriticalVector2 = "https://www.figma.com/api/mcp/asset/16a66917-0756-40b2-9311-ca084bc3721c";
@@ -47,46 +65,212 @@ const maintenanceMoneyIcon = "https://www.figma.com/api/mcp/asset/e9268a7f-9269-
 const aiMechanicIcon = "https://www.figma.com/api/mcp/asset/2277282f-6a56-423d-a502-2f06caf96cdf";
 
 export default function DashboardPage() {
+    const { selectedAircraft, setSelectedAircraft, allAircraft } = useAircraft();
+    const [showAircraftMenu, setShowAircraftMenu] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [privacyMode, setPrivacyMode] = useState(false);
+    const aircraftDropdownRef = useRef<HTMLDivElement>(null);
+    const notificationDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (aircraftDropdownRef.current && !aircraftDropdownRef.current.contains(event.target as Node)) {
+                setShowAircraftMenu(false);
+            }
+            if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(event.target as Node)) {
+                setShowNotifications(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Add print styles to hide sidebar and adjust layout
+    useEffect(() => {
+        const printStyles = `
+            @media print {
+                aside {
+                    display: none !important;
+                }
+                .fixed.left-0 {
+                    display: none !important;
+                }
+                body {
+                    margin: 0;
+                    padding: 0;
+                }
+                div[class*="flex"] div:has(> aside) {
+                    width: 100% !important;
+                    margin-left: 0 !important;
+                }
+            }
+        `;
+
+        const style = document.createElement('style');
+        style.textContent = printStyles;
+        document.head.appendChild(style);
+
+        return () => {
+            document.head.removeChild(style);
+        };
+    }, []);
+
+    const handlePrintReport = () => {
+        console.log("Printing report for aircraft:", selectedAircraft?.registration);
+        window.print();
+    };
+
+    const handlePrivacyMode = () => {
+        setPrivacyMode(!privacyMode);
+        console.log("Privacy mode toggled:", !privacyMode);
+    };
+
     return (
         <div className="relative w-full">
             <div className="w-full max-w-[844px] mx-auto">
+                <BackToHub title="Dashboard" />
                 <div className="bg-white border-[#e5e7eb] border-b-[0.8px] border-solid rounded-[12px] px-6 pt-4 pb-3">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button className="flex h-8 w-[82px] items-center justify-center gap-2 rounded-[8px] border border-black/10 bg-white text-[14px] text-[#0a0a0a]">
-                                <img alt="" className="h-4 w-4" src={headerMenuIcon} />
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div className="flex items-center gap-4 flex-wrap">
+                            {/* Menu Button */}
+                            <button
+                                className="flex h-8 w-[82px] items-center justify-center gap-2 rounded-[8px] border border-black/10 bg-white text-[14px] text-[#0a0a0a] hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                                onClick={() => console.log("Menu clicked")}
+                                title="Open menu"
+                            >
+                                <img alt="Menu icon" className="h-4 w-4" src={headerMenuIcon} />
                                 Menu
                             </button>
+
+                            {/* Airline Info */}
                             <div className="flex items-center gap-2 pr-3 border-r border-[#e5e7eb]">
-                                <img alt="" className="h-4 w-4" src={headerAirlineIcon} />
+                                <img alt="Airline icon" className="h-4 w-4" src={headerAirlineIcon} />
                                 <div className="text-[14px] text-[#0a0a0a]">
                                     SkyWings Airlines
                                     <div className="text-[12px] text-[#6a7282]">License: Active</div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] px-4 py-2">
-                                <img alt="" className="h-5 w-5" src={headerTailNumberIcon} />
-                                <div className="text-[14px] text-[#0a0a0a]">
-                                    N123AB
-                                    <div className="text-[12px] text-[#6a7282]">Boeing 737-800</div>
-                                </div>
-                                <img alt="" className="h-4 w-4" src={headerChevronIcon} />
+
+                            {/* Aircraft Selection Dropdown */}
+                            <div className="relative" ref={aircraftDropdownRef}>
+                                <button
+                                    onClick={() => setShowAircraftMenu(!showAircraftMenu)}
+                                    className="flex items-center gap-3 rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] px-4 py-2 hover:bg-gray-100 transition-colors cursor-pointer"
+                                    title="Select aircraft"
+                                >
+                                    <img alt="Aircraft icon" className="h-5 w-5" src={headerTailNumberIcon} />
+                                    <div className="text-[14px] text-[#0a0a0a]">
+                                        {selectedAircraft?.registration}
+                                        <div className="text-[12px] text-[#6a7282]">{selectedAircraft?.model}</div>
+                                    </div>
+                                    <img
+                                        alt="Dropdown arrow"
+                                        className={`h-4 w-4 transition-transform ${showAircraftMenu ? 'rotate-180' : ''}`}
+                                        src={headerChevronIcon}
+                                    />
+                                </button>
+
+                                {/* Aircraft Dropdown Menu */}
+                                {showAircraftMenu && (
+                                    <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-[#e5e7eb] rounded-[8px] shadow-lg z-50">
+                                        <div className="p-2 max-h-80 overflow-y-auto">
+                                            {allAircraft.map((aircraft) => (
+                                                <button
+                                                    key={aircraft.id}
+                                                    onClick={() => {
+                                                        setSelectedAircraft(aircraft);
+                                                        setShowAircraftMenu(false);
+                                                    }}
+                                                    className={`w-full text-left px-4 py-3 rounded-[6px] transition-colors ${selectedAircraft?.id === aircraft.id
+                                                        ? 'bg-blue-50 border border-blue-200'
+                                                        : 'hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <div className="font-semibold text-[14px] text-[#0a0a0a]">{aircraft.registration}</div>
+                                                    <div className="text-[12px] text-[#6a7282]">{aircraft.model}</div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <button className="flex h-8 items-center gap-2 rounded-[8px] border border-black/10 bg-white px-3 text-[12px] text-[#0a0a0a]">
-                                <img alt="" className="h-4 w-4" src={headerPrintIcon} />
+
+                        <div className="flex items-center gap-3 flex-wrap">
+                            {/* Print Report Button */}
+                            <button
+                                onClick={handlePrintReport}
+                                className="flex h-8 items-center gap-2 rounded-[8px] border border-black/10 bg-white px-3 text-[12px] text-[#0a0a0a] hover:bg-gray-50 active:bg-gray-100 transition-colors whitespace-nowrap"
+                                title="Print maintenance report"
+                            >
+                                <img alt="Print icon" className="h-4 w-4" src={headerPrintIcon} />
                                 Print Report
                             </button>
-                            <button className="flex h-8 items-center gap-2 rounded-[8px] border border-black/10 bg-white px-3 text-[12px] text-[#0a0a0a]">
-                                <img alt="" className="h-4 w-4" src={headerPrivacyIcon} />
+
+                            {/* Privacy Mode Button */}
+                            <button
+                                onClick={handlePrivacyMode}
+                                className={`flex h-8 items-center gap-2 rounded-[8px] border px-3 text-[12px] transition-colors ${privacyMode
+                                    ? 'bg-blue-50 border-blue-300 text-blue-600'
+                                    : 'bg-white border-black/10 text-[#0a0a0a] hover:bg-gray-50'
+                                    }`}
+                                title={privacyMode ? "Disable privacy mode" : "Enable privacy mode"}
+                            >
+                                <img alt="Privacy icon" className="h-4 w-4" src={headerPrivacyIcon} />
                                 Privacy Mode
                             </button>
-                            <div className="relative h-8 w-9 rounded-[8px] border border-black/10 bg-white">
-                                <img alt="" className="absolute left-[10px] top-[7px] h-4 w-4" src={headerBellIcon} />
-                                <div className="absolute -top-1 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-[#e7000b] text-[12px] text-white">
-                                    5
-                                </div>
+
+                            {/* Notifications Button */}
+                            <div className="relative" ref={notificationDropdownRef}>
+                                <button
+                                    onClick={() => setShowNotifications(!showNotifications)}
+                                    className="relative h-8 w-9 rounded-[8px] border border-black/10 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                                    title="View notifications"
+                                >
+                                    <img alt="Notification bell" className="absolute left-[10px] top-[7px] h-4 w-4" src={headerBellIcon} />
+                                    <div className="absolute -top-1 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-[#e7000b] text-[12px] text-white font-semibold">
+                                        {MOCK_NOTIFICATIONS.length}
+                                    </div>
+                                </button>
+
+                                {/* Notifications Dropdown Menu */}
+                                {showNotifications && (
+                                    <div className="absolute top-full right-0 mt-2 w-80 bg-white border border-[#e5e7eb] rounded-[8px] shadow-lg z-50">
+                                        <div className="border-b border-[#e5e7eb] px-4 py-3">
+                                            <h3 className="font-semibold text-[14px] text-[#0a0a0a]">Notifications</h3>
+                                        </div>
+                                        <div className="max-h-96 overflow-y-auto">
+                                            {MOCK_NOTIFICATIONS.length > 0 ? (
+                                                MOCK_NOTIFICATIONS.map((notification) => (
+                                                    <div
+                                                        key={notification.id}
+                                                        className="px-4 py-3 border-b border-[#e5e7eb] last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer"
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${notification.severity === 'critical' ? 'bg-[#e7000b]' :
+                                                                notification.severity === 'warning' ? 'bg-[#a65f00]' :
+                                                                    notification.severity === 'success' ? 'bg-[#008236]' :
+                                                                        'bg-[#0a5dd4]'
+                                                                }`} />
+                                                            <p className="text-[13px] text-[#364153]">{notification.text}</p>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="px-4 py-6 text-center text-[14px] text-[#6a7282]">
+                                                    No notifications
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="border-t border-[#e5e7eb] px-4 py-2">
+                                            <button className="w-full text-center text-[12px] text-blue-600 hover:text-blue-700 py-2">
+                                                View All Notifications
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

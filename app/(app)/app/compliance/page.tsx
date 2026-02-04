@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useAircraft } from "@/lib/AircraftContext";
 
 type AuthoritySource = {
     label: string;
@@ -43,8 +44,9 @@ type CertificateItem = {
 };
 
 export default function RegulatoryCompliancePage() {
-    const aircraftReg = "N123AB";
-    const aircraftModel = "Boeing 737-800";
+    const { selectedAircraft } = useAircraft();
+    const aircraftReg = selectedAircraft?.registration || "N123AB";
+    const aircraftModel = selectedAircraft?.model || "Boeing 737-800";
 
     const [lastChecked, setLastChecked] = useState("1/30/2026 at 2:44:37 PM");
 
@@ -367,15 +369,6 @@ export default function RegulatoryCompliancePage() {
                 © 2026 SkyMaintain — All Rights Reserved | Regulatory-Compliant Aircraft Maintenance Platform
             </footer>
 
-            <button
-                type="button"
-                aria-label="AI Assistant"
-                className="fixed bottom-6 right-6 flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:opacity-90"
-                onClick={() => alert("AI Assistant panel (wire to governed assistant)")}
-            >
-                <RobotIcon />
-                AI Assistant
-            </button>
         </section>
     );
 }
