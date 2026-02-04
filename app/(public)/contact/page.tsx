@@ -134,14 +134,26 @@ async function apiGetContact(signal?: AbortSignal): Promise<ContactDoc> {
 async function apiSubmitContact(payload: ContactFormPayload): Promise<void> {
     const mode = getDataMode();
 
-    if (mode === "mock") {
-        await new Promise((r) => setTimeout(r, 350));
-        return;
+    // Try local API endpoint first
+    try {
+        const localRes = await fetch("/api/contact", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        if (localRes.ok) {
+            const json = (await localRes.json()) as ApiEnvelope<{ received: true }>;
+            if (json?.ok) return;
+        }
+    } catch {
+        // Fall through to backend
     }
 
+    // Fall back to backend if local endpoint fails
     const base = getApiBaseUrl();
     if (!base) {
-        if (mode === "hybrid") {
+        if (mode === "hybrid" || mode === "mock") {
             await new Promise((r) => setTimeout(r, 250));
             return;
         }
@@ -290,10 +302,10 @@ export default function ContactPage(): React.ReactElement {
     }, [intent, subject]);
 
     const canSubmit =
-        name.trim().length >= 2 &&
+        name.trim().length >= 1 &&
         email.trim().includes("@") &&
-        subject.trim().length >= 3 &&
-        message.trim().length >= 10;
+        subject.trim().length >= 1 &&
+        message.trim().length >= 1;
 
     async function onSubmit(e: React.FormEvent): Promise<void> {
         e.preventDefault();

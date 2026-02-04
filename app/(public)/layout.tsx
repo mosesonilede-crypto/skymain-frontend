@@ -20,7 +20,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                     </Link>
 
                     <nav className="hidden items-center gap-6 md:flex">
-                        <Link href="/platform-features" className="text-base text-slate-600 hover:text-slate-900">
+                        <Link href="/platform" className="text-base text-slate-600 hover:text-slate-900">
                             Platform
                         </Link>
                         <Link href="/enterprise" className="text-base text-slate-600 hover:text-slate-900">
@@ -63,6 +63,12 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                 </div>
                 <div className="border-t border-slate-800">
                     <div className="mx-auto flex max-w-[1084px] flex-col items-center gap-6 px-8 py-8 text-sm text-slate-400 md:flex-row md:justify-center">
+                        <Link href="/platform" className="hover:text-slate-200">
+                            Platform
+                        </Link>
+                        <Link href="/platform-features" className="hover:text-slate-200">
+                            Platform Features
+                        </Link>
                         <Link href="/enterprise" className="hover:text-slate-200">
                             Enterprise
                         </Link>
