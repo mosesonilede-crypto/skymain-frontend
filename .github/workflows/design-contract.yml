@@ -1,4 +1,4 @@
-name: Design Contract
+name: Design Contract & Deploy
 
 on:
   pull_request:
@@ -35,3 +35,30 @@ jobs:
         env:
           NEXT_PUBLIC_DATA_MODE: mock
         run: npx playwright test tests/e2e/design.visual.spec.ts
+
+  deploy:
+    needs: design-contract
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_BACKEND_URL: ${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
+
+      - name: Deploy to Vercel
+        uses: vercel/action@v8
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

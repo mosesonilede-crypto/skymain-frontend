@@ -1,0 +1,3 @@
+# This file is deprecated - deployment now uses Vercel via GitHub Actions
+# Cloudflare is used as a reverse proxy/CDN in front of Vercel
+# See .github/workflows/design-contract.yml for deployment configuration

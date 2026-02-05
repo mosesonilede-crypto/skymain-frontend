@@ -1,0 +1,132 @@
+# Deployment Setup Guide
+
+## Architecture
+- **Frontend**: Next.js deployed to Vercel via GitHub Actions
+- **Backend**: Python FastAPI on Namecheap
+- **Protection**: Cloudflare reverse proxy + CDN in front of Vercel
+- **Domain**: Points to Cloudflare nameservers (Cloudflare → Vercel)
+
+## GitHub Actions Deployment
+
+Your repository is configured to automatically deploy to Vercel on pushes to `main`.
+
+### Prerequisites
+
+1. **Vercel Account** (https://vercel.com)
+   - Create a new project for this repo
+   - Get these values from your Vercel account:
+     - `VERCEL_TOKEN`: Personal access token
+     - `VERCEL_ORG_ID`: Organization/team ID
+     - `VERCEL_PROJECT_ID`: Project ID
+
+2. **GitHub Repository Secrets**
+   - Go to: Settings → Secrets and variables → Actions
+   - Add these secrets:
+     - `VERCEL_TOKEN` - Your Vercel personal access token
+     - `VERCEL_ORG_ID` - Your Vercel organization ID
+     - `VERCEL_PROJECT_ID` - Your Vercel project ID
+     - `NEXT_PUBLIC_BACKEND_URL` - Your Namecheap backend API URL (e.g., `https://api.yourdomain.com`)
+
+### Setup Steps
+
+1. **Create Vercel Project**
+   ```bash
+   # Option A: Via Vercel Dashboard
+   # Go to https://vercel.com/new and import your GitHub repo
+   
+   # Option B: Via Vercel CLI
+   npm i -g vercel
+   vercel link
+   ```
+
+2. **Get Vercel Credentials**
+   ```bash
+   # Get your personal access token
+   # https://vercel.com/account/tokens
+   
+   # Get your org/project IDs
+   # https://vercel.com/[your-team]/[project-name]/settings
+   ```
+
+3. **Configure GitHub Secrets**
+   - Go to your GitHub repo → Settings → Secrets and variables → Actions
+   - Add all 4 secrets from above
+
+4. **Deploy**
+   ```bash
+   # Just push to main!
+   git push origin main
+   
+   # Watch the deployment:
+   # GitHub Actions → Design Contract & Deploy → deploy job
+   ```
+
+### Cloudflare Configuration
+
+1. **Point Domain to Cloudflare**
+   - In Cloudflare dashboard, add your domain
+   - Update nameservers at Namecheap to point to Cloudflare
+
+2. **Configure DNS in Cloudflare**
+   - Add CNAME record pointing to your Vercel deployment
+   - Cloudflare will show you the exact CNAME value to use
+   - Enable Cloudflare proxy (orange cloud icon)
+
+3. **SSL/TLS**
+   - Cloudflare: Use "Flexible" or "Full" SSL mode
+   - Vercel handles the actual HTTPS
+
+### Environment Variables
+
+- **`NEXT_PUBLIC_BACKEND_URL`**: Must point to your Namecheap backend
+  - Used by frontend to make API calls
+  - Example: `https://api.yourdomain.com` or `https://your-ip:8000`
+
+### API Routes
+
+The frontend has these API routes (in `/app/api/`):
+- `/api/alerts/[aircraftReg]`
+- `/api/dashboard/[aircraftReg]`
+- `/api/reports/[aircraftReg]`
+- `/api/logs/[aircraftReg]`
+- `/api/insights/[aircraftReg]`
+- `/api/compliance/[aircraftReg]`
+
+These are **Vercel serverless functions** that can be called by the frontend. If you want them to call your Python backend, update them to proxy requests to `NEXT_PUBLIC_BACKEND_URL`.
+
+### Monitoring
+
+1. **GitHub Actions**: Check deployment status at `Actions` tab
+2. **Vercel**: Monitor deployments at https://vercel.com/dashboards
+3. **Cloudflare**: Check DNS resolution and caching at Cloudflare dashboard
+
+### Troubleshooting
+
+**Deployment fails in GitHub Actions**
+- Check if all 4 secrets are set correctly
+- Verify project IDs are correct
+- Check GitHub Actions logs for error messages
+
+**Site is down/not accessible**
+- Check Cloudflare DNS settings
+- Verify CNAME points to Vercel URL
+- Check if Cloudflare proxy is enabled (orange cloud)
+- Verify SSL/TLS settings in Cloudflare
+
+**API calls failing**
+- Check `NEXT_PUBLIC_BACKEND_URL` is set correctly
+- Verify Namecheap backend is running
+- Check CORS headers if backend is on different domain
+- Use browser DevTools to see API response errors
+
+### Rollback
+
+If a deployment breaks:
+```bash
+# Revert to previous commit
+git revert HEAD
+git push origin main
+
+# Or manually rollback in Vercel dashboard
+# Go to Deployments → select previous version → click "Promote to Production"
+```
