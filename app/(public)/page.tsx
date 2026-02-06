@@ -464,6 +464,9 @@ export default function MainLandingPage() {
                             <Link href="/terms" className="hover:text-slate-200">
                                 Terms of Service
                             </Link>
+                            <Link href="/regulatory-governance-accountability" className="hover:text-slate-200">
+                                Regulatory Governance &amp; Accountability
+                            </Link>
                             <Link href="/compliance" className="hover:text-slate-200">
                                 Compliance
                             </Link>

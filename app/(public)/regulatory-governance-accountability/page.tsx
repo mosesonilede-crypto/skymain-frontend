@@ -8,6 +8,15 @@ export default function RegulatoryGovernanceAccountabilityPage() {
             {/* Hero Section */}
             <section className="border-b border-slate-200 bg-white px-6 py-16 sm:py-20">
                 <div className="mx-auto max-w-3xl">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="text-sm font-semibold text-blue-600">Regulatory Governance &amp; Accountability</div>
+                        <Link
+                            href="/"
+                            className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                            Back to Home
+                        </Link>
+                    </div>
                     <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
                         Regulatory Governance & Accountability
                     </h1>
