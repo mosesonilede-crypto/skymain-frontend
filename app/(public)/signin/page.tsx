@@ -17,7 +17,7 @@ function getApiBaseUrl(): string {
     return (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim().replace(/\/+$/, "");
 }
 
-async function loginRequest(payload: { email: string; password: string; orgName: string }) {
+async function loginRequest(payload: { email: string; password: string; orgName: string; licenseCode: string }) {
     const mode = getDataMode();
 
     if (mode === "mock") {
@@ -38,6 +38,7 @@ async function loginRequest(payload: { email: string; password: string; orgName:
                 email: payload.email,
                 password: payload.password,
                 org_name: payload.orgName,
+                license_code: payload.licenseCode,
             }),
         });
 
@@ -58,6 +59,7 @@ export default function SignInPage() {
 
     const [email, setEmail] = React.useState("");
     const [orgName, setOrgName] = React.useState("");
+    const [licenseCode, setLicenseCode] = React.useState("");
     const [password, setPassword] = React.useState("");
     const [remember, setRemember] = React.useState(true);
 
@@ -69,6 +71,7 @@ export default function SignInPage() {
     function applyDemo(role: "fleet_manager" | "maintenance_engineer") {
         setError(null);
         setOrgName("SkyWings Airlines");
+        setLicenseCode("DEMO-LICENSE");
         if (role === "fleet_manager") {
             setEmail("manager@skywings.com");
             setPassword("TestLogin!234");
@@ -84,14 +87,15 @@ export default function SignInPage() {
 
         const eTrim = email.trim();
         const oTrim = orgName.trim();
+        const lTrim = licenseCode.trim();
 
-        if (!eTrim || !oTrim || !password) {
-            setError("Enter your email, organization name, and password.");
+        if (!eTrim || !oTrim || !lTrim || !password) {
+            setError("Enter your email, organization name, license code, and password.");
             return;
         }
 
         setSubmitting(true);
-        const result = await loginRequest({ email: eTrim, password, orgName: oTrim });
+        const result = await loginRequest({ email: eTrim, password, orgName: oTrim, licenseCode: lTrim });
         setSubmitting(false);
 
         if (!result.ok) {
@@ -177,6 +181,18 @@ export default function SignInPage() {
                                     autoComplete="organization"
                                     className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
                                     placeholder="e.g., SkyWings Airlines"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">License Code</label>
+                                <input
+                                    value={licenseCode}
+                                    onChange={(e) => setLicenseCode(e.target.value)}
+                                    type="text"
+                                    autoComplete="off"
+                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
+                                    placeholder="Enter your license code"
                                 />
                             </div>
 

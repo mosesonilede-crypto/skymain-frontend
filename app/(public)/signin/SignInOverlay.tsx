@@ -40,7 +40,7 @@ function getApiBaseUrl(): string {
     return (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim().replace(/\/+$/, "");
 }
 
-async function loginRequest(payload: { email: string; password: string; orgName: string }) {
+async function loginRequest(payload: { email: string; password: string; orgName: string; licenseCode: string }) {
     const mode = getDataMode();
 
     if (mode === "mock") {
@@ -61,6 +61,7 @@ async function loginRequest(payload: { email: string; password: string; orgName:
                 email: payload.email,
                 password: payload.password,
                 org_name: payload.orgName,
+                license_code: payload.licenseCode,
             }),
         });
 
@@ -80,14 +81,15 @@ export default function SignInOverlay() {
 
     const [email, setEmail] = useState("");
     const [orgName, setOrgName] = useState("");
+    const [licenseCode, setLicenseCode] = useState("");
     const [password, setPassword] = useState("");
     const [remember, setRemember] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const disabled = useMemo(
-        () => !email.trim() || !orgName.trim() || !password || submitting,
-        [email, orgName, password, submitting]
+        () => !email.trim() || !orgName.trim() || !licenseCode.trim() || !password || submitting,
+        [email, orgName, licenseCode, password, submitting]
     );
 
     async function onSubmit(event: FormEvent) {
@@ -95,7 +97,7 @@ export default function SignInOverlay() {
         setError(null);
 
         if (disabled) {
-            setError("Enter your email, organization name, and password.");
+            setError("Enter your email, organization name, license code, and password.");
             return;
         }
 
@@ -103,6 +105,7 @@ export default function SignInOverlay() {
         const result = await loginRequest({
             email: email.trim(),
             orgName: orgName.trim(),
+            licenseCode: licenseCode.trim(),
             password,
         });
         setSubmitting(false);
@@ -195,6 +198,21 @@ export default function SignInOverlay() {
                         </label>
 
                         <label className="flex flex-col gap-[4px] text-[14px] text-[#0a0a0a]">
+                            License Code
+                            <div className="relative">
+                                <img src={imgIcon28} alt="" className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
+                                <input
+                                    type="text"
+                                    value={licenseCode}
+                                    onChange={(event) => setLicenseCode(event.target.value)}
+                                    placeholder="Enter license code"
+                                    className="h-[36px] w-full rounded-[8px] bg-[#f3f3f5] pl-[40px] pr-[12px] text-[14px] text-[#0a0a0a] outline-none"
+                                />
+                            </div>
+                            <span className="text-[12px] text-[#6a7282]">Validated before 2FA</span>
+                        </label>
+
+                        <label className="flex flex-col gap-[4px] text-[14px] text-[#0a0a0a]">
                             Password
                             <div className="relative">
                                 <img src={imgIcon27} alt="" className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
@@ -249,6 +267,7 @@ export default function SignInOverlay() {
                                 onClick={() => {
                                     setEmail(DEMO_FLEET.email);
                                     setOrgName(DEMO_FLEET.org);
+                                    setLicenseCode("DEMO-LICENSE");
                                     setPassword(DEMO_FLEET.password);
                                 }}
                                 className="flex h-[32px] items-center gap-[8px] rounded-[8px] border border-black/10 bg-white px-[10px] text-[12px] text-[#0a0a0a]"
@@ -261,6 +280,7 @@ export default function SignInOverlay() {
                                 onClick={() => {
                                     setEmail(DEMO_ENGINEER.email);
                                     setOrgName(DEMO_ENGINEER.org);
+                                    setLicenseCode("DEMO-LICENSE");
                                     setPassword(DEMO_ENGINEER.password);
                                 }}
                                 className="flex h-[32px] items-center gap-[8px] rounded-[8px] border border-black/10 bg-white px-[10px] text-[12px] text-[#0a0a0a]"
