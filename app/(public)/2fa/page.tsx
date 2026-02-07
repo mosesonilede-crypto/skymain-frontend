@@ -18,9 +18,16 @@ function getApiBaseUrl(): string {
     return (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim().replace(/\/+$/, "");
 }
 
+function allowAuthMockFallback(mode: DataMode): boolean {
+    const flag = (process.env.NEXT_PUBLIC_AUTH_TEST_MODE || "").toLowerCase();
+    if (flag === "true" || flag === "1" || flag === "yes") return true;
+    return mode !== "live";
+}
+
 async function verify2faRequest(code: string, mockOTP?: string) {
     const mode = getDataMode();
     const mockValid = Boolean(mockOTP && code === mockOTP);
+    const allowMockFallback = allowAuthMockFallback(mode);
 
     // Deterministic prototype behavior for local testing
     if (mode === "mock") {
@@ -29,7 +36,7 @@ async function verify2faRequest(code: string, mockOTP?: string) {
 
     const base = getApiBaseUrl();
     if (!base) {
-        return mockValid
+        return allowMockFallback && mockValid
             ? { ok: true, error: null }
             : { ok: false, error: "NEXT_PUBLIC_API_BASE_URL is not set." };
     }
@@ -44,14 +51,14 @@ async function verify2faRequest(code: string, mockOTP?: string) {
 
         if (!res.ok) {
             const text = await res.text().catch(() => "");
-            return mockValid
+            return allowMockFallback && mockValid
                 ? { ok: true, error: null }
                 : { ok: false, error: text || `Verification failed (${res.status})` };
         }
 
         return { ok: true, error: null };
     } catch (e) {
-        return mockValid
+        return allowMockFallback && mockValid
             ? { ok: true, error: null }
             : { ok: false, error: e instanceof Error ? e.message : "Network error" };
     }

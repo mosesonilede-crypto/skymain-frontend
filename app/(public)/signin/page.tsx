@@ -20,9 +20,15 @@ function getApiBaseUrl(): string {
     return (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim().replace(/\/+$/, "");
 }
 
+function allowAuthMockFallback(mode: DataMode): boolean {
+    const flag = (process.env.NEXT_PUBLIC_AUTH_TEST_MODE || "").toLowerCase();
+    if (flag === "true" || flag === "1" || flag === "yes") return true;
+    return mode !== "live";
+}
+
 async function loginRequest(payload: { email: string; password: string; orgName: string; licenseCode: string }) {
     const mode = getDataMode();
-    const allowMockFallback = mode !== "live";
+    const allowMockFallback = allowAuthMockFallback(mode);
 
     if (mode === "mock") {
         return { ok: true as const, used: "mock" as const };
