@@ -210,10 +210,10 @@ function Badge({ label }: { label: string }) {
 
 function PlanCard({
     plan,
-    onUpgrade,
+    onContactPricing,
 }: {
     plan: Plan;
-    onUpgrade: (planId: Plan["id"]) => void;
+    onContactPricing: () => void;
 }) {
     const isCurrent = !!plan.isCurrent;
 
@@ -232,12 +232,10 @@ function PlanCard({
                 {plan.badge ? <Badge label={plan.badge} /> : null}
             </div>
 
-            <div className="mt-4 flex items-baseline gap-2">
-                <div className="text-2xl font-semibold text-slate-900">${plan.priceYear}</div>
-                <div className="text-sm text-slate-600">/year</div>
+            <div className="mt-4">
+                <div className="text-lg font-semibold text-slate-900">Custom Pricing</div>
+                <div className="text-sm text-slate-600">Tailored to your fleet size</div>
             </div>
-
-            <div className="mt-2 text-sm text-emerald-700">Save ${plan.savePerYear}/year</div>
 
             <ul className="mt-4 space-y-2 text-sm text-slate-700">
                 {plan.bullets.map((b, idx) => (
@@ -254,7 +252,7 @@ function PlanCard({
                 {isCurrent ? (
                     <button
                         type="button"
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600"
+                        className="w-full rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700"
                         disabled
                     >
                         Current Plan
@@ -262,10 +260,10 @@ function PlanCard({
                 ) : (
                     <button
                         type="button"
-                        className="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
-                        onClick={() => onUpgrade(plan.id)}
+                        className="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 active:bg-slate-700 transition-colors cursor-pointer"
+                        onClick={onContactPricing}
                     >
-                        Upgrade
+                        Contact for Pricing
                     </button>
                 )}
             </div>
@@ -356,8 +354,8 @@ export default function SubscriptionBillingPage() {
         };
     }, [mode, baseUrl]);
 
-    function onUpgrade(planId: Plan["id"]) {
-        void planId;
+    function onContactPricing() {
+        window.location.assign(CONTACT_SUPPORT);
     }
 
     function onAddPaymentMethod() {
@@ -399,7 +397,7 @@ export default function SubscriptionBillingPage() {
                 <StatCard
                     title="Current Plan"
                     value={payload.currentPlanLabel}
-                    subline={`$${payload.currentPlanPriceYear}/year`}
+                    subline="Enterprise subscription"
                     tone="slate"
                 />
                 <StatCard
@@ -420,7 +418,7 @@ export default function SubscriptionBillingPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <div className="text-sm font-semibold text-slate-900">Billing Cycle</div>
-                        <div className="mt-1 text-sm text-slate-600">Save $998 per year with annual billing</div>
+                        <div className="mt-1 text-sm text-slate-600">Save with annual billing — contact us for details</div>
                     </div>
 
                     <div className="flex items-center rounded-2xl border border-slate-200 bg-slate-50 p-1">
@@ -452,7 +450,7 @@ export default function SubscriptionBillingPage() {
                 <div className="text-sm font-semibold text-slate-900">Available Plans</div>
                 <div className="mt-4 grid gap-4 lg:grid-cols-3">
                     {payload.plans.map((p) => (
-                        <PlanCard key={p.id} plan={p} onUpgrade={onUpgrade} />
+                        <PlanCard key={p.id} plan={p} onContactPricing={onContactPricing} />
                     ))}
                 </div>
             </div>
