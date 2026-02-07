@@ -120,8 +120,12 @@ async function loadCompliance(): Promise<{ payload: CompliancePayload; source: "
     if (!baseUrl) return { payload: mockCompliance(), source: "mock" };
 
     if (mode === "live") {
-        const payload = await fetchComplianceLive(baseUrl);
-        return { payload, source: "live" };
+        try {
+            const payload = await fetchComplianceLive(baseUrl);
+            return { payload, source: "live" };
+        } catch {
+            return { payload: mockCompliance(), source: "mock" };
+        }
     }
 
     try {
