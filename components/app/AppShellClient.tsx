@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import AppSidebarNav from "@/components/app/AppSidebarNav";
 import AIMechanicFAB from "@/components/ai/AIMechanicFAB";
 import AIMechanicPanel from "@/components/ai/AIMechanicPanel";
@@ -97,7 +98,7 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                         <div className="border-b border-[#e5e7eb]">
                             <div className="px-6 pt-6 pb-[0.8px]">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
+                                    <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                                         <div className="size-9 rounded-[10px] shadow-lg" style={{ background: "linear-gradient(135deg, #155dfc 0%, #1447e6 100%)" }}>
                                             <div className="flex h-full w-full items-center justify-center">
                                                 <img src={iconLogoVector} alt="" className="h-5 w-5" />
@@ -107,7 +108,7 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                                             <div className="text-[18px] leading-7 text-[#0a0a0a]">SkyMaintain</div>
                                             <div className="text-[12px] leading-4 text-[#6a7282]">v1.0</div>
                                         </div>
-                                    </div>
+                                    </Link>
                                     <button
                                         type="button"
                                         onClick={() => setSidebarVisible(false)}
