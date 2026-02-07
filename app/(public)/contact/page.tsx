@@ -111,26 +111,30 @@ async function apiGetContact(signal?: AbortSignal): Promise<ContactDoc> {
         return structuredClone(mockStore);
     }
 
-    const res = await fetch(`${base}/v1/public/contact`, {
-        method: "GET",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-        signal,
-    });
+    try {
+        const res = await fetch(`${base}/v1/public/contact`, {
+            method: "GET",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+            signal,
+        });
 
-    if (!res.ok) {
-        if (mode === "hybrid") return structuredClone(mockStore);
-        throw new Error(`GET /v1/public/contact failed (${res.status})`);
+        if (!res.ok) {
+            if (mode === "hybrid") return structuredClone(mockStore);
+            return structuredClone(mockStore);
+        }
+
+        const json = (await res.json()) as ApiEnvelope<ContactDoc>;
+        if (!json?.ok || !json?.data) {
+            if (mode === "hybrid") return structuredClone(mockStore);
+            return structuredClone(mockStore);
+        }
+
+        if (mode === "hybrid") mockStore = structuredClone(json.data);
+        return json.data;
+    } catch {
+        return structuredClone(mockStore);
     }
-
-    const json = (await res.json()) as ApiEnvelope<ContactDoc>;
-    if (!json?.ok || !json?.data) {
-        if (mode === "hybrid") return structuredClone(mockStore);
-        throw new Error("Unexpected response shape from GET /v1/public/contact");
-    }
-
-    if (mode === "hybrid") mockStore = structuredClone(json.data);
-    return json.data;
 }
 
 async function apiSubmitContact(payload: ContactFormPayload): Promise<void> {
