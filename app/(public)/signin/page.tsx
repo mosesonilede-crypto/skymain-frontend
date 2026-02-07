@@ -22,14 +22,17 @@ function getApiBaseUrl(): string {
 
 async function loginRequest(payload: { email: string; password: string; orgName: string; licenseCode: string }) {
     const mode = getDataMode();
+    const allowMockFallback = mode !== "live";
 
     if (mode === "mock") {
-        return { ok: true as const };
+        return { ok: true as const, used: "mock" as const };
     }
 
     const base = getApiBaseUrl();
     if (!base) {
-        return { ok: false as const, error: "NEXT_PUBLIC_API_BASE_URL is not set." };
+        return allowMockFallback
+            ? { ok: true as const, used: "mock" as const }
+            : { ok: false as const, error: "NEXT_PUBLIC_API_BASE_URL is not set." };
     }
 
     try {
@@ -47,12 +50,16 @@ async function loginRequest(payload: { email: string; password: string; orgName:
 
         if (!res.ok) {
             const text = await res.text().catch(() => "");
-            return { ok: false as const, error: text || `Login failed (${res.status})` };
+            return allowMockFallback
+                ? { ok: true as const, used: "mock" as const }
+                : { ok: false as const, error: text || `Login failed (${res.status})` };
         }
 
-        return { ok: true as const };
+        return { ok: true as const, used: "live" as const };
     } catch (e) {
-        return { ok: false as const, error: e instanceof Error ? e.message : "Network error" };
+        return allowMockFallback
+            ? { ok: true as const, used: "mock" as const }
+            : { ok: false as const, error: e instanceof Error ? e.message : "Network error" };
     }
 }
 

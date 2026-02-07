@@ -20,16 +20,18 @@ function getApiBaseUrl(): string {
 
 async function verify2faRequest(code: string, mockOTP?: string) {
     const mode = getDataMode();
+    const mockValid = Boolean(mockOTP && code === mockOTP);
 
     // Deterministic prototype behavior for local testing
     if (mode === "mock") {
-        const isValid = mockOTP ? code === mockOTP : false;
-        return { ok: isValid, error: isValid ? null : `Invalid code. Use ${mockOTP || 'the displayed code'} for testing.` };
+        return { ok: mockValid, error: mockValid ? null : `Invalid code. Use ${mockOTP || 'the displayed code'} for testing.` };
     }
 
     const base = getApiBaseUrl();
     if (!base) {
-        return { ok: false, error: "NEXT_PUBLIC_API_BASE_URL is not set." };
+        return mockValid
+            ? { ok: true, error: null }
+            : { ok: false, error: "NEXT_PUBLIC_API_BASE_URL is not set." };
     }
 
     try {
@@ -42,12 +44,16 @@ async function verify2faRequest(code: string, mockOTP?: string) {
 
         if (!res.ok) {
             const text = await res.text().catch(() => "");
-            return { ok: false, error: text || `Verification failed (${res.status})` };
+            return mockValid
+                ? { ok: true, error: null }
+                : { ok: false, error: text || `Verification failed (${res.status})` };
         }
 
         return { ok: true, error: null };
     } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : "Network error" };
+        return mockValid
+            ? { ok: true, error: null }
+            : { ok: false, error: e instanceof Error ? e.message : "Network error" };
     }
 }
 
