@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useAircraft } from "@/lib/AircraftContext";
 import BackToHub from "@/components/app/BackToHub";
 
@@ -400,28 +401,31 @@ export default function DashboardPage() {
                                         <div className="text-[14px] text-[#4a5565]">Current Selection Overview</div>
                                     </div>
                                 </div>
-                                <button className="relative h-8 w-[115px] rounded-[8px] border border-black/10 bg-white text-[14px] text-[#0a0a0a]">
+                                <Link
+                                    href={`/app/logs?aircraft=${encodeURIComponent(selectedAircraft?.registration || "")}`}
+                                    className="relative h-8 w-[115px] rounded-[8px] border border-black/10 bg-white text-[14px] text-[#0a0a0a] flex items-center justify-center hover:bg-gray-50"
+                                >
                                     <img alt="" className="absolute left-2 top-[7px] h-4 w-4" src={aircraftDetailsIcon} />
                                     <span className="ml-4">Full Details</span>
-                                </button>
+                                </Link>
                             </div>
 
                             <div className="mt-6 rounded-[10px] border border-[#bedbff] bg-gradient-to-r from-[#eff6ff] to-[#dbeafe] p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <div className="text-[14px] text-[#4a5565]">Registration Number</div>
-                                        <div className="text-[24px] text-[#0a0a0a]">N123AB</div>
+                                        <div className="text-[24px] text-[#0a0a0a]">{selectedAircraft?.registration || "--"}</div>
                                     </div>
                                     <span className="rounded-[8px] border border-[#b9f8cf] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#008236]">Active</span>
                                 </div>
                                 <div className="mt-3 grid grid-cols-2 gap-4 text-[14px]">
                                     <div>
                                         <div className="text-[#4a5565]">Model:</div>
-                                        <div className="text-[#0a0a0a]">Boeing 737-800</div>
+                                        <div className="text-[#0a0a0a]">{selectedAircraft?.model || "--"}</div>
                                     </div>
                                     <div>
                                         <div className="text-[#4a5565]">Serial Number:</div>
-                                        <div className="text-[#0a0a0a]">B737-30234</div>
+                                        <div className="text-[#0a0a0a]">{dashboardData?.aircraft?.serialNumber || "--"}</div>
                                     </div>
                                 </div>
                             </div>
