@@ -7,8 +7,10 @@ import * as React from "react";
 type DataMode = "mock" | "live" | "hybrid";
 
 function getDataMode(): DataMode {
-    const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "mock").toLowerCase();
+    const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "").toLowerCase();
     if (raw === "live" || raw === "hybrid" || raw === "mock") return raw;
+    const base = (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
+    if (process.env.NODE_ENV === "production" && base) return "live";
     return "mock";
 }
 
@@ -290,9 +292,11 @@ export default function TwoFactorPage() {
                                 {mockOTP}
                             </div>
 
-                            <div className="mt-3 text-xs text-slate-500">
-                                Data mode: <span className="font-semibold text-slate-700">{mode}</span>
-                            </div>
+                            {mode !== "mock" ? (
+                                <div className="mt-6 text-xs text-slate-500">
+                                    Data mode: <span className="font-semibold text-slate-700">{mode}</span>
+                                </div>
+                            ) : null}
                         </div>
 
                         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

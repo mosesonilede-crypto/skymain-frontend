@@ -37,8 +37,10 @@ function cx(...classes: Array<string | false | null | undefined>): string {
 }
 
 function getDataMode(): DataMode {
-    const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "mock").toLowerCase();
+    const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "").toLowerCase();
     if (raw === "mock" || raw === "live" || raw === "hybrid") return raw;
+    const base = (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
+    if (process.env.NODE_ENV === "production" && base) return "live";
     return "mock";
 }
 
@@ -241,21 +243,21 @@ export default function PricingPage(): React.ReactElement {
                     {content.note}
                 </p>
 
-                <div className="mt-4">
-                    <span
-                        className={cx(
-                            "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
-                            mode === "live"
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : mode === "hybrid"
-                                    ? "border-amber-200 bg-amber-50 text-amber-800"
-                                    : "border-slate-200 bg-slate-50 text-slate-700"
-                        )}
-                        title="Data mode is controlled by NEXT_PUBLIC_DATA_MODE"
-                    >
-                        Data: {mode.toUpperCase()}
-                    </span>
-                </div>
+                {mode !== "mock" ? (
+                    <div className="mt-4">
+                        <span
+                            className={cx(
+                                "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
+                                mode === "live"
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                    : "border-amber-200 bg-amber-50 text-amber-800"
+                            )}
+                            title="Data mode is controlled by NEXT_PUBLIC_DATA_MODE"
+                        >
+                            Data: {mode.toUpperCase()}
+                        </span>
+                    </div>
+                ) : null}
 
                 {error && (
                     <div className="mx-auto mt-6 max-w-2xl rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">

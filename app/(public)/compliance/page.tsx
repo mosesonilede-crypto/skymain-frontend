@@ -110,8 +110,11 @@ async function fetchComplianceLive(baseUrl: string): Promise<CompliancePayload> 
 }
 
 async function loadCompliance(): Promise<{ payload: CompliancePayload; source: "mock" | "live" }> {
-    const mode = getEnv("NEXT_PUBLIC_DATA_MODE", "mock");
     const baseUrl = getEnv("NEXT_PUBLIC_API_BASE_URL", "");
+    const rawMode = getEnv("NEXT_PUBLIC_DATA_MODE", "").toLowerCase();
+    const mode = (rawMode === "mock" || rawMode === "live" || rawMode === "hybrid")
+        ? rawMode
+        : (process.env.NODE_ENV === "production" && baseUrl ? "live" : "mock");
 
     if (mode === "mock") return { payload: mockCompliance(), source: "mock" };
     if (!baseUrl) return { payload: mockCompliance(), source: "mock" };
@@ -272,10 +275,10 @@ export default async function CompliancePage() {
                     </div>
 
                     {/* Data source badge (for development) */}
-                    {source === "mock" && (
+                    {source === "live" && (
                         <div className="flex justify-center w-full mt-4">
-                            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
-                                Data: MOCK
+                            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                                Data: LIVE
                             </span>
                         </div>
                     )}
