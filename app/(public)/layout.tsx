@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import PublicHeader from "@/components/public/PublicHeader";
 
-const headerIcon = "https://www.figma.com/api/mcp/asset/0baf688f-9084-42e7-a43e-a6bdbc9b944f";
 const footerIcon = "https://www.figma.com/api/mcp/asset/031aef08-7a5b-463c-adda-e9b5a01e356d";
 
 export const metadata: Metadata = {
@@ -12,41 +12,7 @@ export const metadata: Metadata = {
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="min-h-dvh bg-white text-slate-900">
-            <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-                <div className="mx-auto flex max-w-[1148px] items-center justify-between px-8 py-4">
-                    <Link href="/" className="flex items-center gap-2">
-                        <img src={headerIcon} alt="" className="h-8 w-8" />
-                        <span className="text-xl font-bold text-slate-900">SkyMaintain</span>
-                    </Link>
-
-                    <nav className="hidden items-center gap-6 md:flex">
-                        <Link href="/platform" className="text-base text-slate-600 hover:text-slate-900">
-                            Platform
-                        </Link>
-                        <Link href="/enterprise" className="text-base text-slate-600 hover:text-slate-900">
-                            Enterprise
-                        </Link>
-                        <Link href="/compliance" className="text-base text-slate-600 hover:text-slate-900">
-                            Compliance
-                        </Link>
-                        <Link href="/security" className="text-base text-slate-600 hover:text-slate-900">
-                            Security
-                        </Link>
-                        <Link href="/contact" className="text-base text-slate-600 hover:text-slate-900">
-                            Contact
-                        </Link>
-                        <Link href="/signin" className="text-sm text-slate-600 hover:text-slate-900">
-                            Sign In
-                        </Link>
-                        <Link
-                            href="/get-started"
-                            className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
-                        >
-                            Get Started
-                        </Link>
-                    </nav>
-                </div>
-            </header>
+            <PublicHeader />
 
             <main>{children}</main>
 
