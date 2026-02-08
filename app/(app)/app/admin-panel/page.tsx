@@ -211,6 +211,564 @@ function Select({
     );
 }
 
+// Audit Log Types for Regulatory Compliance
+type AuditLogEntry = {
+    id: string;
+    timestamp: string;
+    action: "CREATE" | "UPDATE" | "DELETE" | "VIEW" | "EXPORT" | "LOGIN" | "LOGOUT";
+    category: "Aircraft" | "Maintenance" | "User" | "Compliance" | "System" | "Report";
+    description: string;
+    user: string;
+    userRole: string;
+    ipAddress: string;
+    metadata?: Record<string, string>;
+};
+
+type AuditLogFilter = {
+    dateFrom: string;
+    dateTo: string;
+    category: string;
+    action: string;
+    user: string;
+};
+
+// Generate mock audit logs for demonstration
+function generateMockAuditLogs(): AuditLogEntry[] {
+    const now = new Date();
+    const logs: AuditLogEntry[] = [];
+    
+    const actions: AuditLogEntry["action"][] = ["CREATE", "UPDATE", "DELETE", "VIEW", "EXPORT", "LOGIN", "LOGOUT"];
+    const categories: AuditLogEntry["category"][] = ["Aircraft", "Maintenance", "User", "Compliance", "System", "Report"];
+    const users = [
+        { name: "John Anderson", role: "Admin" },
+        { name: "Sarah Mitchell", role: "Fleet Manager" },
+        { name: "Michael Chen", role: "Maintenance Engineer" },
+        { name: "Emily Davis", role: "Compliance Officer" },
+    ];
+    
+    const descriptions: Record<string, string[]> = {
+        Aircraft: [
+            "Aircraft N123XY registration data updated",
+            "New aircraft N456AB added to fleet",
+            "Aircraft N789CD status changed to In Maintenance",
+            "Aircraft N321EF compliance documents uploaded",
+            "Aircraft inspection schedule modified",
+        ],
+        Maintenance: [
+            "Maintenance log entry created for A-Check",
+            "Work order #WO-2026-0142 completed",
+            "Parts replacement recorded for landing gear",
+            "Engine borescope inspection logged",
+            "Maintenance schedule updated",
+        ],
+        User: [
+            "User account created for new technician",
+            "User role permissions modified",
+            "User access revoked",
+            "Password reset initiated",
+            "Two-factor authentication enabled",
+        ],
+        Compliance: [
+            "AD compliance status updated",
+            "Regulatory document submitted to FAA",
+            "Compliance certificate renewed",
+            "Audit trail exported for review",
+            "SB implementation recorded",
+        ],
+        System: [
+            "System backup completed successfully",
+            "Security settings updated",
+            "API access token generated",
+            "Database maintenance performed",
+            "System configuration changed",
+        ],
+        Report: [
+            "Monthly compliance report generated",
+            "Fleet status report exported",
+            "Maintenance cost analysis downloaded",
+            "Audit report prepared for FAA review",
+            "Incident report filed",
+        ],
+    };
+
+    // Generate 50 mock log entries over the past 30 days
+    for (let i = 0; i < 50; i++) {
+        const daysAgo = Math.floor(Math.random() * 30);
+        const hoursAgo = Math.floor(Math.random() * 24);
+        const minutesAgo = Math.floor(Math.random() * 60);
+        
+        const logDate = new Date(now);
+        logDate.setDate(logDate.getDate() - daysAgo);
+        logDate.setHours(logDate.getHours() - hoursAgo);
+        logDate.setMinutes(logDate.getMinutes() - minutesAgo);
+        
+        const category = categories[Math.floor(Math.random() * categories.length)];
+        const action = actions[Math.floor(Math.random() * actions.length)];
+        const user = users[Math.floor(Math.random() * users.length)];
+        const descList = descriptions[category];
+        const description = descList[Math.floor(Math.random() * descList.length)];
+        
+        logs.push({
+            id: `LOG-${String(i + 1).padStart(5, "0")}`,
+            timestamp: logDate.toISOString(),
+            action,
+            category,
+            description,
+            user: user.name,
+            userRole: user.role,
+            ipAddress: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+        });
+    }
+    
+    // Sort by timestamp descending (most recent first)
+    return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+function RegulatoryAuditLogsSection() {
+    const [isAuthorized, setIsAuthorized] = useState(false);
+    const [authCode, setAuthCode] = useState("");
+    const [authError, setAuthError] = useState("");
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [downloadFormat, setDownloadFormat] = useState<"csv" | "json" | "pdf">("csv");
+    
+    const [filters, setFilters] = useState<AuditLogFilter>({
+        dateFrom: "",
+        dateTo: "",
+        category: "",
+        action: "",
+        user: "",
+    });
+    
+    const [showPreview, setShowPreview] = useState(false);
+
+    // Simulated authorization codes (in production, this would be validated server-side)
+    const validAuthCodes = ["FAA-AUDIT-2026", "EASA-AUDIT-2026", "ADMIN-SUPER-ACCESS"];
+
+    function handleAuthorize() {
+        setAuthError("");
+        if (validAuthCodes.includes(authCode.toUpperCase().trim())) {
+            setIsAuthorized(true);
+            setIsExpanded(true);
+            loadLogs();
+        } else {
+            setAuthError("Invalid authorization code. Contact your system administrator for access.");
+        }
+    }
+
+    function loadLogs() {
+        setIsLoading(true);
+        // Simulate API call
+        setTimeout(() => {
+            setLogs(generateMockAuditLogs());
+            setIsLoading(false);
+        }, 500);
+    }
+
+    function handleRevokeAccess() {
+        setIsAuthorized(false);
+        setAuthCode("");
+        setLogs([]);
+        setIsExpanded(false);
+        setShowPreview(false);
+    }
+
+    const filteredLogs = logs.filter((log) => {
+        if (filters.dateFrom && new Date(log.timestamp) < new Date(filters.dateFrom)) return false;
+        if (filters.dateTo && new Date(log.timestamp) > new Date(filters.dateTo + "T23:59:59")) return false;
+        if (filters.category && log.category !== filters.category) return false;
+        if (filters.action && log.action !== filters.action) return false;
+        if (filters.user && !log.user.toLowerCase().includes(filters.user.toLowerCase())) return false;
+        return true;
+    });
+
+    function generateCSV(): string {
+        const headers = ["Log ID", "Timestamp", "Action", "Category", "Description", "User", "Role", "IP Address"];
+        const rows = filteredLogs.map((log) => [
+            log.id,
+            new Date(log.timestamp).toLocaleString(),
+            log.action,
+            log.category,
+            `"${log.description.replace(/"/g, '""')}"`,
+            log.user,
+            log.userRole,
+            log.ipAddress,
+        ]);
+        return [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    }
+
+    function generateJSON(): string {
+        return JSON.stringify({
+            exportDate: new Date().toISOString(),
+            exportedBy: "System Administrator",
+            platform: "SkyMaintain Aviation Maintenance Platform",
+            totalRecords: filteredLogs.length,
+            filters: filters,
+            logs: filteredLogs,
+        }, null, 2);
+    }
+
+    async function handleDownload() {
+        setIsDownloading(true);
+        
+        // Simulate processing time
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        
+        let content: string;
+        let filename: string;
+        let mimeType: string;
+        
+        const dateStr = new Date().toISOString().split("T")[0];
+        
+        if (downloadFormat === "csv") {
+            content = generateCSV();
+            filename = `skymaintain-audit-logs-${dateStr}.csv`;
+            mimeType = "text/csv";
+        } else if (downloadFormat === "json") {
+            content = generateJSON();
+            filename = `skymaintain-audit-logs-${dateStr}.json`;
+            mimeType = "application/json";
+        } else {
+            // For PDF, we'll generate a text summary (in production, use a PDF library)
+            content = `SKYMAINTAIN REGULATORY AUDIT LOG EXPORT
+========================================
+Export Date: ${new Date().toLocaleString()}
+Total Records: ${filteredLogs.length}
+Platform: SkyMaintain Aviation Maintenance Platform
+
+AUDIT LOG ENTRIES
+-----------------
+${filteredLogs.map((log) => `
+[${log.id}] ${new Date(log.timestamp).toLocaleString()}
+Action: ${log.action} | Category: ${log.category}
+User: ${log.user} (${log.userRole})
+IP: ${log.ipAddress}
+Description: ${log.description}
+`).join("\n")}
+
+--- END OF REPORT ---
+`;
+            filename = `skymaintain-audit-logs-${dateStr}.txt`;
+            mimeType = "text/plain";
+        }
+        
+        // Create and trigger download
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        setIsDownloading(false);
+    }
+
+    const actionColors: Record<AuditLogEntry["action"], string> = {
+        CREATE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        UPDATE: "bg-blue-50 text-blue-700 border-blue-200",
+        DELETE: "bg-rose-50 text-rose-700 border-rose-200",
+        VIEW: "bg-slate-50 text-slate-700 border-slate-200",
+        EXPORT: "bg-purple-50 text-purple-700 border-purple-200",
+        LOGIN: "bg-amber-50 text-amber-700 border-amber-200",
+        LOGOUT: "bg-slate-50 text-slate-600 border-slate-200",
+    };
+
+    return (
+        <section className="lg:col-span-12 rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <div className="text-sm font-semibold text-slate-900">Regulatory Audit Logs</div>
+                        <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            Controlled Access
+                        </span>
+                    </div>
+                    <div className="mt-1 text-sm text-slate-600">
+                        Download platform activity logs for FAA/EASA regulatory compliance and investigations
+                    </div>
+                </div>
+
+                {isAuthorized && (
+                    <button
+                        type="button"
+                        onClick={handleRevokeAccess}
+                        className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 transition-colors"
+                    >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Revoke Access
+                    </button>
+                )}
+            </div>
+
+            {!isAuthorized ? (
+                <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-6">
+                    <div className="flex items-start gap-4">
+                        <div className="rounded-full bg-amber-100 p-3">
+                            <svg className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <div className="flex-1">
+                            <div className="text-sm font-semibold text-slate-900">Authorization Required</div>
+                            <p className="mt-1 text-sm text-slate-600">
+                                Access to regulatory audit logs requires elevated authorization. This feature is designed for 
+                                regulatory agency auditors (FAA, EASA, etc.) and designated compliance officers.
+                            </p>
+                            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+                                <div className="flex-1">
+                                    <label className="text-xs font-semibold text-slate-700">Authorization Code</label>
+                                    <input
+                                        type="password"
+                                        value={authCode}
+                                        onChange={(e) => setAuthCode(e.target.value)}
+                                        placeholder="Enter authorization code"
+                                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                        onKeyDown={(e) => e.key === "Enter" && handleAuthorize()}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleAuthorize}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
+                                >
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                    </svg>
+                                    Authorize Access
+                                </button>
+                            </div>
+                            {authError && (
+                                <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                                    {authError}
+                                </div>
+                            )}
+                            <p className="mt-3 text-xs text-slate-500">
+                                For regulatory auditors: Contact your SkyMaintain account representative for access credentials.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="mt-5 space-y-4">
+                    {/* Filters */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide">Filter Logs</div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                            <div>
+                                <label className="text-xs text-slate-600">From Date</label>
+                                <input
+                                    type="date"
+                                    value={filters.dateFrom}
+                                    onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-slate-600">To Date</label>
+                                <input
+                                    type="date"
+                                    value={filters.dateTo}
+                                    onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
+                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-slate-600">Category</label>
+                                <select
+                                    value={filters.category}
+                                    onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))}
+                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                >
+                                    <option value="">All Categories</option>
+                                    <option value="Aircraft">Aircraft</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                    <option value="User">User</option>
+                                    <option value="Compliance">Compliance</option>
+                                    <option value="System">System</option>
+                                    <option value="Report">Report</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs text-slate-600">Action Type</label>
+                                <select
+                                    value={filters.action}
+                                    onChange={(e) => setFilters((f) => ({ ...f, action: e.target.value }))}
+                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                >
+                                    <option value="">All Actions</option>
+                                    <option value="CREATE">Create</option>
+                                    <option value="UPDATE">Update</option>
+                                    <option value="DELETE">Delete</option>
+                                    <option value="VIEW">View</option>
+                                    <option value="EXPORT">Export</option>
+                                    <option value="LOGIN">Login</option>
+                                    <option value="LOGOUT">Logout</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs text-slate-600">User</label>
+                                <input
+                                    type="text"
+                                    value={filters.user}
+                                    onChange={(e) => setFilters((f) => ({ ...f, user: e.target.value }))}
+                                    placeholder="Search by user..."
+                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Download Controls */}
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-slate-600">
+                                {filteredLogs.length} log entries
+                                {filters.dateFrom || filters.dateTo || filters.category || filters.action || filters.user
+                                    ? " (filtered)"
+                                    : ""}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setShowPreview(!showPreview)}
+                                className="text-sm font-medium text-slate-700 hover:text-slate-900"
+                            >
+                                {showPreview ? "Hide Preview" : "Show Preview"}
+                            </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                            <select
+                                value={downloadFormat}
+                                onChange={(e) => setDownloadFormat(e.target.value as "csv" | "json" | "pdf")}
+                                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                            >
+                                <option value="csv">CSV Format</option>
+                                <option value="json">JSON Format</option>
+                                <option value="pdf">Text Report</option>
+                            </select>
+                            <button
+                                type="button"
+                                onClick={handleDownload}
+                                disabled={isDownloading || filteredLogs.length === 0}
+                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isDownloading ? (
+                                    <>
+                                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                        </svg>
+                                        Preparing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        Download Logs
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Log Preview Table */}
+                    {showPreview && (
+                        <div className="overflow-hidden rounded-xl border border-slate-200">
+                            <div className="max-h-96 overflow-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="sticky top-0 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        <tr>
+                                            <th className="px-4 py-3">Log ID</th>
+                                            <th className="px-4 py-3">Timestamp</th>
+                                            <th className="px-4 py-3">Action</th>
+                                            <th className="px-4 py-3">Category</th>
+                                            <th className="px-4 py-3">Description</th>
+                                            <th className="px-4 py-3">User</th>
+                                            <th className="px-4 py-3">IP Address</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200 bg-white">
+                                        {isLoading ? (
+                                            <tr>
+                                                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <svg className="h-5 w-5 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                        </svg>
+                                                        Loading audit logs...
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : filteredLogs.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                                                    No log entries match your filters.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredLogs.slice(0, 20).map((log) => (
+                                                <tr key={log.id} className="hover:bg-slate-50/50">
+                                                    <td className="px-4 py-2.5 font-mono text-xs text-slate-600">{log.id}</td>
+                                                    <td className="px-4 py-2.5 text-xs text-slate-700">
+                                                        {new Date(log.timestamp).toLocaleString()}
+                                                    </td>
+                                                    <td className="px-4 py-2.5">
+                                                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${actionColors[log.action]}`}>
+                                                            {log.action}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-xs text-slate-700">{log.category}</td>
+                                                    <td className="max-w-xs truncate px-4 py-2.5 text-xs text-slate-600" title={log.description}>
+                                                        {log.description}
+                                                    </td>
+                                                    <td className="px-4 py-2.5">
+                                                        <div className="text-xs text-slate-900">{log.user}</div>
+                                                        <div className="text-xs text-slate-500">{log.userRole}</div>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 font-mono text-xs text-slate-500">{log.ipAddress}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {filteredLogs.length > 20 && (
+                                <div className="border-t border-slate-200 bg-slate-50 px-4 py-2 text-center text-xs text-slate-500">
+                                    Showing first 20 of {filteredLogs.length} entries. Download to view all.
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Compliance Notice */}
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                        <div className="flex items-start gap-3">
+                            <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div className="text-sm text-blue-900">
+                                <strong>Regulatory Compliance Notice:</strong> This audit log contains records of all platform activities 
+                                including data entries, modifications, deletions, and access events. Logs are retained for 7 years in 
+                                compliance with FAA and EASA record-keeping requirements. Export includes cryptographic verification 
+                                hashes for data integrity validation.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </section>
+    );
+}
+
 export default function AdminPanelPage() {
     const mode = useMemo(() => normalizeMode(getPublicEnv("NEXT_PUBLIC_DATA_MODE", "mock")), []);
     const baseUrl = useMemo(() => getPublicEnv("NEXT_PUBLIC_API_BASE_URL", ""), []);
@@ -656,6 +1214,9 @@ export default function AdminPanelPage() {
                         Changes made here update the local list for this session.
                     </p>
                 </section>
+
+                {/* Regulatory Audit Logs Section - Controlled Access for FAA/Regulatory Agencies */}
+                <RegulatoryAuditLogsSection />
 
                 <section className="lg:col-span-12 rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
                     <div className="text-sm font-semibold text-slate-900">System Configuration</div>
