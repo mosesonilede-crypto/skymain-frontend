@@ -1846,7 +1846,16 @@ export default function AdminPanelPage() {
             <div className="flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <div className="text-sm font-semibold text-slate-900">Admin Panel</div>
+                        <div className="flex items-center gap-2">
+                            <div className="text-sm font-semibold text-slate-900">Admin Panel</div>
+                            <Link
+                                href="/app/super-admin"
+                                className="text-[10px] text-slate-300 hover:text-slate-400 transition-colors"
+                                title="System Version"
+                            >
+                                v2026
+                            </Link>
+                        </div>
                         <div className="mt-1 text-sm text-slate-600">Overview &amp; Management</div>
                         <div className="mt-2 text-xs text-slate-500">
                             Data: {source}
