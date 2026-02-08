@@ -956,7 +956,7 @@ function AccessCodeManagementSection() {
     const [selectedCode, setSelectedCode] = useState<AccessCode | null>(null);
     const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
     const [filterStatus, setFilterStatus] = useState<string>("all");
-    
+
     // Form state for creating new code
     const [newCodeForm, setNewCodeForm] = useState({
         agency: "" as RegulatoryAgency | "",
@@ -1000,7 +1000,7 @@ function AccessCodeManagementSection() {
 
         const code = generateAccessCode(newCodeForm.agency);
         const now = new Date().toISOString();
-        
+
         const newCode: AccessCode = {
             id: `AC-${String(accessCodes.length + 1).padStart(3, "0")}`,
             code,
@@ -1037,7 +1037,7 @@ function AccessCodeManagementSection() {
     }
 
     function handleRevokeCode(codeId: string) {
-        setAccessCodes(prev => prev.map(c => 
+        setAccessCodes(prev => prev.map(c =>
             c.id === codeId ? { ...c, status: "revoked" as const } : c
         ));
         showNotification("success", "Access code has been revoked.");
@@ -1104,11 +1104,10 @@ function AccessCodeManagementSection() {
 
             {/* Notification */}
             {notification && (
-                <div className={`mt-4 rounded-lg border px-4 py-3 text-sm ${
-                    notification.type === "success" 
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700" 
+                <div className={`mt-4 rounded-lg border px-4 py-3 text-sm ${notification.type === "success"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                         : "border-rose-200 bg-rose-50 text-rose-700"
-                }`}>
+                    }`}>
                     {notification.message}
                 </div>
             )}
@@ -1121,11 +1120,10 @@ function AccessCodeManagementSection() {
                         key={status}
                         type="button"
                         onClick={() => setFilterStatus(status)}
-                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                            filterStatus === status
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${filterStatus === status
                                 ? "bg-slate-900 text-white"
                                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        }`}
+                            }`}
                     >
                         {status.charAt(0).toUpperCase() + status.slice(1)}
                     </button>
@@ -1186,14 +1184,14 @@ function AccessCodeManagementSection() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="text-sm text-slate-700">
-                                                {code.usageLimit === "unlimited" 
+                                                {code.usageLimit === "unlimited"
                                                     ? `${code.usageCount} uses`
                                                     : `${code.usageCount} / ${code.maxUsageCount}`
                                                 }
                                             </div>
                                             <div className="text-xs text-slate-500">
-                                                {code.usageLimit === "single" ? "Single use" : 
-                                                 code.usageLimit === "multi" ? "Multi-use" : "Unlimited"}
+                                                {code.usageLimit === "single" ? "Single use" :
+                                                    code.usageLimit === "multi" ? "Multi-use" : "Unlimited"}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-sm text-slate-700">
@@ -1457,14 +1455,14 @@ function AccessCodeManagementSection() {
                                 <div>
                                     <div className="text-xs font-semibold text-slate-500 uppercase">Usage</div>
                                     <div className="mt-1 text-sm text-slate-900">
-                                        {selectedCode.usageLimit === "unlimited" 
+                                        {selectedCode.usageLimit === "unlimited"
                                             ? `${selectedCode.usageCount} uses`
                                             : `${selectedCode.usageCount} / ${selectedCode.maxUsageCount}`
                                         }
                                     </div>
                                     <div className="text-xs text-slate-500">
-                                        {selectedCode.usageLimit === "single" ? "Single use" : 
-                                         selectedCode.usageLimit === "multi" ? "Multi-use" : "Unlimited"}
+                                        {selectedCode.usageLimit === "single" ? "Single use" :
+                                            selectedCode.usageLimit === "multi" ? "Multi-use" : "Unlimited"}
                                     </div>
                                 </div>
                             </div>
