@@ -1,6 +1,7 @@
 /**
  * @skymain.design
  * Predictive Alerts - Fully Interactive & Data-Driven
+ * Enhanced with Fleet Health Summary Spreadsheet
  */
 
 /* eslint-disable @next/next/no-img-element */
@@ -8,7 +9,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import BackToHub from "@/components/app/BackToHub";
-import { useAircraft } from "@/lib/AircraftContext";
+import { useAircraft, Aircraft } from "@/lib/AircraftContext";
 
 // Figma asset icons
 const imgIconInfo = "https://www.figma.com/api/mcp/asset/7b77c949-1221-4774-834e-afe6a67ee8ee";
@@ -98,6 +99,333 @@ const MOCK_ALERTS: PredictedAlert[] = [
         recommendedAction: "Book maintenance facility slot 45 days in advance"
     },
 ];
+
+// Fleet Health Summary Data Type
+interface FleetHealthSummary {
+    registration: string;
+    model: string;
+    overallHealth: "excellent" | "good" | "fair" | "poor" | "critical";
+    healthScore: number; // 0-100
+    criticalAlerts: number;
+    warningAlerts: number;
+    infoAlerts: number;
+    lastInspection: string;
+    nextScheduledMaintenance: string;
+    flightHoursRemaining: number;
+    engineHealth: "normal" | "attention" | "critical";
+    hydraulicsHealth: "normal" | "attention" | "critical";
+    avionicsHealth: "normal" | "attention" | "critical";
+    structuralHealth: "normal" | "attention" | "critical";
+}
+
+// Generate mock fleet health data for all aircraft
+function generateFleetHealthData(allAircraft: Aircraft[], selectedReg: string): FleetHealthSummary[] {
+    const healthProfiles: Record<string, Partial<FleetHealthSummary>> = {
+        "N872LM": {
+            overallHealth: "good",
+            healthScore: 87,
+            criticalAlerts: 1,
+            warningAlerts: 2,
+            infoAlerts: 2,
+            lastInspection: "2026-01-15",
+            nextScheduledMaintenance: "2026-03-15",
+            flightHoursRemaining: 450,
+            engineHealth: "normal",
+            hydraulicsHealth: "attention",
+            avionicsHealth: "normal",
+            structuralHealth: "normal",
+        },
+        "N451KJ": {
+            overallHealth: "excellent",
+            healthScore: 95,
+            criticalAlerts: 0,
+            warningAlerts: 1,
+            infoAlerts: 1,
+            lastInspection: "2026-01-20",
+            nextScheduledMaintenance: "2026-04-20",
+            flightHoursRemaining: 680,
+            engineHealth: "normal",
+            hydraulicsHealth: "normal",
+            avionicsHealth: "normal",
+            structuralHealth: "normal",
+        },
+        "N789QW": {
+            overallHealth: "fair",
+            healthScore: 72,
+            criticalAlerts: 0,
+            warningAlerts: 3,
+            infoAlerts: 2,
+            lastInspection: "2026-01-10",
+            nextScheduledMaintenance: "2026-02-28",
+            flightHoursRemaining: 180,
+            engineHealth: "attention",
+            hydraulicsHealth: "normal",
+            avionicsHealth: "attention",
+            structuralHealth: "normal",
+        },
+        "N123XY": {
+            overallHealth: "poor",
+            healthScore: 58,
+            criticalAlerts: 2,
+            warningAlerts: 2,
+            infoAlerts: 1,
+            lastInspection: "2026-01-22",
+            nextScheduledMaintenance: "2026-02-15",
+            flightHoursRemaining: 85,
+            engineHealth: "critical",
+            hydraulicsHealth: "attention",
+            avionicsHealth: "normal",
+            structuralHealth: "attention",
+        },
+    };
+
+    // Generate data for all aircraft in fleet
+    const fleetData: FleetHealthSummary[] = allAircraft.map((aircraft) => {
+        const profile = healthProfiles[aircraft.registration];
+        if (profile) {
+            return {
+                registration: aircraft.registration,
+                model: aircraft.model,
+                ...profile,
+            } as FleetHealthSummary;
+        }
+        // Generate random health data for aircraft without predefined profiles
+        const healthScore = Math.floor(Math.random() * 40) + 60; // 60-100
+        const overallHealth: FleetHealthSummary["overallHealth"] = 
+            healthScore >= 90 ? "excellent" :
+            healthScore >= 75 ? "good" :
+            healthScore >= 60 ? "fair" :
+            healthScore >= 40 ? "poor" : "critical";
+        
+        return {
+            registration: aircraft.registration,
+            model: aircraft.model,
+            overallHealth,
+            healthScore,
+            criticalAlerts: healthScore < 60 ? Math.floor(Math.random() * 3) : 0,
+            warningAlerts: Math.floor(Math.random() * 4),
+            infoAlerts: Math.floor(Math.random() * 3),
+            lastInspection: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            nextScheduledMaintenance: new Date(Date.now() + Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            flightHoursRemaining: Math.floor(Math.random() * 800) + 100,
+            engineHealth: Math.random() > 0.8 ? "attention" : "normal",
+            hydraulicsHealth: Math.random() > 0.9 ? "attention" : "normal",
+            avionicsHealth: Math.random() > 0.85 ? "attention" : "normal",
+            structuralHealth: "normal",
+        } as FleetHealthSummary;
+    });
+
+    // Sort so selected aircraft is first, then by health score ascending (worst first for attention)
+    return fleetData.sort((a, b) => {
+        if (a.registration === selectedReg) return -1;
+        if (b.registration === selectedReg) return 1;
+        return a.healthScore - b.healthScore;
+    });
+}
+
+// Health status indicator component
+function HealthIndicator({ status }: { status: "normal" | "attention" | "critical" }) {
+    const colors = {
+        normal: "bg-emerald-500",
+        attention: "bg-amber-500",
+        critical: "bg-red-500",
+    };
+    return <span className={`inline-block h-2.5 w-2.5 rounded-full ${colors[status]}`} />;
+}
+
+// Overall health badge component
+function HealthBadge({ health, score }: { health: FleetHealthSummary["overallHealth"]; score: number }) {
+    const styles = {
+        excellent: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        good: "bg-blue-100 text-blue-700 border-blue-200",
+        fair: "bg-amber-100 text-amber-700 border-amber-200",
+        poor: "bg-orange-100 text-orange-700 border-orange-200",
+        critical: "bg-red-100 text-red-700 border-red-200",
+    };
+    return (
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${styles[health]}`}>
+            {score}%
+        </span>
+    );
+}
+
+// Fleet Health Summary Spreadsheet Component
+function FleetHealthSpreadsheet({ 
+    fleetData, 
+    selectedReg, 
+    onSelectAircraft 
+}: { 
+    fleetData: FleetHealthSummary[]; 
+    selectedReg: string;
+    onSelectAircraft: (registration: string) => void;
+}) {
+    const ITEMS_PER_PAGE = 25;
+    const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+
+    const visibleData = fleetData.slice(0, visibleCount);
+    const hasMore = fleetData.length > visibleCount;
+
+    return (
+        <div className="rounded-[14px] border border-black/10 bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">
+                <div>
+                    <h2 className="text-[20px] font-normal leading-[28px] text-[#0a0a0a]">Fleet Health Summary</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Showing {Math.min(visibleCount, fleetData.length)} of {fleetData.length} aircraft in fleet
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                        <span className="flex items-center gap-1.5">
+                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Normal
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Attention
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="h-2.5 w-2.5 rounded-full bg-red-500" /> Critical
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="overflow-x-auto">
+                <div className="max-h-[600px] overflow-y-auto">
+                    <table className="w-full min-w-[1000px]">
+                        <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Aircraft</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Model</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Health Score</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Alerts</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Engine</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Hydraulics</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Avionics</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Structure</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Next Maintenance</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Flight Hrs Left</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {visibleData.map((aircraft) => {
+                                const isSelected = aircraft.registration === selectedReg;
+                                return (
+                                    <tr 
+                                        key={aircraft.registration} 
+                                        className={`transition-colors hover:bg-slate-50 ${isSelected ? "bg-blue-50/50 border-l-4 border-l-blue-500" : ""}`}
+                                    >
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold text-[#0a0a0a]">{aircraft.registration}</span>
+                                                {isSelected && (
+                                                    <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
+                                                        Selected
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-slate-600">{aircraft.model}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <HealthBadge health={aircraft.overallHealth} score={aircraft.healthScore} />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-center gap-2">
+                                                {aircraft.criticalAlerts > 0 && (
+                                                    <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
+                                                        {aircraft.criticalAlerts}
+                                                    </span>
+                                                )}
+                                                {aircraft.warningAlerts > 0 && (
+                                                    <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
+                                                        {aircraft.warningAlerts}
+                                                    </span>
+                                                )}
+                                                {aircraft.infoAlerts > 0 && (
+                                                    <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">
+                                                        {aircraft.infoAlerts}
+                                                    </span>
+                                                )}
+                                                {aircraft.criticalAlerts === 0 && aircraft.warningAlerts === 0 && aircraft.infoAlerts === 0 && (
+                                                    <span className="text-xs text-slate-400">—</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <HealthIndicator status={aircraft.engineHealth} />
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <HealthIndicator status={aircraft.hydraulicsHealth} />
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <HealthIndicator status={aircraft.avionicsHealth} />
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <HealthIndicator status={aircraft.structuralHealth} />
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-slate-600">
+                                            {new Date(aircraft.nextScheduledMaintenance).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className={`text-sm font-medium ${aircraft.flightHoursRemaining < 200 ? "text-amber-600" : "text-slate-700"}`}>
+                                                {aircraft.flightHoursRemaining}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {!isSelected ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onSelectAircraft(aircraft.registration)}
+                                                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-200"
+                                                >
+                                                    Select
+                                                </button>
+                                            ) : (
+                                                <span className="text-xs text-blue-600 font-medium">Active</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Load More / Show Less */}
+            {fleetData.length > ITEMS_PER_PAGE && (
+                <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-between">
+                    <span className="text-sm text-slate-500">
+                        {hasMore 
+                            ? `${fleetData.length - visibleCount} more aircraft not shown`
+                            : "All aircraft displayed"
+                        }
+                    </span>
+                    <div className="flex gap-2">
+                        {visibleCount > ITEMS_PER_PAGE && (
+                            <button
+                                type="button"
+                                onClick={() => setVisibleCount(ITEMS_PER_PAGE)}
+                                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                            >
+                                Show Less
+                            </button>
+                        )}
+                        {hasMore && (
+                            <button
+                                type="button"
+                                onClick={() => setVisibleCount(prev => Math.min(prev + ITEMS_PER_PAGE, fleetData.length))}
+                                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                            >
+                                Load More ({Math.min(ITEMS_PER_PAGE, fleetData.length - visibleCount)})
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 function getPredictedAlerts(): PredictedAlert[] {
     if (typeof window === "undefined") return [];
@@ -200,7 +528,7 @@ function AlertCard({ alert, onViewDetails }: { alert: PredictedAlert; onViewDeta
 }
 
 export default function PredictiveAlertsPage() {
-    const { selectedAircraft } = useAircraft();
+    const { selectedAircraft, allAircraft, setSelectedAircraft } = useAircraft();
     const [alerts, setAlerts] = useState<PredictedAlert[]>([]);
     const [filter, setFilter] = useState<"all" | "critical" | "warning" | "info">("all");
     const [mounted, setMounted] = useState(false);
@@ -208,6 +536,19 @@ export default function PredictiveAlertsPage() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Generate fleet health data
+    const fleetHealthData = useMemo(() => {
+        return generateFleetHealthData(allAircraft, selectedAircraft?.registration || "");
+    }, [allAircraft, selectedAircraft?.registration]);
+
+    // Handle aircraft selection from spreadsheet
+    const handleSelectAircraft = useCallback((registration: string) => {
+        const aircraft = allAircraft.find(a => a.registration === registration);
+        if (aircraft) {
+            setSelectedAircraft(aircraft);
+        }
+    }, [allAircraft, setSelectedAircraft]);
 
     // Fetch live alerts data
     async function fetchAlerts() {
@@ -415,6 +756,13 @@ export default function PredictiveAlertsPage() {
                     )}
                 </div>
             </div>
+
+            {/* Fleet Health Summary Spreadsheet */}
+            <FleetHealthSpreadsheet 
+                fleetData={fleetHealthData}
+                selectedReg={reg}
+                onSelectAircraft={handleSelectAircraft}
+            />
 
             {/* Information Card */}
             <div className="rounded-[14px] border border-black/10 bg-white p-6">
