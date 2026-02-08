@@ -1105,8 +1105,8 @@ function AccessCodeManagementSection() {
             {/* Notification */}
             {notification && (
                 <div className={`mt-4 rounded-lg border px-4 py-3 text-sm ${notification.type === "success"
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : "border-rose-200 bg-rose-50 text-rose-700"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-rose-200 bg-rose-50 text-rose-700"
                     }`}>
                     {notification.message}
                 </div>
@@ -1121,8 +1121,8 @@ function AccessCodeManagementSection() {
                         type="button"
                         onClick={() => setFilterStatus(status)}
                         className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${filterStatus === status
-                                ? "bg-slate-900 text-white"
-                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            ? "bg-slate-900 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                             }`}
                     >
                         {status.charAt(0).toUpperCase() + status.slice(1)}
