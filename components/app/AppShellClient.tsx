@@ -15,6 +15,7 @@ import AppSidebarNav from "@/components/app/AppSidebarNav";
 import AIMechanicFAB from "@/components/ai/AIMechanicFAB";
 import AIMechanicPanel from "@/components/ai/AIMechanicPanel";
 import { useAuth } from "@/lib/AuthContext";
+import { useSessionTimeout, SessionTimeoutWarning, clearSessionData } from "@/lib/SessionTimeout";
 
 // Figma assets for sidebar (node 2:1304)
 const imageManager = "https://www.figma.com/api/mcp/asset/24260c56-f8dd-4bdc-b2a8-85f82cd479e3";
@@ -56,6 +57,16 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const router = useRouter();
     const { logout } = useAuth();
     const contentRef = useRef<HTMLDivElement>(null);
+
+    // Session timeout management
+    const { isWarningVisible, remainingSeconds, extendSession } = useSessionTimeout();
+
+    // Handle manual logout with session cleanup
+    const handleLogout = () => {
+        clearSessionData();
+        logout();
+        router.push("/");
+    };
 
     // Scroll to top when route changes
     useEffect(() => {
@@ -136,10 +147,7 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        logout();
-                                        router.push("/");
-                                    }}
+                                    onClick={handleLogout}
                                     className="mt-3 flex h-8 w-full items-center justify-center gap-2 rounded-[8px] border border-black/10 bg-white text-[14px] text-[#0a0a0a] hover:bg-gray-50"
                                 >
                                     <img src={iconLogout} alt="" className="h-4 w-4" />
@@ -185,6 +193,12 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                 onClose={() => setAiOpen(false)}
                 initialQuery={aiInitialQuery}
                 context={aiContext}
+            />
+            {/* Session Timeout Warning Modal */}
+            <SessionTimeoutWarning
+                isVisible={isWarningVisible}
+                remainingSeconds={remainingSeconds}
+                onExtend={extendSession}
             />
         </div>
     );

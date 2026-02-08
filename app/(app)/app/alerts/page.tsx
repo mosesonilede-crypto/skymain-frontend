@@ -191,12 +191,12 @@ function generateFleetHealthData(allAircraft: Aircraft[], selectedReg: string): 
         }
         // Generate random health data for aircraft without predefined profiles
         const healthScore = Math.floor(Math.random() * 40) + 60; // 60-100
-        const overallHealth: FleetHealthSummary["overallHealth"] = 
+        const overallHealth: FleetHealthSummary["overallHealth"] =
             healthScore >= 90 ? "excellent" :
-            healthScore >= 75 ? "good" :
-            healthScore >= 60 ? "fair" :
-            healthScore >= 40 ? "poor" : "critical";
-        
+                healthScore >= 75 ? "good" :
+                    healthScore >= 60 ? "fair" :
+                        healthScore >= 40 ? "poor" : "critical";
+
         return {
             registration: aircraft.registration,
             model: aircraft.model,
@@ -250,12 +250,12 @@ function HealthBadge({ health, score }: { health: FleetHealthSummary["overallHea
 }
 
 // Fleet Health Summary Spreadsheet Component
-function FleetHealthSpreadsheet({ 
-    fleetData, 
-    selectedReg, 
-    onSelectAircraft 
-}: { 
-    fleetData: FleetHealthSummary[]; 
+function FleetHealthSpreadsheet({
+    fleetData,
+    selectedReg,
+    onSelectAircraft
+}: {
+    fleetData: FleetHealthSummary[];
     selectedReg: string;
     onSelectAircraft: (registration: string) => void;
 }) {
@@ -311,8 +311,8 @@ function FleetHealthSpreadsheet({
                             {visibleData.map((aircraft) => {
                                 const isSelected = aircraft.registration === selectedReg;
                                 return (
-                                    <tr 
-                                        key={aircraft.registration} 
+                                    <tr
+                                        key={aircraft.registration}
                                         className={`transition-colors hover:bg-slate-50 ${isSelected ? "bg-blue-50/50 border-l-4 border-l-blue-500" : ""}`}
                                     >
                                         <td className="px-4 py-3">
@@ -396,7 +396,7 @@ function FleetHealthSpreadsheet({
             {fleetData.length > ITEMS_PER_PAGE && (
                 <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-between">
                     <span className="text-sm text-slate-500">
-                        {hasMore 
+                        {hasMore
                             ? `${fleetData.length - visibleCount} more aircraft not shown`
                             : "All aircraft displayed"
                         }
@@ -758,7 +758,7 @@ export default function PredictiveAlertsPage() {
             </div>
 
             {/* Fleet Health Summary Spreadsheet */}
-            <FleetHealthSpreadsheet 
+            <FleetHealthSpreadsheet
                 fleetData={fleetHealthData}
                 selectedReg={reg}
                 onSelectAircraft={handleSelectAircraft}
