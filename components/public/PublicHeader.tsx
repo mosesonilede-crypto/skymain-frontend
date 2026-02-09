@@ -45,7 +45,7 @@ export default function PublicHeader() {
                     ) : isAuthenticated ? (
                         <>
                             <Link
-                                href="/app/dashboard"
+                                href="/app/welcome"
                                 className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
                             >
                                 Go to Hub
@@ -67,7 +67,7 @@ export default function PublicHeader() {
                     {/* Show "Get Started" for non-authenticated, "Go to Hub" button for authenticated */}
                     {isAuthenticated ? (
                         <Link
-                            href="/app/dashboard"
+                            href="/app/welcome"
                             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
                         >
                             Open Platform

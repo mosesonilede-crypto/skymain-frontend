@@ -160,7 +160,7 @@ export default function GetStartedPage() {
                                 👋 Welcome back! You&apos;re already logged in.
                             </span>
                             <Link
-                                href="/app/dashboard"
+                                href="/app/welcome"
                                 className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-1.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors"
                             >
                                 <Home className="h-4 w-4" />
