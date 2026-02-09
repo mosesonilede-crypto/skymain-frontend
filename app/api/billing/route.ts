@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDataMode } from "@/lib/dataService";
+import { getStripe, PLAN_DETAILS } from "@/lib/stripe";
+import type Stripe from "stripe";
 
 type BillingCycle = "Monthly" | "Annual";
 
@@ -151,27 +153,120 @@ function generateMockBillingData(): SubscriptionBillingPayload {
     };
 }
 
-// Stripe integration placeholder - when STRIPE_SECRET_KEY is set, fetch real data
-async function fetchStripeBillingData(): Promise<SubscriptionBillingPayload | null> {
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeKey) return null;
+// Stripe integration - when STRIPE_SECRET_KEY is set, fetch real data
+async function fetchStripeBillingData(customerId?: string): Promise<SubscriptionBillingPayload | null> {
+    const stripe = getStripe();
+    if (!stripe || !customerId) return null;
 
-    // TODO: Implement Stripe API integration
-    // const stripe = new Stripe(stripeKey);
-    // const subscriptions = await stripe.subscriptions.list({ customer: customerId });
-    // const invoices = await stripe.invoices.list({ customer: customerId });
-    // Transform and return data...
+    try {
+        // Fetch customer's subscriptions
+        const subscriptions = await stripe.subscriptions.list({
+            customer: customerId,
+            status: "all",
+            limit: 1,
+        });
 
-    return null;
+        const subscription = subscriptions.data[0];
+        if (!subscription) return null;
+
+        // Fetch payment methods
+        const paymentMethods = await stripe.paymentMethods.list({
+            customer: customerId,
+            type: "card",
+        });
+
+        // Fetch invoices
+        const invoices = await stripe.invoices.list({
+            customer: customerId,
+            limit: 10,
+        });
+
+        // Determine current plan from price
+        const priceId = subscription.items.data[0]?.price.id;
+        let currentPlan: "starter" | "professional" | "enterprise" = "professional";
+        let billingCycle: BillingCycle = "Annual";
+
+        // Map price ID to plan (you'll need to set these)
+        const interval = subscription.items.data[0]?.price.recurring?.interval;
+        billingCycle = interval === "year" ? "Annual" : "Monthly";
+
+        return {
+            status: subscription.status === "active" ? "Active" : "Inactive",
+            currentPlanLabel: currentPlan,
+            currentPlanPriceYear: PLAN_DETAILS[currentPlan].yearlyPrice,
+            nextBilling: new Date(subscription.current_period_end * 1000).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+            }),
+            autoRenewEnabled: !subscription.cancel_at_period_end,
+            teamMembers: 5, // TODO: Get from your database
+            teamMembersAllowed: currentPlan === "starter" ? 5 : currentPlan === "professional" ? 25 : 999,
+            billingCycle,
+            plans: [
+                {
+                    id: "starter",
+                    name: PLAN_DETAILS.starter.name,
+                    tagline: PLAN_DETAILS.starter.tagline,
+                    priceYear: PLAN_DETAILS.starter.yearlyPrice,
+                    savePerYear: PLAN_DETAILS.starter.monthlyPrice * 12 - PLAN_DETAILS.starter.yearlyPrice,
+                    bullets: [...PLAN_DETAILS.starter.features],
+                    isCurrent: currentPlan === "starter",
+                    badge: currentPlan === "starter" ? "Current Plan" : undefined,
+                },
+                {
+                    id: "professional",
+                    name: PLAN_DETAILS.professional.name,
+                    tagline: PLAN_DETAILS.professional.tagline,
+                    priceYear: PLAN_DETAILS.professional.yearlyPrice,
+                    savePerYear: PLAN_DETAILS.professional.monthlyPrice * 12 - PLAN_DETAILS.professional.yearlyPrice,
+                    bullets: [...PLAN_DETAILS.professional.features],
+                    isCurrent: currentPlan === "professional",
+                    badge: currentPlan === "professional" ? "Current Plan" : "Most Popular",
+                },
+                {
+                    id: "enterprise",
+                    name: PLAN_DETAILS.enterprise.name,
+                    tagline: PLAN_DETAILS.enterprise.tagline,
+                    priceYear: PLAN_DETAILS.enterprise.yearlyPrice,
+                    savePerYear: PLAN_DETAILS.enterprise.monthlyPrice * 12 - PLAN_DETAILS.enterprise.yearlyPrice,
+                    bullets: [...PLAN_DETAILS.enterprise.features],
+                    isCurrent: currentPlan === "enterprise",
+                    badge: currentPlan === "enterprise" ? "Current Plan" : undefined,
+                },
+            ],
+            paymentMethods: paymentMethods.data.map((pm) => ({
+                id: pm.id,
+                label: `${pm.card?.brand?.charAt(0).toUpperCase()}${pm.card?.brand?.slice(1)} ending in ${pm.card?.last4}`,
+                expires: `${pm.card?.exp_month}/${pm.card?.exp_year}`,
+                isDefault: pm.id === subscription.default_payment_method,
+            })),
+            billingHistory: invoices.data.map((inv) => ({
+                date: new Date(inv.created * 1000).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                }),
+                description: inv.lines.data[0]?.description || "Subscription",
+                amount: `$${(inv.amount_paid / 100).toFixed(2)}`,
+                status: inv.paid ? "Paid" : "Unpaid",
+            })),
+        };
+    } catch (error) {
+        console.error("Error fetching Stripe data:", error);
+        return null;
+    }
 }
 
 export async function GET(request: NextRequest) {
     const mode = getDataMode();
+    const { searchParams } = new URL(request.url);
+    const customerId = searchParams.get("customerId");
 
     try {
         // In live mode, try to fetch from Stripe first
-        if (mode === "live") {
-            const stripeData = await fetchStripeBillingData();
+        if (mode === "live" || mode === "hybrid") {
+            const stripeData = await fetchStripeBillingData(customerId || undefined);
             if (stripeData) {
                 return NextResponse.json(stripeData, {
                     headers: {
@@ -180,7 +275,7 @@ export async function GET(request: NextRequest) {
                 });
             }
             // If Stripe not configured in live mode, return error
-            if (!process.env.STRIPE_SECRET_KEY) {
+            if (mode === "live" && !process.env.STRIPE_SECRET_KEY) {
                 return NextResponse.json(
                     { error: "Billing provider not configured" },
                     { status: 503 }
