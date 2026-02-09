@@ -222,7 +222,7 @@ function PlanCard({
 }) {
     const isCurrent = !!plan.isCurrent;
     const interval = billingCycle === "Annual" ? "yearly" : "monthly";
-    const displayPrice = billingCycle === "Annual" 
+    const displayPrice = billingCycle === "Annual"
         ? `$${(plan.priceYear / 100).toFixed(0)}`
         : `$${Math.round(plan.priceYear / 12 / 100)}`;
 
@@ -303,7 +303,7 @@ export default function SubscriptionBillingPage() {
     useEffect(() => {
         const success = searchParams.get("success");
         const canceled = searchParams.get("canceled");
-        
+
         if (success === "true") {
             setSuccessMessage("🎉 Subscription successful! Thank you for your purchase.");
             // Clear URL params after showing message
@@ -408,7 +408,7 @@ export default function SubscriptionBillingPage() {
             });
 
             const data = await res.json();
-            
+
             if (data.ok && data.url) {
                 // Redirect to Stripe Checkout
                 window.location.href = data.url;
@@ -435,7 +435,7 @@ export default function SubscriptionBillingPage() {
             });
 
             const data = await res.json();
-            
+
             if (data.ok && data.url) {
                 window.location.href = data.url;
             } else {
@@ -446,10 +446,6 @@ export default function SubscriptionBillingPage() {
         } finally {
             setCheckoutLoading(false);
         }
-    }
-
-    function onContactPricing() {
-        window.location.assign(CONTACT_SUPPORT);
     }
 
     function onAddPaymentMethod() {
@@ -561,9 +557,9 @@ export default function SubscriptionBillingPage() {
                 </div>
                 <div className="mt-4 grid gap-4 lg:grid-cols-3">
                     {payload.plans.map((p) => (
-                        <PlanCard 
-                            key={p.id} 
-                            plan={p} 
+                        <PlanCard
+                            key={p.id}
+                            plan={p}
                             billingCycle={cycle}
                             onSelectPlan={onSelectPlan}
                             isLoading={checkoutLoading}
