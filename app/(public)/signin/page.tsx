@@ -279,32 +279,35 @@ export default function SignInPage() {
                             </div>
                         </form>
 
-                        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                            <div className="text-sm font-semibold text-slate-900">Try Demo Accounts</div>
-                            <div className="mt-2 text-sm text-slate-600">
-                                Prefills credentials for deterministic testing in mock mode.
-                            </div>
+                        {/* Demo accounts - only shown in mock/development mode */}
+                        {mode === "mock" && (
+                            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                                <div className="text-sm font-semibold text-slate-900">Try Demo Accounts</div>
+                                <div className="mt-2 text-sm text-slate-600">
+                                    Prefills credentials for deterministic testing in mock mode.
+                                </div>
 
-                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                <button
-                                    type="button"
-                                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm hover:bg-slate-50"
-                                    onClick={() => applyDemo("fleet_manager")}
-                                >
-                                    <div className="font-semibold text-slate-900">Fleet Manager</div>
-                                    <div className="mt-1 text-xs text-slate-600">SkyWings Airlines</div>
-                                </button>
+                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                    <button
+                                        type="button"
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm hover:bg-slate-50"
+                                        onClick={() => applyDemo("fleet_manager")}
+                                    >
+                                        <div className="font-semibold text-slate-900">Fleet Manager</div>
+                                        <div className="mt-1 text-xs text-slate-600">SkyWings Airlines</div>
+                                    </button>
 
-                                <button
-                                    type="button"
-                                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm hover:bg-slate-50"
-                                    onClick={() => applyDemo("maintenance_engineer")}
-                                >
-                                    <div className="font-semibold text-slate-900">Maintenance Engineer</div>
-                                    <div className="mt-1 text-xs text-slate-600">SkyWings Airlines</div>
-                                </button>
+                                    <button
+                                        type="button"
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm hover:bg-slate-50"
+                                        onClick={() => applyDemo("maintenance_engineer")}
+                                    >
+                                        <div className="font-semibold text-slate-900">Maintenance Engineer</div>
+                                        <div className="mt-1 text-xs text-slate-600">SkyWings Airlines</div>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         <div className="mt-6 text-xs text-slate-500">
                             By signing in, you acknowledge the operational decision-support nature of SkyMaintain and that final
