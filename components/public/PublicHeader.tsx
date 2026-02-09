@@ -43,25 +43,43 @@ export default function PublicHeader() {
                     {isLoading ? (
                         <span className="text-sm text-slate-400">...</span>
                     ) : isAuthenticated ? (
-                        <button
-                            type="button"
-                            onClick={handleLogout}
-                            className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
-                        >
-                            Log Out
-                        </button>
+                        <>
+                            <Link
+                                href="/app/dashboard"
+                                className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                            >
+                                Go to Hub
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                className="text-sm text-slate-600 hover:text-slate-900 transition-colors"
+                            >
+                                Log Out
+                            </button>
+                        </>
                     ) : (
                         <Link href="/signin" className="text-sm text-slate-600 hover:text-slate-900">
                             Sign In
                         </Link>
                     )}
 
-                    <Link
-                        href="/get-started"
-                        className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
-                    >
-                        Get Started
-                    </Link>
+                    {/* Show "Get Started" for non-authenticated, "Go to Hub" button for authenticated */}
+                    {isAuthenticated ? (
+                        <Link
+                            href="/app/dashboard"
+                            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                        >
+                            Open Platform
+                        </Link>
+                    ) : (
+                        <Link
+                            href="/get-started"
+                            className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
+                        >
+                            Get Started
+                        </Link>
+                    )}
                 </nav>
             </div>
         </header>

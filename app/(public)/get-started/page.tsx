@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, ArrowRight, Check, Plane, Shield, TrendingDown, DollarSign, Zap, FileCheck, Activity, ClipboardList, Star, ExternalLink, Tag } from "lucide-react";
+import { ChevronDown, ChevronUp, ArrowRight, Check, Plane, Shield, TrendingDown, DollarSign, Zap, FileCheck, Activity, ClipboardList, Star, ExternalLink, Tag, Home } from "lucide-react";
 import { startTrialIfMissing } from "@/lib/trial";
+import { useAuth } from "@/lib/AuthContext";
 
 // Image assets from Figma
 const imgGlobalAeroFleet = "https://www.figma.com/api/mcp/asset/d3926b89-b96a-4544-93f0-14aa7cf8b92f";
@@ -138,6 +139,7 @@ const faqs: FAQ[] = [
 
 export default function GetStartedPage() {
     const [expandedFaqs, setExpandedFaqs] = useState<number[]>([0, 1, 2]);
+    const { isAuthenticated, isLoading } = useAuth();
 
     const toggleFaq = (index: number) => {
         setExpandedFaqs(prev =>
@@ -149,6 +151,26 @@ export default function GetStartedPage() {
 
     return (
         <div className="min-h-screen bg-white">
+            {/* Authenticated User Banner - Show "Go to Hub" option */}
+            {!isLoading && isAuthenticated && (
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-3">
+                    <div className="mx-auto max-w-6xl px-6">
+                        <div className="flex items-center justify-center gap-4 text-white">
+                            <span className="text-sm font-medium">
+                                👋 Welcome back! You&apos;re already logged in.
+                            </span>
+                            <Link
+                                href="/app/dashboard"
+                                className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-1.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            >
+                                <Home className="h-4 w-4" />
+                                Go to Hub
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Hero Section */}
             <section className="relative overflow-hidden bg-gradient-to-br from-[#9810fa] via-[#8200db] to-[#372aac] pt-32 pb-0">
                 <div className="mx-auto max-w-6xl px-6">
