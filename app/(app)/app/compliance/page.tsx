@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from "react";
 import { useAircraft } from "@/lib/AircraftContext";
+import { useRouter } from "next/navigation";
 
 type AuthoritySource = {
     label: string;
@@ -222,6 +223,14 @@ export default function RegulatoryCompliancePage() {
         },
     ]);
 
+    // State for modals
+    const [selectedUpdate, setSelectedUpdate] = useState<RegulatoryUpdate | null>(null);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+    const [taskCreated, setTaskCreated] = useState(false);
+    const [hiddenUpdates, setHiddenUpdates] = useState<number[]>([]);
+    const [showUpdates, setShowUpdates] = useState(true);
+
     // Update all state when aircraft changes
     useEffect(() => {
         const data = mockComplianceByAircraft[aircraftReg] || mockComplianceByAircraft["N872LM"];
@@ -424,23 +433,48 @@ export default function RegulatoryCompliancePage() {
                 rightSlot={
                     <div className="flex items-center gap-2">
                         <span className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-200">
-                            {applicableUpdates.length} New
+                            {applicableUpdates.filter((_, i) => !hiddenUpdates.includes(i)).length} New
                         </span>
                         <button
                             type="button"
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
-                            onClick={() => alert("Hide (UI state toggle)")}
+                            onClick={() => setShowUpdates(!showUpdates)}
                         >
-                            Hide
+                            {showUpdates ? "Hide" : "Show"}
                         </button>
                     </div>
                 }
             >
-                <div className="space-y-3">
-                    {applicableUpdates.map((u, idx) => (
-                        <UpdateCard key={`${u.kind}-${idx}`} update={u} />
-                    ))}
-                </div>
+                {showUpdates && (
+                    <div className="space-y-3">
+                        {applicableUpdates.map((u, idx) => (
+                            !hiddenUpdates.includes(idx) && (
+                                <UpdateCard 
+                                    key={`${u.kind}-${idx}`} 
+                                    update={u} 
+                                    onViewDetails={() => {
+                                        setSelectedUpdate(u);
+                                        setIsDetailsModalOpen(true);
+                                    }}
+                                    onCreateTask={() => {
+                                        setSelectedUpdate(u);
+                                        setIsCreateTaskModalOpen(true);
+                                    }}
+                                />
+                            )
+                        ))}
+                        {applicableUpdates.filter((_, i) => !hiddenUpdates.includes(i)).length === 0 && (
+                            <div className="text-center py-8 text-slate-500">
+                                <p className="text-sm">No pending regulatory updates</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+                {!showUpdates && (
+                    <div className="text-center py-4 text-slate-500">
+                        <p className="text-sm">Updates hidden. Click "Show" to view.</p>
+                    </div>
+                )}
             </Panel>
 
             <Panel title="Airworthiness Directives (ADs)" rightSlot={<CountBadge count={ads.length} />}>
@@ -499,6 +533,32 @@ export default function RegulatoryCompliancePage() {
             <footer className="mt-auto border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
                 © 2026 SkyMaintain — All Rights Reserved | Regulatory-Compliant Aircraft Maintenance Platform
             </footer>
+
+            {/* View Details Modal */}
+            {isDetailsModalOpen && selectedUpdate && (
+                <ViewDetailsModal
+                    update={selectedUpdate}
+                    onClose={() => {
+                        setIsDetailsModalOpen(false);
+                        setSelectedUpdate(null);
+                    }}
+                    aircraftModel={aircraftModel}
+                />
+            )}
+
+            {/* Create Task Modal */}
+            {isCreateTaskModalOpen && selectedUpdate && (
+                <CreateTaskModal
+                    update={selectedUpdate}
+                    onClose={() => {
+                        setIsCreateTaskModalOpen(false);
+                        setSelectedUpdate(null);
+                        setTaskCreated(false);
+                    }}
+                    onTaskCreated={() => setTaskCreated(true)}
+                    aircraftModel={aircraftModel}
+                />
+            )}
 
         </section>
     );
@@ -627,7 +687,15 @@ function Metric({
     );
 }
 
-function UpdateCard({ update }: { update: RegulatoryUpdate }) {
+function UpdateCard({ 
+    update, 
+    onViewDetails, 
+    onCreateTask 
+}: { 
+    update: RegulatoryUpdate; 
+    onViewDetails: () => void;
+    onCreateTask: () => void;
+}) {
     const badge =
         update.kind === "New AD"
             ? "bg-rose-50 text-rose-700 ring-rose-200"
@@ -654,14 +722,14 @@ function UpdateCard({ update }: { update: RegulatoryUpdate }) {
                 <button
                     type="button"
                     className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
-                    onClick={() => alert("View Details (wire modal + citations)")}
+                    onClick={onViewDetails}
                 >
                     View Details
                 </button>
                 <button
                     type="button"
                     className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
-                    onClick={() => alert("Create Task (wire to /app/docs or task system)")}
+                    onClick={onCreateTask}
                 >
                     Create Task
                 </button>
@@ -886,5 +954,415 @@ function RobotIcon() {
             <circle cx="9" cy="14" r="1" />
             <circle cx="15" cy="14" r="1" />
         </svg>
+    );
+}
+
+// View Details Modal Component
+function ViewDetailsModal({ 
+    update, 
+    onClose,
+    aircraftModel
+}: { 
+    update: RegulatoryUpdate; 
+    onClose: () => void;
+    aircraftModel: string;
+}) {
+    // Generate dynamic regulatory data based on update type
+    const regulatoryDetails = update.kind === "New AD" ? {
+        authority: "FAA",
+        documentNumber: update.title.match(/FAA-[\d-]+/)?.[0] || "FAA-2026-0124",
+        category: "Airworthiness Directive",
+        applicability: `${aircraftModel} series aircraft with serial numbers 1000-5000`,
+        complianceMethod: "Inspection and/or replacement as specified",
+        estimatedCompliance: "4-6 hours per aircraft",
+        recurringAction: "One-time inspection with follow-up at next C-check",
+        citations: [
+            { ref: "14 CFR 39.13", desc: "Airworthiness Directives" },
+            { ref: "AC 43.13-1B", desc: "Acceptable Methods, Techniques, and Practices" },
+            { ref: "AMM Chapter 57", desc: "Wings - Inspection Procedures" }
+        ],
+        relatedDocuments: [
+            { id: "SB-2026-57-001", title: "Wing Spar Inspection Service Bulletin" },
+            { id: "AD 2025-26-05", title: "Previous Related Directive" }
+        ]
+    } : {
+        authority: "Airbus",
+        documentNumber: "SB-A320-29-2026",
+        category: "Service Bulletin",
+        applicability: `${aircraftModel} aircraft with hydraulic system mod level < Rev H`,
+        complianceMethod: "Seal replacement per service bulletin instructions",
+        estimatedCompliance: "2-3 hours per aircraft",
+        recurringAction: "Replace at intervals not exceeding 5000 flight hours",
+        citations: [
+            { ref: "AMM 29-00-00", desc: "Hydraulic Power - General" },
+            { ref: "CMM 29-10-01", desc: "Hydraulic Pump Maintenance" },
+            { ref: "MMEL 29-1", desc: "Hydraulic System Dispatch Requirements" }
+        ],
+        relatedDocuments: [
+            { id: "AOT A29L-2025-01", title: "All Operator Telex - Hydraulic Awareness" },
+            { id: "SIL 29-050", title: "Service Information Letter - Seal Degradation" }
+        ]
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="relative max-h-[90vh] w-full max-w-3xl overflow-auto rounded-2xl bg-white shadow-2xl">
+                {/* Header */}
+                <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-6 py-4">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                                    update.kind === "New AD" 
+                                        ? "bg-rose-50 text-rose-700 ring-rose-200" 
+                                        : "bg-amber-50 text-amber-700 ring-amber-200"
+                                }`}>
+                                    {update.kind}
+                                </span>
+                                <span className="text-sm text-slate-600">{regulatoryDetails.authority}</span>
+                            </div>
+                            <h2 className="mt-2 text-lg font-semibold text-slate-900">{update.title}</h2>
+                            <p className="mt-1 text-sm text-slate-600">{update.subtitle}</p>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        >
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 space-y-6">
+                    {/* Key Dates */}
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <div className="rounded-xl bg-slate-50 p-4">
+                            <div className="text-xs font-semibold text-slate-600">Issue Date</div>
+                            <div className="mt-1 text-sm font-semibold text-slate-900">{update.date}</div>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 p-4">
+                            <div className="text-xs font-semibold text-slate-600">Effective Date</div>
+                            <div className="mt-1 text-sm font-semibold text-slate-900">{update.effective}</div>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 p-4">
+                            <div className="text-xs font-semibold text-slate-600">Document Number</div>
+                            <div className="mt-1 text-sm font-semibold text-slate-900">{regulatoryDetails.documentNumber}</div>
+                        </div>
+                    </div>
+
+                    {/* Applicability & Compliance */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-semibold text-slate-900">Applicability & Compliance</h3>
+                        <div className="rounded-xl border border-slate-200 divide-y divide-slate-200">
+                            <div className="p-4">
+                                <div className="text-xs font-semibold text-slate-600">Aircraft Applicability</div>
+                                <div className="mt-1 text-sm text-slate-900">{regulatoryDetails.applicability}</div>
+                            </div>
+                            <div className="p-4">
+                                <div className="text-xs font-semibold text-slate-600">Compliance Method</div>
+                                <div className="mt-1 text-sm text-slate-900">{regulatoryDetails.complianceMethod}</div>
+                            </div>
+                            <div className="p-4">
+                                <div className="text-xs font-semibold text-slate-600">Estimated Time</div>
+                                <div className="mt-1 text-sm text-slate-900">{regulatoryDetails.estimatedCompliance}</div>
+                            </div>
+                            <div className="p-4">
+                                <div className="text-xs font-semibold text-slate-600">Recurring Action</div>
+                                <div className="mt-1 text-sm text-slate-900">{regulatoryDetails.recurringAction}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Regulatory Citations */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-semibold text-slate-900">Regulatory Citations</h3>
+                        <div className="space-y-2">
+                            {regulatoryDetails.citations.map((citation, idx) => (
+                                <div key={idx} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
+                                        <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="text-sm font-semibold text-slate-900">{citation.ref}</div>
+                                        <div className="text-xs text-slate-600">{citation.desc}</div>
+                                    </div>
+                                    <a 
+                                        href={`https://www.ecfr.gov/current/title-14`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                    >
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                        </svg>
+                                    </a>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Related Documents */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-semibold text-slate-900">Related Documents</h3>
+                        <div className="space-y-2">
+                            {regulatoryDetails.relatedDocuments.map((doc, idx) => (
+                                <div key={idx} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 hover:bg-slate-50 cursor-pointer">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
+                                        <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="text-sm font-semibold text-slate-900">{doc.id}</div>
+                                        <div className="text-xs text-slate-600">{doc.title}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="sticky bottom-0 border-t border-slate-200 bg-slate-50 px-6 py-4">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="text-xs text-slate-500">
+                            Last updated: {new Date().toLocaleDateString()}
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={onClose}
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                            >
+                                Close
+                            </button>
+                            <button
+                                onClick={() => window.print()}
+                                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:opacity-95"
+                            >
+                                Print / Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Create Task Modal Component
+function CreateTaskModal({ 
+    update, 
+    onClose,
+    onTaskCreated,
+    aircraftModel
+}: { 
+    update: RegulatoryUpdate; 
+    onClose: () => void;
+    onTaskCreated: () => void;
+    aircraftModel: string;
+}) {
+    const router = useRouter();
+    const [taskTitle, setTaskTitle] = React.useState(`Comply with ${update.title.split(":")[0] || update.title}`);
+    const [priority, setPriority] = React.useState<"High" | "Medium" | "Low">(update.kind === "New AD" ? "High" : "Medium");
+    const [assignee, setAssignee] = React.useState("");
+    const [dueDate, setDueDate] = React.useState(update.effective);
+    const [notes, setNotes] = React.useState("");
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [taskCreated, setTaskCreatedLocal] = React.useState(false);
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setIsSubmitting(true);
+        
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // In production, this would call an API
+        // await fetch('/api/tasks', { method: 'POST', body: JSON.stringify({ ... }) });
+        
+        setIsSubmitting(false);
+        setTaskCreatedLocal(true);
+        onTaskCreated();
+        
+        // Auto close after success
+        setTimeout(() => {
+            onClose();
+        }, 2000);
+    }
+
+    if (taskCreated) {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-2xl">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                        <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <h3 className="mt-4 text-lg font-semibold text-slate-900">Task Created Successfully</h3>
+                    <p className="mt-2 text-sm text-slate-600">
+                        Your compliance task has been added to the task management system.
+                    </p>
+                    <div className="mt-6 flex justify-center gap-3">
+                        <button
+                            onClick={onClose}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                        >
+                            Close
+                        </button>
+                        <button
+                            onClick={() => router.push("/app/docs")}
+                            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:opacity-95"
+                        >
+                            View Tasks
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+                {/* Header */}
+                <div className="border-b border-slate-200 px-6 py-4">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 className="text-lg font-semibold text-slate-900">Create Compliance Task</h2>
+                            <p className="mt-1 text-sm text-slate-600">
+                                Schedule task for {aircraftModel}
+                            </p>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        >
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    {/* Source Update Info */}
+                    <div className="rounded-xl bg-slate-50 p-4">
+                        <div className="flex items-center gap-2">
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${
+                                update.kind === "New AD" 
+                                    ? "bg-rose-50 text-rose-700 ring-rose-200" 
+                                    : "bg-amber-50 text-amber-700 ring-amber-200"
+                            }`}>
+                                {update.kind}
+                            </span>
+                            <span className="text-xs text-slate-600">Effective: {update.effective}</span>
+                        </div>
+                        <div className="mt-2 text-sm font-medium text-slate-900">{update.title}</div>
+                    </div>
+
+                    {/* Task Title */}
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-900">Task Title</label>
+                        <input
+                            type="text"
+                            value={taskTitle}
+                            onChange={(e) => setTaskTitle(e.target.value)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            required
+                        />
+                    </div>
+
+                    {/* Priority */}
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-900">Priority</label>
+                        <div className="mt-2 flex gap-2">
+                            {(["High", "Medium", "Low"] as const).map((p) => (
+                                <button
+                                    key={p}
+                                    type="button"
+                                    onClick={() => setPriority(p)}
+                                    className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                                        priority === p
+                                            ? p === "High"
+                                                ? "bg-rose-600 text-white"
+                                                : p === "Medium"
+                                                ? "bg-amber-500 text-white"
+                                                : "bg-emerald-600 text-white"
+                                            : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                                    }`}
+                                >
+                                    {p}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Due Date */}
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-900">Due Date</label>
+                        <input
+                            type="date"
+                            value={dueDate}
+                            onChange={(e) => setDueDate(e.target.value)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            required
+                        />
+                    </div>
+
+                    {/* Assignee */}
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-900">Assign To</label>
+                        <select
+                            value={assignee}
+                            onChange={(e) => setAssignee(e.target.value)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="">Select technician...</option>
+                            <option value="john.doe">John Doe - Lead Technician</option>
+                            <option value="jane.smith">Jane Smith - Senior Engineer</option>
+                            <option value="mike.wilson">Mike Wilson - Compliance Officer</option>
+                            <option value="sarah.jones">Sarah Jones - Quality Inspector</option>
+                        </select>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-900">Notes (Optional)</label>
+                        <textarea
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            rows={3}
+                            placeholder="Add any additional notes or instructions..."
+                            className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                        />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-3 pt-4">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
+                        >
+                            {isSubmitting ? "Creating..." : "Create Task"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 }
