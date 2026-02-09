@@ -360,7 +360,78 @@ export default function DocumentationPage() {
                                 value={discManual}
                                 onChange={setDiscManual}
                                 placeholder="Select reference manual..."
-                                options={["AMM", "MEL", "SRM", "IPC", "Engineering Order"]}
+                                options={[
+                                    // 1. Regulatory and Mandatory Documents (Highest Legal Authority)
+                                    "── REGULATORY & MANDATORY ──",
+                                    "Airworthiness Directive (AD)",
+                                    "Service Bulletin (SB)",
+                                    "Service Letter (SL)",
+                                    "Service Instruction (SI)",
+
+                                    // 2. Manufacturer Aircraft Maintenance Manuals (Primary Technical Authority)
+                                    "── AIRCRAFT MAINTENANCE MANUALS ──",
+                                    "Aircraft Maintenance Manual (AMM)",
+                                    "Illustrated Parts Catalog (IPC)",
+                                    "Maintenance Planning Document (MPD)",
+                                    "Fault Isolation Manual (FIM)",
+                                    "Wiring Diagram Manual (WDM)",
+                                    "Structural Repair Manual (SRM)",
+                                    "Aircraft Operating Manual (AOM)",
+                                    "Flight Crew Operating Manual (FCOM)",
+
+                                    // 3. Component and Engine Manuals
+                                    "── ENGINE & COMPONENT MANUALS ──",
+                                    "Engine Maintenance Manual (EMM)",
+                                    "Engine Overhaul Manual (EOM)",
+                                    "Component Maintenance Manual (CMM)",
+                                    "Component Illustrated Parts Catalog (CIPC)",
+
+                                    // 4. Approved Maintenance Program
+                                    "── APPROVED MAINTENANCE PROGRAM ──",
+                                    "Continuous Airworthiness Maintenance Program (CAMP)",
+                                    "Approved Maintenance Program (AMP)",
+                                    "Minimum Equipment List (MEL)",
+                                    "Master Minimum Equipment List (MMEL)",
+                                    "Configuration Deviation List (CDL)",
+
+                                    // 5. Operator and Organizational Manuals
+                                    "── ORGANIZATIONAL MANUALS ──",
+                                    "General Maintenance Manual (GMM)",
+                                    "Maintenance Organization Exposition (MOE)",
+                                    "Quality Control Manual (QCM)",
+                                    "Training Manual (TM)",
+
+                                    // 6. Standard Practices and General References
+                                    "── STANDARD PRACTICES ──",
+                                    "Standard Practices Manual (SPM)",
+                                    "Non-Destructive Testing Manual (NDT)",
+                                    "Corrosion Prevention and Control Program (CPCP)",
+                                    "Weight and Balance Manual (WBM)",
+
+                                    // 7. FAA/Authority Reference Handbooks
+                                    "── FAA HANDBOOKS & CIRCULARS ──",
+                                    "FAA-H-8083-30 AMT General Handbook",
+                                    "FAA-H-8083-31 AMT Airframe Handbook",
+                                    "FAA-H-8083-32 AMT Powerplant Handbook",
+                                    "Advisory Circular (AC)",
+
+                                    // 8. Records and Release Documents
+                                    "── RECORDS & FORMS ──",
+                                    "Aircraft Logbook - Airframe",
+                                    "Aircraft Logbook - Engine",
+                                    "Aircraft Logbook - Propeller",
+                                    "Aircraft Logbook - Appliance",
+                                    "FAA Form 8130-3",
+                                    "EASA Form 1",
+                                    "Maintenance Task Card",
+                                    "Engineering Order (EO)",
+
+                                    // 9. Digital and Integrated Manuals
+                                    "── DIGITAL SYSTEMS ──",
+                                    "Electronic Technical Log (ETL)",
+                                    "OEM Digital Manual (AirbusWorld/MyBoeingFleet)",
+                                    "Integrated Maintenance Information System (MIS)",
+                                ]}
                             />
 
                             <div className="mt-2 flex flex-wrap gap-3">
@@ -517,11 +588,20 @@ function SelectField({
                 onChange={(e) => onChange(e.target.value)}
             >
                 <option value="">{placeholder}</option>
-                {options.map((o) => (
-                    <option key={o} value={o}>
-                        {o}
-                    </option>
-                ))}
+                {options.map((o) => {
+                    // Section headers (starting with ──) are disabled labels
+                    const isHeader = o.startsWith("──");
+                    return (
+                        <option
+                            key={o}
+                            value={isHeader ? "" : o}
+                            disabled={isHeader}
+                            className={isHeader ? "font-bold text-slate-500 bg-slate-100" : ""}
+                        >
+                            {o}
+                        </option>
+                    );
+                })}
             </select>
         </label>
     );
