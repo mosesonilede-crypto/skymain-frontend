@@ -1,9 +1,12 @@
-name: Design Contract & Deploy
+name: Design Contract
 
 on:
   pull_request:
   push:
     branches: [main]
+
+# NOTE: Deployment is handled automatically by Vercel's GitHub integration
+# This workflow only runs tests - Vercel auto-deploys on push to main
 
 jobs:
   design-contract:
@@ -36,24 +39,6 @@ jobs:
           NEXT_PUBLIC_DATA_MODE: mock
         run: npx playwright test tests/e2e/design.visual.spec.ts
 
-  deploy:
-    needs: design-contract
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      # Using Vercel GitHub Integration for deployment (bypasses CLI rate limits)
-      # Vercel automatically deploys when connected to your GitHub repo
-      # This step just triggers a webhook to ensure deployment starts
-      - name: Trigger Vercel Deployment
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: "--prod"
+  # Deployment is handled by Vercel's native GitHub integration
+  # No CLI deployment needed - Vercel auto-deploys when push to main
+  # This avoids rate limits on the free tier
