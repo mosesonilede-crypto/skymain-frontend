@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { getStripe, getPriceId, PlanId, BillingInterval } from "@/lib/stripe";
 
 export const runtime = "nodejs";
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
 
         const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://skymaintain.ai";
 
-        const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+        const sessionParams: Stripe.Checkout.SessionCreateParams = {
             mode: "subscription",
             payment_method_types: ["card"],
             line_items: [
@@ -54,17 +55,17 @@ export async function POST(req: NextRequest) {
             cancel_url: `${baseUrl}/app/subscription-billing?canceled=true`,
             allow_promotion_codes: true,
             billing_address_collection: "required",
-            customer_email: body.customerEmail,
             metadata: {
                 plan: body.plan,
                 interval: body.interval,
             },
         };
 
-        // If customer already exists in Stripe, use their ID
+        // Set customer info
         if (body.customerId) {
             sessionParams.customer = body.customerId;
-            delete sessionParams.customer_email;
+        } else if (body.customerEmail) {
+            sessionParams.customer_email = body.customerEmail;
         }
 
         const session = await stripe.checkout.sessions.create(sessionParams);

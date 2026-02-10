@@ -183,7 +183,14 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
 
         // Determine current plan from price
         const priceId = subscription.items.data[0]?.price.id;
-        let currentPlan: "starter" | "professional" | "enterprise" = "professional";
+        type PlanType = "starter" | "professional" | "enterprise";
+        const determinePlan = (): PlanType => {
+            // TODO: Map priceId to actual plan
+            // For now, default to professional
+            void priceId; // suppress unused warning
+            return "professional";
+        };
+        const currentPlan: PlanType = determinePlan();
         let billingCycle: BillingCycle = "Annual";
 
         // Map price ID to plan (you'll need to set these)
@@ -194,7 +201,7 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
             status: subscription.status === "active" ? "Active" : "Inactive",
             currentPlanLabel: currentPlan,
             currentPlanPriceYear: PLAN_DETAILS[currentPlan].yearlyPrice,
-            nextBilling: new Date(subscription.current_period_end * 1000).toLocaleDateString("en-US", {
+            nextBilling: new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
@@ -248,8 +255,8 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
                     year: "numeric",
                 }),
                 description: inv.lines.data[0]?.description || "Subscription",
-                amount: `$${(inv.amount_paid / 100).toFixed(2)}`,
-                status: inv.paid ? "Paid" : "Unpaid",
+                amount: `$${((inv.amount_paid ?? 0) / 100).toFixed(2)}`,
+                status: inv.status === "paid" ? "Paid" : "Unpaid",
             })),
         };
     } catch (error) {

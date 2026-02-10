@@ -22,7 +22,6 @@ export default function manifest(): MetadataRoute.Manifest {
                 src: "/apple-icon.svg",
                 sizes: "180x180",
                 type: "image/svg+xml",
-                purpose: "apple touch icon",
             },
         ],
     };

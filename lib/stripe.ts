@@ -8,7 +8,6 @@ export function getStripe(): Stripe | null {
         return null;
     }
     return new Stripe(stripeSecretKey, {
-        apiVersion: "2024-12-18.acacia",
         typescript: true,
     });
 }

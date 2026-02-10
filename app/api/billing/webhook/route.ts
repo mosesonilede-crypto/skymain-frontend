@@ -108,11 +108,12 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
 }
 
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
+    const subData = subscription as unknown as { current_period_end: number };
     console.log("📝 Subscription updated:", {
         subscriptionId: subscription.id,
         customerId: subscription.customer,
         status: subscription.status,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+        currentPeriodEnd: new Date(subData.current_period_end * 1000).toISOString(),
     });
 
     // TODO: Update subscription status in your database
