@@ -195,28 +195,25 @@ export default function GetStartedPage() {
                         >
                             Partner with Us
                         </Link>
-                            >
-                        Request Demo
-                    </Link>
-                </div>
+                    </div>
 
-                {/* Trust badges */}
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-[#e9d4ff]">
-                    <span className="flex items-center gap-2">
-                        <Check className="h-5 w-5" />
-                        14-day free trial
-                    </span>
-                    <span className="flex items-center gap-2">
-                        <Check className="h-5 w-5" />
-                        No credit card required
-                    </span>
-                    <span className="flex items-center gap-2">
-                        <Check className="h-5 w-5" />
-                        Full platform access
-                    </span>
+                    {/* Trust badges */}
+                    <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-[#e9d4ff]">
+                        <span className="flex items-center gap-2">
+                            <Check className="h-5 w-5" />
+                            14-day free trial
+                        </span>
+                        <span className="flex items-center gap-2">
+                            <Check className="h-5 w-5" />
+                            No credit card required
+                        </span>
+                        <span className="flex items-center gap-2">
+                            <Check className="h-5 w-5" />
+                            Full platform access
+                        </span>
+                    </div>
                 </div>
-        </div>
-                </div >
+        </div >
             </section >
 
         {/* Stats Banner */ }
