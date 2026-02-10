@@ -213,11 +213,11 @@ export default function GetStartedPage() {
                         </span>
                     </div>
                 </div>
-        </div >
-            </section >
+            </div>
+            </section>
 
-        {/* Stats Banner */ }
-        < section className = "bg-gradient-to-r from-[#155dfc] to-[#9810fa] py-16" >
+            {/* Stats Banner */}
+            <section className="bg-gradient-to-r from-[#155dfc] to-[#9810fa] py-16">
             <div className="mx-auto max-w-6xl px-6">
                 <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
                     {stats.map((stat) => (
@@ -231,10 +231,10 @@ export default function GetStartedPage() {
                     ))}
                 </div>
             </div>
-            </section >
+            </section>
 
-        {/* Featured Partner - GlobalAero */ }
-        < section className = "border-y-4 border-[#155dfc] bg-gradient-to-br from-[#f8fafc] to-[#f3f4f6] py-12" >
+            {/* Featured Partner - GlobalAero */}
+            <section className="border-y-4 border-[#155dfc] bg-gradient-to-br from-[#f8fafc] to-[#f3f4f6] py-12">
             <div className="mx-auto max-w-6xl px-6">
                 <div className="mb-4 flex justify-center">
                     <span className="rounded-lg bg-[#4a5565] px-4 py-2 text-xs font-medium text-white">
@@ -293,10 +293,10 @@ export default function GetStartedPage() {
                     </span>
                 </div>
             </div>
-            </section >
+            </section>
 
-        {/* Platform Capabilities */ }
-        < section className = "bg-[#f9fafb] py-16" >
+            {/* Platform Capabilities */}
+            <section className="bg-[#f9fafb] py-16">
             <div className="mx-auto max-w-6xl px-6">
                 <div className="mb-12 text-center">
                     <span className="rounded-lg bg-[#155dfc] px-4 py-2 text-xs font-medium text-white">
@@ -347,10 +347,10 @@ export default function GetStartedPage() {
                     ))}
                 </div>
             </div>
-            </section >
+            </section>
 
-        {/* Customer Success */ }
-        < section className = "bg-white py-16" >
+            {/* Customer Success */}
+            <section className="bg-white py-16">
             <div className="mx-auto max-w-6xl px-6">
                 <div className="mb-12 text-center">
                     <span className="rounded-lg bg-[#9810fa] px-4 py-2 text-xs font-medium text-white">
@@ -387,10 +387,10 @@ export default function GetStartedPage() {
                     ))}
                 </div>
             </div>
-            </section >
+            </section>
 
-        {/* Industry Partner - AeroTech */ }
-        < section className = "border-y-4 border-[#f54900] bg-gradient-to-br from-[#fff7ed] to-[#fffbeb] py-12" >
+            {/* Industry Partner - AeroTech */}
+            <section className="border-y-4 border-[#f54900] bg-gradient-to-br from-[#fff7ed] to-[#fffbeb] py-12">
             <div className="mx-auto max-w-6xl px-6">
                 <div className="mb-4 flex justify-center">
                     <span className="rounded-lg bg-[#f54900] px-4 py-2 text-xs font-medium text-white">
@@ -459,10 +459,10 @@ export default function GetStartedPage() {
                     </span>
                 </div>
             </div>
-            </section >
+            </section>
 
-        {/* Connecting Aviation Excellence */ }
-        < section className = "bg-gradient-to-br from-[#f9fafb] to-[#eff6ff] py-16" >
+            {/* Connecting Aviation Excellence */}
+            <section className="bg-gradient-to-br from-[#f9fafb] to-[#eff6ff] py-16">
             <div className="mx-auto max-w-6xl px-6">
                 <div className="mb-12 text-center">
                     <span className="rounded-lg bg-[#9810fa] px-4 py-2 text-xs font-medium text-white">
@@ -525,10 +525,10 @@ export default function GetStartedPage() {
                     <strong>Partner Disclosure:</strong> SkyMaintain displays sponsored partner content. Sponsorship does not influence AI responses, maintenance recommendations, or compliance assessments. All partnerships are reviewed for aviation industry relevance and quality standards.
                 </p>
             </div>
-            </section >
+            </section>
 
-        {/* FAQ Section */ }
-        < section className = "bg-[#f9fafb] py-16" >
+            {/* FAQ Section */}
+            <section className="bg-[#f9fafb] py-16">
             <div className="mx-auto max-w-4xl px-6">
                 <div className="mb-12 text-center">
                     <h2 className="text-3xl font-bold text-[#101828] md:text-4xl">
@@ -572,10 +572,10 @@ export default function GetStartedPage() {
                     </Link>
                 </div>
             </div>
-            </section >
+            </section>
 
-        {/* Final CTA */ }
-        < section className = "bg-gradient-to-br from-[#155dfc] via-[#9810fa] to-[#432dd7] py-20" >
+            {/* Final CTA */}
+            <section className="bg-gradient-to-br from-[#155dfc] via-[#9810fa] to-[#432dd7] py-20">
             <div className="mx-auto max-w-4xl px-6 text-center">
                 <div className="mb-8 flex justify-center">
                     <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
@@ -609,10 +609,10 @@ export default function GetStartedPage() {
                     ✓ 14-day free trial • ✓ No credit card required • ✓ Full platform access
                 </p>
             </div>
-            </section >
+            </section>
 
-        {/* Footer */ }
-        < footer className = "bg-[#101828] py-12" >
+            {/* Footer */}
+            <footer className="bg-[#101828] py-12">
             <div className="mx-auto max-w-6xl px-6">
                 <div className="grid gap-8 md:grid-cols-4">
                     {/* Brand */}
@@ -674,7 +674,7 @@ export default function GetStartedPage() {
                     </p>
                 </div>
             </div>
-            </footer >
-        </div >
+            </footer>
+        </div>
     );
 }
