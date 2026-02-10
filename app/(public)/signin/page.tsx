@@ -5,69 +5,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { getTrialStatus, startTrialIfMissing } from "@/lib/trial";
-
-type DataMode = "mock" | "live" | "hybrid";
-
-function getDataMode(): DataMode {
-    const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "").toLowerCase();
-    if (raw === "live" || raw === "hybrid" || raw === "mock") return raw;
-    const base = getApiBaseUrl();
-    if (process.env.NODE_ENV === "production" && base) return "live";
-    return "mock";
-}
-
-function getApiBaseUrl(): string {
-    return (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim().replace(/\/+$/, "");
-}
-
-function allowAuthMockFallback(mode: DataMode): boolean {
-    const flag = (process.env.NEXT_PUBLIC_AUTH_TEST_MODE || "").toLowerCase();
-    if (flag === "true" || flag === "1" || flag === "yes") return true;
-    return mode !== "live";
-}
-
-async function loginRequest(payload: { email: string; password: string; orgName: string; licenseCode: string }) {
-    const mode = getDataMode();
-    const allowMockFallback = allowAuthMockFallback(mode);
-
-    if (mode === "mock") {
-        return { ok: true as const, used: "mock" as const };
-    }
-
-    const base = getApiBaseUrl();
-    if (!base) {
-        return allowMockFallback
-            ? { ok: true as const, used: "mock" as const }
-            : { ok: false as const, error: "NEXT_PUBLIC_API_BASE_URL is not set." };
-    }
-
-    try {
-        const res = await fetch(`${base}/v1/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-                email: payload.email,
-                password: payload.password,
-                org_name: payload.orgName,
-                license_code: payload.licenseCode,
-            }),
-        });
-
-        if (!res.ok) {
-            const text = await res.text().catch(() => "");
-            return allowMockFallback
-                ? { ok: true as const, used: "mock" as const }
-                : { ok: false as const, error: text || `Login failed (${res.status})` };
-        }
-
-        return { ok: true as const, used: "live" as const };
-    } catch (e) {
-        return allowMockFallback
-            ? { ok: true as const, used: "mock" as const }
-            : { ok: false as const, error: e instanceof Error ? e.message : "Network error" };
-    }
-}
+import { supabase } from "@/lib/supabaseClient";
 
 export default function SignInPage() {
     const router = useRouter();
@@ -81,8 +19,6 @@ export default function SignInPage() {
 
     const [submitting, setSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
-
-    const mode = getDataMode();
 
     function applyDemo(role: "fleet_manager" | "maintenance_engineer") {
         setError(null);
@@ -128,16 +64,19 @@ export default function SignInPage() {
         }
 
         setSubmitting(true);
-        const result = await loginRequest({ email: eTrim, password, orgName: oTrim, licenseCode: lTrim });
+        const result = await supabase.auth.signInWithPassword({ email: eTrim, password });
         setSubmitting(false);
 
-        if (!result.ok) {
-            setError(result.error || "Sign in failed.");
+        if (result.error) {
+            setError(result.error.message || "Sign in failed.");
             return;
         }
 
+        const user = result.data.user;
+        const orgNameMeta = (user?.user_metadata?.org_name as string | undefined) || oTrim;
+
         // Persist authentication state
-        login({ email: eTrim, orgName: oTrim, role: "fleet_manager" });
+        login({ email: eTrim, orgName: orgNameMeta, role: "fleet_manager" });
         startTrialIfMissing();
 
         router.push("/2fa");
@@ -174,11 +113,6 @@ export default function SignInPage() {
                             </div>
                         </div>
 
-                        {mode !== "mock" ? (
-                            <div className="mt-6 text-xs text-slate-500">
-                                Data mode: <span className="font-semibold text-slate-700">{mode}</span>
-                            </div>
-                        ) : null}
                     </div>
                 </section>
 
@@ -187,6 +121,15 @@ export default function SignInPage() {
                         <div className="text-sm font-semibold text-slate-900">Sign In</div>
                         <div className="mt-1 text-sm text-slate-600">
                             Enter your credentials. Organization name must match your licensed tenant.
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-600">
+                            <Link href="/#signup" className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 hover:bg-slate-50">
+                                Start free trial
+                            </Link>
+                            <Link href="/partnerships" className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 hover:bg-slate-50">
+                                Partnership info
+                            </Link>
                         </div>
 
                         {error ? (

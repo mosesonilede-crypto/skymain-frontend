@@ -35,6 +35,9 @@ export default function PublicHeader() {
                     <Link href="/security" className="text-base text-slate-600 hover:text-slate-900">
                         Security
                     </Link>
+                    <Link href="/partnerships" className="text-base text-slate-600 hover:text-slate-900">
+                        Partnerships
+                    </Link>
                     <Link href="/contact" className="text-base text-slate-600 hover:text-slate-900">
                         Contact
                     </Link>
@@ -74,10 +77,10 @@ export default function PublicHeader() {
                         </Link>
                     ) : (
                         <Link
-                            href="/get-started"
+                            href="/#signup"
                             className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
                         >
-                            Get Started
+                            Start Free Trial
                         </Link>
                     )}
                 </nav>

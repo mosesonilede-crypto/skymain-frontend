@@ -3,66 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-
-type DataMode = "mock" | "live" | "hybrid";
-
-function getDataMode(): DataMode {
-    const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "").toLowerCase();
-    if (raw === "live" || raw === "hybrid" || raw === "mock") return raw;
-    const base = (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
-    if (process.env.NODE_ENV === "production" && base) return "live";
-    return "mock";
-}
-
-function getApiBaseUrl(): string {
-    return (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim().replace(/\/+$/, "");
-}
-
-function allowAuthMockFallback(mode: DataMode): boolean {
-    const flag = (process.env.NEXT_PUBLIC_AUTH_TEST_MODE || "").toLowerCase();
-    if (flag === "true" || flag === "1" || flag === "yes") return true;
-    return mode !== "live";
-}
-
-async function verify2faRequest(code: string, mockOTP?: string) {
-    const mode = getDataMode();
-    const mockValid = Boolean(mockOTP && code === mockOTP);
-    const allowMockFallback = allowAuthMockFallback(mode);
-
-    // Deterministic prototype behavior for local testing
-    if (mode === "mock") {
-        return { ok: mockValid, error: mockValid ? null : `Invalid code. Use ${mockOTP || 'the displayed code'} for testing.` };
-    }
-
-    const base = getApiBaseUrl();
-    if (!base) {
-        return allowMockFallback && mockValid
-            ? { ok: true, error: null }
-            : { ok: false, error: "NEXT_PUBLIC_API_BASE_URL is not set." };
-    }
-
-    try {
-        const res = await fetch(`${base}/v1/auth/2fa/verify`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ code }),
-        });
-
-        if (!res.ok) {
-            const text = await res.text().catch(() => "");
-            return allowMockFallback && mockValid
-                ? { ok: true, error: null }
-                : { ok: false, error: text || `Verification failed (${res.status})` };
-        }
-
-        return { ok: true, error: null };
-    } catch (e) {
-        return allowMockFallback && mockValid
-            ? { ok: true, error: null }
-            : { ok: false, error: e instanceof Error ? e.message : "Network error" };
-    }
-}
+import { useAuth } from "@/lib/AuthContext";
 
 function HelpCenterFab() {
     // Route all help into /contact unless a dedicated page exists
@@ -105,20 +46,15 @@ function HelpCenterFab() {
     );
 }
 
-// Generate a random 6-digit OTP
-function generateOTP(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
 export default function TwoFactorPage() {
     const router = useRouter();
-    const mode = getDataMode();
+    const { user } = useAuth();
 
-    const [method, setMethod] = React.useState<"email" | "sms" | "authenticator">("email");
-    const [email] = React.useState("manager@skywings.com");
-
-    // Generate OTP once on component mount
-    const [mockOTP] = React.useState(() => generateOTP());
+    const [method, setMethod] = React.useState<"email" | "authenticator">("email");
+    const [email] = React.useState(user?.email || "manager@skywings.com");
+    const [mockOTP, setMockOTP] = React.useState<string | null>(null);
+    const [sendError, setSendError] = React.useState<string | null>(null);
+    const [sending, setSending] = React.useState(false);
     const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
     const [code, setCode] = React.useState("");
@@ -155,6 +91,44 @@ export default function TwoFactorPage() {
         }
     }
 
+    async function sendOtp() {
+        setSendError(null);
+        setMockOTP(null);
+        const destination = email.trim();
+
+        if (!destination && method !== "authenticator") {
+            setSendError("Missing destination for verification.");
+            return;
+        }
+
+        setSending(true);
+        try {
+            const res = await fetch("/api/2fa/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ method: "email", destination }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setSendError(data?.error || "Failed to send code.");
+                return;
+            }
+            if (data?.mockCode) {
+                setMockOTP(data.mockCode);
+            }
+        } catch (error) {
+            setSendError(error instanceof Error ? error.message : "Failed to send code.");
+        } finally {
+            setSending(false);
+        }
+    }
+
+    React.useEffect(() => {
+        if (method === "authenticator") return;
+        sendOtp();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [method]);
+
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
@@ -166,12 +140,26 @@ export default function TwoFactorPage() {
         }
 
         setSubmitting(true);
-        const result = await verify2faRequest(normalized, mockOTP);
-        setSubmitting(false);
-
-        if (!result.ok) {
-            setError(result.error || "Verification failed.");
+        try {
+            const res = await fetch("/api/2fa/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    method: method === "authenticator" ? "auth" : "email",
+                    code: normalized,
+                    destination: email.trim(),
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data?.ok) {
+                setError(data?.error || "Verification failed.");
+                return;
+            }
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Verification failed.");
             return;
+        } finally {
+            setSubmitting(false);
         }
 
         // Chronology: 2FA -> welcome (post-login landing)
@@ -183,14 +171,14 @@ export default function TwoFactorPage() {
             <main className="mx-auto max-w-5xl px-6 py-10">
                 <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
                     <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Two-Factor Authentication</h1>
-                    <p className="mt-2 text-sm text-slate-600">Verify your identity to continue.</p>
+                    <p className="mt-2 text-sm text-slate-600">Verify your identity to continue (email OTP or authenticator).</p>
 
                     <div className="mt-6">
                         <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Choose verification method
                         </div>
 
-                        <div className="mt-3 grid gap-3 md:grid-cols-3">
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
                             <button
                                 type="button"
                                 onClick={() => setMethod("email")}
@@ -204,22 +192,6 @@ export default function TwoFactorPage() {
                                 <div className="text-sm font-semibold">Email OTP</div>
                                 <div className={method === "email" ? "mt-1 text-xs text-white/80" : "mt-1 text-xs text-slate-600"}>
                                     Receive code via email
-                                </div>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => setMethod("sms")}
-                                className={[
-                                    "rounded-2xl border px-5 py-4 text-left",
-                                    method === "sms"
-                                        ? "border-slate-900 bg-slate-900 text-white"
-                                        : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
-                                ].join(" ")}
-                            >
-                                <div className="text-sm font-semibold">SMS OTP</div>
-                                <div className={method === "sms" ? "mt-1 text-xs text-white/80" : "mt-1 text-xs text-slate-600"}>
-                                    Receive code via text message
                                 </div>
                             </button>
 
@@ -245,16 +217,40 @@ export default function TwoFactorPage() {
                         </div>
                     </div>
 
+                    {sendError ? (
+                        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                            {sendError}
+                        </div>
+                    ) : null}
                     <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700">
                         {method === "email" ? (
                             <>
                                 We sent a code to <span className="font-semibold text-slate-900">{email}</span>.
                             </>
-                        ) : method === "sms" ? (
-                            <>We sent a code to your registered mobile number.</>
                         ) : (
                             <>Enter the current 6-digit code from your authenticator app.</>
                         )}
+                        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                            {mockOTP ? (
+                                <span>
+                                    Mock code: <span className="font-semibold text-slate-700">{mockOTP}</span>
+                                </span>
+                            ) : null}
+                            {method !== "authenticator" ? (
+                                <button
+                                    type="button"
+                                    onClick={sendOtp}
+                                    disabled={sending}
+                                    className="rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {sending ? "Sending..." : "Resend code"}
+                                </button>
+                            ) : null}
+                        </div>
+                    </div>
+
+                    <div className="mt-4 text-xs text-slate-500">
+                        Need help? <Link href="/contact?intent=support" className="font-semibold text-slate-700 underline">Contact support</Link>.
                     </div>
 
                     {error ? (

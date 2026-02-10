@@ -8,6 +8,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import type { Metadata } from "next";
+import LandingSignupForm from "@/components/public/LandingSignupForm";
 
 // Figma assets for main landing page (node 122:24)
 const imgLogo = "https://www.figma.com/api/mcp/asset/939d6895-e188-4c6a-9a81-e9f7b56b6c7d";
@@ -86,11 +87,17 @@ export default function MainLandingPage() {
                 {/* CTA Buttons */}
                 <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                     <Link
-                        href="/get-started"
+                        href="#signup"
                         className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-8 py-5 text-lg font-medium text-white transition-colors hover:bg-slate-800"
                     >
-                        Get Started
+                        Start Free Trial
                         <img src={imgArrowIcon} alt="" className="h-4 w-4" />
+                    </Link>
+                    <Link
+                        href="/partnerships"
+                        className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-8 py-5 text-lg font-medium text-slate-900 transition-colors hover:bg-slate-50"
+                    >
+                        Partner with Us
                     </Link>
                     <Link
                         href="/demo"
@@ -109,6 +116,32 @@ export default function MainLandingPage() {
                     </Link>
                 </div>
                 <p className="mt-3 text-xs text-slate-500">For regulated aviation organizations only</p>
+            </section>
+
+            <section id="signup" className="mx-auto max-w-[1084px] px-8 pb-16">
+                <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Get started</div>
+                        <h2 className="mt-3 text-3xl font-bold text-slate-900">Start a 14-day evaluation</h2>
+                        <p className="mt-4 text-base text-slate-600">
+                            Start onboarding immediately, or explore partnerships and compliance details before committing.
+                        </p>
+                        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="text-sm font-semibold text-slate-900">For Operators</div>
+                                <p className="mt-2 text-xs text-slate-600">Launch a trial, verify email, and begin onboarding.</p>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="text-sm font-semibold text-slate-900">For Partners</div>
+                                <p className="mt-2 text-xs text-slate-600">Visit the partnerships page for integration or reseller paths.</p>
+                                <Link href="/partnerships" className="mt-3 inline-flex text-xs font-semibold text-slate-900 underline">
+                                    Partnership details
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                    <LandingSignupForm />
+                </div>
             </section>
 
             {/* Built for Aviation Section */}

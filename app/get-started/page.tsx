@@ -176,508 +176,508 @@ export default function GetStartedPage() {
                 <div className="mx-auto max-w-6xl px-6">
                     <div className="flex flex-col items-center text-center">
                         <h1 className="text-4xl font-bold leading-tight text-white md:text-5xl lg:text-6xl">
-                            AI-Powered Predictive<br />Aircraft Maintenance
+                            Partnerships & Platform Evaluation
                         </h1>
                         <p className="mt-6 text-xl text-[#f3e8ff] md:text-2xl">
-                            Built for Safety, Compliance, and Scale
+                            Explore partnership opportunities or evaluate SkyMaintain for your operation.
                         </p>
-
-                        {/* CTA Buttons */}
-                        <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row">
-                            <Link
-                                href="/signin"
-                                onClick={() => startTrialIfMissing()}
-                                className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-lg font-bold text-[#8200db] shadow-xl hover:bg-gray-50 transition-colors"
-                            >
-                                Start Your Free Trial
-                                <ArrowRight className="h-5 w-5" />
-                            </Link>
-                            <Link
-                                href="/contact"
-                                className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-lg font-bold text-[#155dfc] shadow-xl hover:bg-gray-50 transition-colors"
-                            >
-                                Request Demo
-                            </Link>
-                        </div>
-
-                        {/* Trust badges */}
-                        <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-[#e9d4ff]">
-                            <span className="flex items-center gap-2">
-                                <Check className="h-5 w-5" />
-                                14-day free trial
-                            </span>
-                            <span className="flex items-center gap-2">
-                                <Check className="h-5 w-5" />
-                                No credit card required
-                            </span>
-                            <span className="flex items-center gap-2">
-                                <Check className="h-5 w-5" />
-                                Full platform access
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Stats Banner */}
-            <section className="bg-gradient-to-r from-[#155dfc] to-[#9810fa] py-16">
-                <div className="mx-auto max-w-6xl px-6">
-                    <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-                        {stats.map((stat) => (
-                            <div key={stat.label} className="flex flex-col items-center text-center">
-                                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
-                                    {stat.icon}
-                                </div>
-                                <div className="text-3xl font-bold text-white md:text-4xl">{stat.value}</div>
-                                <div className="mt-2 text-sm text-[#dbeafe]">{stat.label}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Featured Partner - GlobalAero */}
-            <section className="border-y-4 border-[#155dfc] bg-gradient-to-br from-[#f8fafc] to-[#f3f4f6] py-12">
-                <div className="mx-auto max-w-6xl px-6">
-                    <div className="mb-4 flex justify-center">
-                        <span className="rounded-lg bg-[#4a5565] px-4 py-2 text-xs font-medium text-white">
-                            FEATURED PARTNER
-                        </span>
-                    </div>
-
-                    <div className="overflow-hidden rounded-2xl border-4 border-[#e5e7eb] bg-white shadow-2xl">
-                        <div className="grid md:grid-cols-2">
-                            {/* Left Content */}
-                            <div className="bg-gradient-to-br from-[#1c398e] to-[#312c85] p-8 md:p-12">
-                                <div className="mb-6 flex h-12 w-16 items-center justify-center rounded-lg bg-white/20">
-                                    <Plane className="h-8 w-8 text-white" />
-                                </div>
-                                <h3 className="text-3xl font-bold text-white md:text-4xl">GlobalAero Airlines</h3>
-                                <p className="mt-4 text-lg leading-relaxed text-[#dbeafe]">
-                                    &quot;Partnering with the world&apos;s leading carriers. Experience excellence in aviation with our premium fleet services and 24/7 maintenance support.&quot;
-                                </p>
-                                <div className="mt-6 flex flex-wrap gap-4 text-sm text-white">
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> 500+ Aircraft Fleet
-                                    </span>
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> Global Coverage
-                                    </span>
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> ISO Certified
-                                    </span>
-                                </div>
-                                <Link href="/contact" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#1c398e] hover:bg-gray-50 transition-colors">
-                                    Learn More
-                                    <ExternalLink className="h-4 w-4" />
-                                </Link>
-                            </div>
-
-                            {/* Right Image */}
-                            <div className="relative h-64 md:h-auto">
-                                <img
-                                    src={imgGlobalAeroFleet}
-                                    alt="GlobalAero Airlines Fleet"
-                                    className="absolute inset-0 h-full w-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                                <span className="absolute right-4 top-4 rounded-lg bg-[#4a5565] px-3 py-1 text-xs text-white">
-                                    Sponsored
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Dev Info */}
-                    <div className="mt-4 rounded-lg bg-[#f3f4f6] p-3">
-                        <span className="text-xs font-bold text-[#4a5565]">DEV INFO: </span>
-                        <span className="text-xs text-[#4a5565]">
-                            Ad ID: ad-001-globalaero | Contract: 2026-01-01 to 2026-12-31 | Annual contract - Premium airline partner
-                        </span>
-                    </div>
-                </div>
-            </section>
-
-            {/* Platform Capabilities */}
-            <section className="bg-[#f9fafb] py-16">
-                <div className="mx-auto max-w-6xl px-6">
-                    <div className="mb-12 text-center">
-                        <span className="rounded-lg bg-[#155dfc] px-4 py-2 text-xs font-medium text-white">
-                            Platform Capabilities
-                        </span>
-                        <h2 className="mt-4 text-3xl font-bold text-[#101828] md:text-4xl">
-                            Comprehensive AI-Driven Maintenance Solution
-                        </h2>
-                        <p className="mx-auto mt-4 max-w-3xl text-lg text-[#4a5565]">
-                            Built specifically for aviation maintenance operations with regulatory compliance at its core
-                        </p>
-                    </div>
-
-                    <div className="space-y-16">
-                        {capabilities.map((cap, idx) => (
-                            <div
-                                key={cap.title}
-                                className={`flex flex-col items-center gap-8 lg:flex-row ${cap.position === "left" ? "lg:flex-row-reverse" : ""
-                                    }`}
-                            >
-                                {/* Content */}
-                                <div className="flex-1 space-y-4">
-                                    <div className="h-12 w-12 text-[#155dfc]">
-                                        {idx === 0 && <Zap className="h-12 w-12" />}
-                                        {idx === 1 && <FileCheck className="h-12 w-12" />}
-                                        {idx === 2 && <Activity className="h-12 w-12" />}
-                                        {idx === 3 && <ClipboardList className="h-12 w-12" />}
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-[#101828] md:text-3xl">{cap.title}</h3>
-                                    <p className="text-lg text-[#4a5565]">{cap.description}</p>
-                                    <Link href={idx === 0 ? "/platform-features" : idx === 1 ? "/regulatory-compliance-automation" : "/platform-features"} className="inline-flex items-center gap-2 rounded-lg bg-[#155dfc] px-4 py-2 text-sm font-medium text-white hover:bg-[#1447e6] transition-colors">
-                                        Learn More
-                                        <ArrowRight className="h-4 w-4" />
-                                    </Link>
-                                </div>
-
-                                {/* Image */}
-                                <div className="flex-1">
-                                    <div className="relative h-64 w-full overflow-hidden rounded-2xl border-4 border-white shadow-2xl lg:h-80">
-                                        <img
-                                            src={cap.image}
-                                            alt={cap.title}
-                                            className="absolute inset-0 h-full w-full object-cover"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Customer Success */}
-            <section className="bg-white py-16">
-                <div className="mx-auto max-w-6xl px-6">
-                    <div className="mb-12 text-center">
-                        <span className="rounded-lg bg-[#9810fa] px-4 py-2 text-xs font-medium text-white">
-                            Customer Success
-                        </span>
-                        <h2 className="mt-4 text-3xl font-bold text-[#101828] md:text-4xl">
-                            Trusted by Aviation Professionals
-                        </h2>
-                    </div>
-
-                    <div className="grid gap-8 md:grid-cols-2">
-                        {testimonials.map((testimonial) => (
-                            <div
-                                key={testimonial.name}
-                                className="rounded-2xl border border-black/10 bg-white p-8"
-                            >
-                                <div className="mb-6 h-12 w-12 rounded-full bg-[#155dfc]/10 flex items-center justify-center">
-                                    <Plane className="h-6 w-6 text-[#155dfc]" />
-                                </div>
-                                <div className="mb-6 flex gap-1">
-                                    {[...Array(5)].map((_, i) => (
-                                        <Star key={i} className="h-5 w-5 fill-[#fbbf24] text-[#fbbf24]" />
-                                    ))}
-                                </div>
-                                <p className="mb-6 text-lg italic text-[#364153]">
-                                    &quot;{testimonial.quote}&quot;
-                                </p>
-                                <div className="border-t border-[#e5e7eb] pt-6">
-                                    <div className="font-bold text-[#101828]">{testimonial.name}</div>
-                                    <div className="text-sm text-[#4a5565]">{testimonial.title}</div>
-                                    <div className="text-sm text-[#155dfc]">{testimonial.company}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Industry Partner - AeroTech */}
-            <section className="border-y-4 border-[#f54900] bg-gradient-to-br from-[#fff7ed] to-[#fffbeb] py-12">
-                <div className="mx-auto max-w-6xl px-6">
-                    <div className="mb-4 flex justify-center">
-                        <span className="rounded-lg bg-[#f54900] px-4 py-2 text-xs font-medium text-white">
-                            INDUSTRY PARTNER
-                        </span>
-                    </div>
-
-                    <div className="overflow-hidden rounded-2xl border-4 border-[#e5e7eb] bg-white shadow-2xl">
-                        <div className="grid md:grid-cols-2">
-                            {/* Left Image */}
-                            <div className="relative h-64 md:h-auto">
-                                <img
-                                    src={imgAviationParts}
-                                    alt="Aviation Parts and Components"
-                                    className="absolute inset-0 h-full w-full object-cover"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent" />
-                                <span className="absolute left-4 top-4 rounded-lg bg-[#f54900] px-3 py-1 text-xs text-white">
-                                    Sponsored
-                                </span>
-                            </div>
-
-                            {/* Right Content */}
-                            <div className="bg-gradient-to-br from-[#f54900] to-[#e7000b] p-8 md:p-12">
-                                <div className="mb-6 flex h-12 w-16 items-center justify-center rounded-lg bg-white/20">
-                                    <Shield className="h-8 w-8 text-white" />
-                                </div>
-                                <h3 className="text-3xl font-bold text-white md:text-4xl">AeroTech Parts &amp; Supply</h3>
-                                <p className="mt-4 text-lg leading-relaxed text-[#ffedd4]">
-                                    &quot;Your trusted source for certified aircraft parts and components. Fast delivery, competitive pricing, and unmatched quality assurance.&quot;
-                                </p>
-                                <div className="mt-6 flex flex-wrap gap-4 text-sm text-white">
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> FAA/EASA Certified
-                                    </span>
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> 24-Hour Shipping
-                                    </span>
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> 50,000+ Parts
-                                    </span>
-                                </div>
-
-                                {/* Special Offer */}
-                                <div className="mt-6 flex items-center gap-3 rounded-lg bg-white/10 p-3">
-                                    <Tag className="h-5 w-5 text-white" />
-                                    <div>
-                                        <div className="text-xs text-[#ffedd4]">Special Offer</div>
-                                        <div className="text-sm font-bold text-white">15% Off First Order - Use Code: SKYMAINT15</div>
-                                    </div>
-                                </div>
-
-                                <button className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#f54900] hover:bg-gray-50 transition-colors">
-                                    Shop Parts Catalog
-                                    <ExternalLink className="h-4 w-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Dev Info */}
-                    <div className="mt-4 rounded-lg bg-[#f3f4f6] p-3">
-                        <span className="text-xs font-bold text-[#4a5565]">DEV INFO: </span>
-                        <span className="text-xs text-[#4a5565]">
-                            Ad ID: ad-002-aerotech | Contract: 2026-01-15 to 2026-07-15 | 6-month contract with promo code tracking
-                        </span>
-                    </div>
-                </div>
-            </section>
-
-            {/* Connecting Aviation Excellence */}
-            <section className="bg-gradient-to-br from-[#f9fafb] to-[#eff6ff] py-16">
-                <div className="mx-auto max-w-6xl px-6">
-                    <div className="mb-12 text-center">
-                        <span className="rounded-lg bg-[#9810fa] px-4 py-2 text-xs font-medium text-white">
-                            Industry Partners
-                        </span>
-                        <h2 className="mt-4 text-3xl font-bold text-[#101828] md:text-4xl">
-                            Connecting Aviation Excellence
-                        </h2>
-                        <p className="mx-auto mt-4 max-w-3xl text-lg text-[#4a5565]">
-                            Featured partners providing trusted solutions to the aviation maintenance community
-                        </p>
-                    </div>
-
-                    <div className="grid gap-8 md:grid-cols-2">
-                        {/* AeroTech Solutions */}
-                        <div className="relative rounded-2xl border border-black/10 bg-white p-8">
-                            <span className="absolute right-4 top-4 rounded-full bg-[#f3f4f6] px-3 py-1 text-xs text-[#4a5565]">
-                                Sponsored
-                            </span>
-                            <div className="flex items-center justify-center">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#dbeafe]">
-                                        <Activity className="h-6 w-6 text-[#155dfc]" />
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-[#101828]">AeroTech Solutions</h3>
-                                </div>
-                            </div>
-                            <p className="mt-6 text-center text-[#364153]">
-                                Advanced diagnostic tools and predictive analytics for modern aircraft fleets.
-                            </p>
-                            <Link href="/contact" className="mt-6 inline-flex w-full justify-center rounded-lg bg-[#155dfc] py-3 text-sm font-medium text-white hover:bg-[#1447e6] transition-colors">
-                                Learn More <ArrowRight className="inline h-4 w-4 ml-1" />
-                            </Link>
-                            <p className="mt-3 text-center text-xs text-[#6a7282]">
-                                Sponsored content. SkyMaintain does not endorse products.
-                            </p>
-                        </div>
-
-                        {/* Partner Slot Available */}
-                        <div className="rounded-2xl border border-black/10 bg-white p-8">
-                            <div className="flex items-center justify-center">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#e5e7eb]">
-                                        <Activity className="h-6 w-6 text-[#6a7282]" />
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-[#6a7282]">Partner Slot Available</h3>
-                                </div>
-                            </div>
-                            <p className="mt-6 text-center text-[#6a7282]">
-                                Join our network of industry partners and reach aviation maintenance professionals worldwide.
-                            </p>
-                            <Link href="/become-partner" className="mt-6 inline-flex w-full justify-center rounded-lg bg-[#4a5565] py-3 text-sm font-medium text-white hover:bg-[#3d4654] transition-colors">
-                                Become a Partner <ArrowRight className="inline h-4 w-4 ml-1" />
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* Partner Disclosure */}
-                    <p className="mt-8 text-center text-xs text-[#6a7282]">
-                        <strong>Partner Disclosure:</strong> SkyMaintain displays sponsored partner content. Sponsorship does not influence AI responses, maintenance recommendations, or compliance assessments. All partnerships are reviewed for aviation industry relevance and quality standards.
-                    </p>
-                </div>
-            </section>
-
-            {/* FAQ Section */}
-            <section className="bg-[#f9fafb] py-16">
-                <div className="mx-auto max-w-4xl px-6">
-                    <div className="mb-12 text-center">
-                        <h2 className="text-3xl font-bold text-[#101828] md:text-4xl">
-                            Compliance &amp; Trust — Frequently Asked Questions
-                        </h2>
-                        <p className="mt-4 text-lg text-[#4a5565]">
-                            How SkyMaintain supports maintenance professionals safely, responsibly, and in line with regulations.
-                        </p>
-                    </div>
-
-                    <div className="space-y-4">
-                        {faqs.map((faq, idx) => (
-                            <div
-                                key={faq.question}
-                                className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white"
-                            >
-                                <button
-                                    onClick={() => toggleFaq(idx)}
-                                    className="flex w-full items-center justify-between p-6 text-left"
-                                >
-                                    <span className="text-lg font-bold text-[#101828]">{faq.question}</span>
-                                    {expandedFaqs.includes(idx) ? (
-                                        <ChevronUp className="h-5 w-5 text-[#4a5565]" />
-                                    ) : (
-                                        <ChevronDown className="h-5 w-5 text-[#4a5565]" />
-                                    )}
-                                </button>
-                                {expandedFaqs.includes(idx) && (
-                                    <div className="border-t border-[#e5e7eb] px-6 pb-6 pt-4">
-                                        <p className="whitespace-pre-line text-[#364153]">{faq.answer}</p>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-8 text-center text-[#4a5565]">
-                        Have more questions?{" "}
-                        <Link href="/contact" className="text-[#155dfc] hover:underline">
-                            Contact our compliance team
-                        </Link>
-                    </div>
-                </div>
-            </section>
-
-            {/* Final CTA */}
-            <section className="bg-gradient-to-br from-[#155dfc] via-[#9810fa] to-[#432dd7] py-20">
-                <div className="mx-auto max-w-4xl px-6 text-center">
-                    <div className="mb-8 flex justify-center">
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
-                            <Plane className="h-10 w-10 text-white" />
-                        </div>
-                    </div>
-                    <h2 className="text-3xl font-bold text-white md:text-5xl">
-                        Ready to Transform Your Maintenance Operations?
-                    </h2>
-                    <p className="mx-auto mt-6 max-w-2xl text-lg text-[#dbeafe]">
-                        Join 50+ airlines and operators using SkyMaintain to improve safety, reduce costs, and ensure 100% regulatory compliance.
-                    </p>
-
-                    <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                         <Link
-                            href="/signin"
-                            className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-lg font-medium text-[#155dfc] shadow-xl hover:bg-gray-50 transition-colors"
+                            href="/#signup"
+                            onClick={() => startTrialIfMissing()}
+                            className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-lg font-bold text-[#8200db] shadow-xl hover:bg-gray-50 transition-colors"
                         >
-                            Start Your Free Trial
+                            Start Free Trial
                             <ArrowRight className="h-5 w-5" />
                         </Link>
                         <Link
-                            href="/contact"
-                            className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-lg font-medium text-[#155dfc] shadow-xl hover:bg-gray-50 transition-colors"
+                            href="/contact?intent=partnerships"
+                            className="inline-flex items-center justify-center rounded-xl border border-white/30 bg-white/10 px-6 py-3 text-lg font-bold text-white shadow-xl hover:bg-white/20 transition-colors"
                         >
-                            Schedule a Demo
+                            Partner with Us
                         </Link>
-                    </div>
+                            >
+                        Request Demo
+                    </Link>
+                </div>
 
-                    <p className="mt-6 text-sm text-[#bedbff]">
-                        ✓ 14-day free trial • ✓ No credit card required • ✓ Full platform access
+                {/* Trust badges */}
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-[#e9d4ff]">
+                    <span className="flex items-center gap-2">
+                        <Check className="h-5 w-5" />
+                        14-day free trial
+                    </span>
+                    <span className="flex items-center gap-2">
+                        <Check className="h-5 w-5" />
+                        No credit card required
+                    </span>
+                    <span className="flex items-center gap-2">
+                        <Check className="h-5 w-5" />
+                        Full platform access
+                    </span>
+                </div>
+        </div>
+                </div >
+            </section >
+
+        {/* Stats Banner */ }
+        < section className = "bg-gradient-to-r from-[#155dfc] to-[#9810fa] py-16" >
+            <div className="mx-auto max-w-6xl px-6">
+                <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+                    {stats.map((stat) => (
+                        <div key={stat.label} className="flex flex-col items-center text-center">
+                            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
+                                {stat.icon}
+                            </div>
+                            <div className="text-3xl font-bold text-white md:text-4xl">{stat.value}</div>
+                            <div className="mt-2 text-sm text-[#dbeafe]">{stat.label}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            </section >
+
+        {/* Featured Partner - GlobalAero */ }
+        < section className = "border-y-4 border-[#155dfc] bg-gradient-to-br from-[#f8fafc] to-[#f3f4f6] py-12" >
+            <div className="mx-auto max-w-6xl px-6">
+                <div className="mb-4 flex justify-center">
+                    <span className="rounded-lg bg-[#4a5565] px-4 py-2 text-xs font-medium text-white">
+                        FEATURED PARTNER
+                    </span>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border-4 border-[#e5e7eb] bg-white shadow-2xl">
+                    <div className="grid md:grid-cols-2">
+                        {/* Left Content */}
+                        <div className="bg-gradient-to-br from-[#1c398e] to-[#312c85] p-8 md:p-12">
+                            <div className="mb-6 flex h-12 w-16 items-center justify-center rounded-lg bg-white/20">
+                                <Plane className="h-8 w-8 text-white" />
+                            </div>
+                            <h3 className="text-3xl font-bold text-white md:text-4xl">GlobalAero Airlines</h3>
+                            <p className="mt-4 text-lg leading-relaxed text-[#dbeafe]">
+                                &quot;Partnering with the world&apos;s leading carriers. Experience excellence in aviation with our premium fleet services and 24/7 maintenance support.&quot;
+                            </p>
+                            <div className="mt-6 flex flex-wrap gap-4 text-sm text-white">
+                                <span className="flex items-center gap-2">
+                                    <Check className="h-4 w-4" /> 500+ Aircraft Fleet
+                                </span>
+                                <span className="flex items-center gap-2">
+                                    <Check className="h-4 w-4" /> Global Coverage
+                                </span>
+                                <span className="flex items-center gap-2">
+                                    <Check className="h-4 w-4" /> ISO Certified
+                                </span>
+                            </div>
+                            <Link href="/contact" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#1c398e] hover:bg-gray-50 transition-colors">
+                                Learn More
+                                <ExternalLink className="h-4 w-4" />
+                            </Link>
+                        </div>
+
+                        {/* Right Image */}
+                        <div className="relative h-64 md:h-auto">
+                            <img
+                                src={imgGlobalAeroFleet}
+                                alt="GlobalAero Airlines Fleet"
+                                className="absolute inset-0 h-full w-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                            <span className="absolute right-4 top-4 rounded-lg bg-[#4a5565] px-3 py-1 text-xs text-white">
+                                Sponsored
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Dev Info */}
+                <div className="mt-4 rounded-lg bg-[#f3f4f6] p-3">
+                    <span className="text-xs font-bold text-[#4a5565]">DEV INFO: </span>
+                    <span className="text-xs text-[#4a5565]">
+                        Ad ID: ad-001-globalaero | Contract: 2026-01-01 to 2026-12-31 | Annual contract - Premium airline partner
+                    </span>
+                </div>
+            </div>
+            </section >
+
+        {/* Platform Capabilities */ }
+        < section className = "bg-[#f9fafb] py-16" >
+            <div className="mx-auto max-w-6xl px-6">
+                <div className="mb-12 text-center">
+                    <span className="rounded-lg bg-[#155dfc] px-4 py-2 text-xs font-medium text-white">
+                        Platform Capabilities
+                    </span>
+                    <h2 className="mt-4 text-3xl font-bold text-[#101828] md:text-4xl">
+                        Comprehensive AI-Driven Maintenance Solution
+                    </h2>
+                    <p className="mx-auto mt-4 max-w-3xl text-lg text-[#4a5565]">
+                        Built specifically for aviation maintenance operations with regulatory compliance at its core
                     </p>
                 </div>
-            </section>
 
-            {/* Footer */}
-            <footer className="bg-[#101828] py-12">
-                <div className="mx-auto max-w-6xl px-6">
-                    <div className="grid gap-8 md:grid-cols-4">
-                        {/* Brand */}
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#155dfc]">
-                                    <Plane className="h-5 w-5 text-white" />
+                <div className="space-y-16">
+                    {capabilities.map((cap, idx) => (
+                        <div
+                            key={cap.title}
+                            className={`flex flex-col items-center gap-8 lg:flex-row ${cap.position === "left" ? "lg:flex-row-reverse" : ""
+                                }`}
+                        >
+                            {/* Content */}
+                            <div className="flex-1 space-y-4">
+                                <div className="h-12 w-12 text-[#155dfc]">
+                                    {idx === 0 && <Zap className="h-12 w-12" />}
+                                    {idx === 1 && <FileCheck className="h-12 w-12" />}
+                                    {idx === 2 && <Activity className="h-12 w-12" />}
+                                    {idx === 3 && <ClipboardList className="h-12 w-12" />}
                                 </div>
-                                <span className="text-lg font-bold text-white">SkyMaintain</span>
+                                <h3 className="text-2xl font-bold text-[#101828] md:text-3xl">{cap.title}</h3>
+                                <p className="text-lg text-[#4a5565]">{cap.description}</p>
+                                <Link href={idx === 0 ? "/platform-features" : idx === 1 ? "/regulatory-compliance-automation" : "/platform-features"} className="inline-flex items-center gap-2 rounded-lg bg-[#155dfc] px-4 py-2 text-sm font-medium text-white hover:bg-[#1447e6] transition-colors">
+                                    Learn More
+                                    <ArrowRight className="h-4 w-4" />
+                                </Link>
                             </div>
-                            <p className="mt-4 text-sm text-[#99a1af]">
-                                AI-powered aircraft maintenance platform ensuring safety, compliance, and efficiency.
+
+                            {/* Image */}
+                            <div className="flex-1">
+                                <div className="relative h-64 w-full overflow-hidden rounded-2xl border-4 border-white shadow-2xl lg:h-80">
+                                    <img
+                                        src={cap.image}
+                                        alt={cap.title}
+                                        className="absolute inset-0 h-full w-full object-cover"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            </section >
+
+        {/* Customer Success */ }
+        < section className = "bg-white py-16" >
+            <div className="mx-auto max-w-6xl px-6">
+                <div className="mb-12 text-center">
+                    <span className="rounded-lg bg-[#9810fa] px-4 py-2 text-xs font-medium text-white">
+                        Customer Success
+                    </span>
+                    <h2 className="mt-4 text-3xl font-bold text-[#101828] md:text-4xl">
+                        Trusted by Aviation Professionals
+                    </h2>
+                </div>
+
+                <div className="grid gap-8 md:grid-cols-2">
+                    {testimonials.map((testimonial) => (
+                        <div
+                            key={testimonial.name}
+                            className="rounded-2xl border border-black/10 bg-white p-8"
+                        >
+                            <div className="mb-6 h-12 w-12 rounded-full bg-[#155dfc]/10 flex items-center justify-center">
+                                <Plane className="h-6 w-6 text-[#155dfc]" />
+                            </div>
+                            <div className="mb-6 flex gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                    <Star key={i} className="h-5 w-5 fill-[#fbbf24] text-[#fbbf24]" />
+                                ))}
+                            </div>
+                            <p className="mb-6 text-lg italic text-[#364153]">
+                                &quot;{testimonial.quote}&quot;
                             </p>
+                            <div className="border-t border-[#e5e7eb] pt-6">
+                                <div className="font-bold text-[#101828]">{testimonial.name}</div>
+                                <div className="text-sm text-[#4a5565]">{testimonial.title}</div>
+                                <div className="text-sm text-[#155dfc]">{testimonial.company}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            </section >
+
+        {/* Industry Partner - AeroTech */ }
+        < section className = "border-y-4 border-[#f54900] bg-gradient-to-br from-[#fff7ed] to-[#fffbeb] py-12" >
+            <div className="mx-auto max-w-6xl px-6">
+                <div className="mb-4 flex justify-center">
+                    <span className="rounded-lg bg-[#f54900] px-4 py-2 text-xs font-medium text-white">
+                        INDUSTRY PARTNER
+                    </span>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border-4 border-[#e5e7eb] bg-white shadow-2xl">
+                    <div className="grid md:grid-cols-2">
+                        {/* Left Image */}
+                        <div className="relative h-64 md:h-auto">
+                            <img
+                                src={imgAviationParts}
+                                alt="Aviation Parts and Components"
+                                className="absolute inset-0 h-full w-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent" />
+                            <span className="absolute left-4 top-4 rounded-lg bg-[#f54900] px-3 py-1 text-xs text-white">
+                                Sponsored
+                            </span>
                         </div>
 
-                        {/* Product */}
-                        <div>
-                            <h4 className="mb-4 font-bold text-white">Product</h4>
-                            <ul className="space-y-2">
-                                <li><Link href="/platform-features" className="text-[#d1d5dc] hover:text-white">Features</Link></li>
-                                <li><Link href="/pricing" className="text-[#d1d5dc] hover:text-white">Pricing</Link></li>
-                                <li><Link href="/security" className="text-[#d1d5dc] hover:text-white">Security</Link></li>
-                            </ul>
-                        </div>
+                        {/* Right Content */}
+                        <div className="bg-gradient-to-br from-[#f54900] to-[#e7000b] p-8 md:p-12">
+                            <div className="mb-6 flex h-12 w-16 items-center justify-center rounded-lg bg-white/20">
+                                <Shield className="h-8 w-8 text-white" />
+                            </div>
+                            <h3 className="text-3xl font-bold text-white md:text-4xl">AeroTech Parts &amp; Supply</h3>
+                            <p className="mt-4 text-lg leading-relaxed text-[#ffedd4]">
+                                &quot;Your trusted source for certified aircraft parts and components. Fast delivery, competitive pricing, and unmatched quality assurance.&quot;
+                            </p>
+                            <div className="mt-6 flex flex-wrap gap-4 text-sm text-white">
+                                <span className="flex items-center gap-2">
+                                    <Check className="h-4 w-4" /> FAA/EASA Certified
+                                </span>
+                                <span className="flex items-center gap-2">
+                                    <Check className="h-4 w-4" /> 24-Hour Shipping
+                                </span>
+                                <span className="flex items-center gap-2">
+                                    <Check className="h-4 w-4" /> 50,000+ Parts
+                                </span>
+                            </div>
 
-                        {/* Company */}
-                        <div>
-                            <h4 className="mb-4 font-bold text-white">Company</h4>
-                            <ul className="space-y-2">
-                                <li><Link href="/about" className="text-[#d1d5dc] hover:text-white">About Us</Link></li>
-                                <li><Link href="/careers" className="text-[#d1d5dc] hover:text-white">Careers</Link></li>
-                                <li><Link href="/contact" className="text-[#d1d5dc] hover:text-white">Contact</Link></li>
-                            </ul>
-                        </div>
+                            {/* Special Offer */}
+                            <div className="mt-6 flex items-center gap-3 rounded-lg bg-white/10 p-3">
+                                <Tag className="h-5 w-5 text-white" />
+                                <div>
+                                    <div className="text-xs text-[#ffedd4]">Special Offer</div>
+                                    <div className="text-sm font-bold text-white">15% Off First Order - Use Code: SKYMAINT15</div>
+                                </div>
+                            </div>
 
-                        {/* Legal */}
-                        <div>
-                            <h4 className="mb-4 font-bold text-white">Legal</h4>
-                            <ul className="space-y-2">
-                                <li><Link href="/privacy" className="text-[#d1d5dc] hover:text-white">Privacy Policy</Link></li>
-                                <li><Link href="/terms" className="text-[#d1d5dc] hover:text-white">Terms of Service</Link></li>
-                                <li><Link href="/compliance" className="text-[#d1d5dc] hover:text-white">Compliance</Link></li>
-                            </ul>
+                            <button className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#f54900] hover:bg-gray-50 transition-colors">
+                                Shop Parts Catalog
+                                <ExternalLink className="h-4 w-4" />
+                            </button>
                         </div>
-                    </div>
-
-                    <div className="mt-8 border-t border-[#1e2939] pt-8 text-center">
-                        <p className="text-sm text-[#d1d5dc]">
-                            © 2026 <span className="text-[#51a2ff]">SkyMaintain</span>. All Rights Reserved.
-                        </p>
-                        <p className="mt-2 text-xs text-[#6a7282]">
-                            SkyMaintain is a product of EncycloAMTs LLC.
-                        </p>
-                        <p className="mt-1 text-xs text-[#6a7282]">
-                            A Regulatory-Compliant Architecture for AI-Assisted Aircraft Maintenance Decision Support
-                        </p>
-                        <p className="mt-4 text-xs text-[#6a7282]">
-                            <strong>Partner Disclosure:</strong> SkyMaintain displays sponsored partner content. Sponsorship does not influence AI responses, maintenance recommendations, or compliance assessments.
-                        </p>
                     </div>
                 </div>
-            </footer>
-        </div>
+
+                {/* Dev Info */}
+                <div className="mt-4 rounded-lg bg-[#f3f4f6] p-3">
+                    <span className="text-xs font-bold text-[#4a5565]">DEV INFO: </span>
+                    <span className="text-xs text-[#4a5565]">
+                        Ad ID: ad-002-aerotech | Contract: 2026-01-15 to 2026-07-15 | 6-month contract with promo code tracking
+                    </span>
+                </div>
+            </div>
+            </section >
+
+        {/* Connecting Aviation Excellence */ }
+        < section className = "bg-gradient-to-br from-[#f9fafb] to-[#eff6ff] py-16" >
+            <div className="mx-auto max-w-6xl px-6">
+                <div className="mb-12 text-center">
+                    <span className="rounded-lg bg-[#9810fa] px-4 py-2 text-xs font-medium text-white">
+                        Industry Partners
+                    </span>
+                    <h2 className="mt-4 text-3xl font-bold text-[#101828] md:text-4xl">
+                        Connecting Aviation Excellence
+                    </h2>
+                    <p className="mx-auto mt-4 max-w-3xl text-lg text-[#4a5565]">
+                        Featured partners providing trusted solutions to the aviation maintenance community
+                    </p>
+                </div>
+
+                <div className="grid gap-8 md:grid-cols-2">
+                    {/* AeroTech Solutions */}
+                    <div className="relative rounded-2xl border border-black/10 bg-white p-8">
+                        <span className="absolute right-4 top-4 rounded-full bg-[#f3f4f6] px-3 py-1 text-xs text-[#4a5565]">
+                            Sponsored
+                        </span>
+                        <div className="flex items-center justify-center">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#dbeafe]">
+                                    <Activity className="h-6 w-6 text-[#155dfc]" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-[#101828]">AeroTech Solutions</h3>
+                            </div>
+                        </div>
+                        <p className="mt-6 text-center text-[#364153]">
+                            Advanced diagnostic tools and predictive analytics for modern aircraft fleets.
+                        </p>
+                        <Link href="/contact" className="mt-6 inline-flex w-full justify-center rounded-lg bg-[#155dfc] py-3 text-sm font-medium text-white hover:bg-[#1447e6] transition-colors">
+                            Learn More <ArrowRight className="inline h-4 w-4 ml-1" />
+                        </Link>
+                        <p className="mt-3 text-center text-xs text-[#6a7282]">
+                            Sponsored content. SkyMaintain does not endorse products.
+                        </p>
+                    </div>
+
+                    {/* Partner Slot Available */}
+                    <div className="rounded-2xl border border-black/10 bg-white p-8">
+                        <div className="flex items-center justify-center">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#e5e7eb]">
+                                    <Activity className="h-6 w-6 text-[#6a7282]" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-[#6a7282]">Partner Slot Available</h3>
+                            </div>
+                        </div>
+                        <p className="mt-6 text-center text-[#6a7282]">
+                            Join our network of industry partners and reach aviation maintenance professionals worldwide.
+                        </p>
+                        <Link href="/become-partner" className="mt-6 inline-flex w-full justify-center rounded-lg bg-[#4a5565] py-3 text-sm font-medium text-white hover:bg-[#3d4654] transition-colors">
+                            Become a Partner <ArrowRight className="inline h-4 w-4 ml-1" />
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Partner Disclosure */}
+                <p className="mt-8 text-center text-xs text-[#6a7282]">
+                    <strong>Partner Disclosure:</strong> SkyMaintain displays sponsored partner content. Sponsorship does not influence AI responses, maintenance recommendations, or compliance assessments. All partnerships are reviewed for aviation industry relevance and quality standards.
+                </p>
+            </div>
+            </section >
+
+        {/* FAQ Section */ }
+        < section className = "bg-[#f9fafb] py-16" >
+            <div className="mx-auto max-w-4xl px-6">
+                <div className="mb-12 text-center">
+                    <h2 className="text-3xl font-bold text-[#101828] md:text-4xl">
+                        Compliance &amp; Trust — Frequently Asked Questions
+                    </h2>
+                    <p className="mt-4 text-lg text-[#4a5565]">
+                        How SkyMaintain supports maintenance professionals safely, responsibly, and in line with regulations.
+                    </p>
+                </div>
+
+                <div className="space-y-4">
+                    {faqs.map((faq, idx) => (
+                        <div
+                            key={faq.question}
+                            className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white"
+                        >
+                            <button
+                                onClick={() => toggleFaq(idx)}
+                                className="flex w-full items-center justify-between p-6 text-left"
+                            >
+                                <span className="text-lg font-bold text-[#101828]">{faq.question}</span>
+                                {expandedFaqs.includes(idx) ? (
+                                    <ChevronUp className="h-5 w-5 text-[#4a5565]" />
+                                ) : (
+                                    <ChevronDown className="h-5 w-5 text-[#4a5565]" />
+                                )}
+                            </button>
+                            {expandedFaqs.includes(idx) && (
+                                <div className="border-t border-[#e5e7eb] px-6 pb-6 pt-4">
+                                    <p className="whitespace-pre-line text-[#364153]">{faq.answer}</p>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                <div className="mt-8 text-center text-[#4a5565]">
+                    Have more questions?{" "}
+                    <Link href="/contact" className="text-[#155dfc] hover:underline">
+                        Contact our compliance team
+                    </Link>
+                </div>
+            </div>
+            </section >
+
+        {/* Final CTA */ }
+        < section className = "bg-gradient-to-br from-[#155dfc] via-[#9810fa] to-[#432dd7] py-20" >
+            <div className="mx-auto max-w-4xl px-6 text-center">
+                <div className="mb-8 flex justify-center">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
+                        <Plane className="h-10 w-10 text-white" />
+                    </div>
+                </div>
+                <h2 className="text-3xl font-bold text-white md:text-5xl">
+                    Ready to Transform Your Maintenance Operations?
+                </h2>
+                <p className="mx-auto mt-6 max-w-2xl text-lg text-[#dbeafe]">
+                    Join 50+ airlines and operators using SkyMaintain to improve safety, reduce costs, and ensure 100% regulatory compliance.
+                </p>
+
+                <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                    <Link
+                        href="/signin"
+                        className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-lg font-medium text-[#155dfc] shadow-xl hover:bg-gray-50 transition-colors"
+                    >
+                        Start Your Free Trial
+                        <ArrowRight className="h-5 w-5" />
+                    </Link>
+                    <Link
+                        href="/contact"
+                        className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-lg font-medium text-[#155dfc] shadow-xl hover:bg-gray-50 transition-colors"
+                    >
+                        Schedule a Demo
+                    </Link>
+                </div>
+
+                <p className="mt-6 text-sm text-[#bedbff]">
+                    ✓ 14-day free trial • ✓ No credit card required • ✓ Full platform access
+                </p>
+            </div>
+            </section >
+
+        {/* Footer */ }
+        < footer className = "bg-[#101828] py-12" >
+            <div className="mx-auto max-w-6xl px-6">
+                <div className="grid gap-8 md:grid-cols-4">
+                    {/* Brand */}
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#155dfc]">
+                                <Plane className="h-5 w-5 text-white" />
+                            </div>
+                            <span className="text-lg font-bold text-white">SkyMaintain</span>
+                        </div>
+                        <p className="mt-4 text-sm text-[#99a1af]">
+                            AI-powered aircraft maintenance platform ensuring safety, compliance, and efficiency.
+                        </p>
+                    </div>
+
+                    {/* Product */}
+                    <div>
+                        <h4 className="mb-4 font-bold text-white">Product</h4>
+                        <ul className="space-y-2">
+                            <li><Link href="/platform-features" className="text-[#d1d5dc] hover:text-white">Features</Link></li>
+                            <li><Link href="/pricing" className="text-[#d1d5dc] hover:text-white">Pricing</Link></li>
+                            <li><Link href="/security" className="text-[#d1d5dc] hover:text-white">Security</Link></li>
+                        </ul>
+                    </div>
+
+                    {/* Company */}
+                    <div>
+                        <h4 className="mb-4 font-bold text-white">Company</h4>
+                        <ul className="space-y-2">
+                            <li><Link href="/about" className="text-[#d1d5dc] hover:text-white">About Us</Link></li>
+                            <li><Link href="/careers" className="text-[#d1d5dc] hover:text-white">Careers</Link></li>
+                            <li><Link href="/contact" className="text-[#d1d5dc] hover:text-white">Contact</Link></li>
+                        </ul>
+                    </div>
+
+                    {/* Legal */}
+                    <div>
+                        <h4 className="mb-4 font-bold text-white">Legal</h4>
+                        <ul className="space-y-2">
+                            <li><Link href="/privacy" className="text-[#d1d5dc] hover:text-white">Privacy Policy</Link></li>
+                            <li><Link href="/terms" className="text-[#d1d5dc] hover:text-white">Terms of Service</Link></li>
+                            <li><Link href="/compliance" className="text-[#d1d5dc] hover:text-white">Compliance</Link></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div className="mt-8 border-t border-[#1e2939] pt-8 text-center">
+                    <p className="text-sm text-[#d1d5dc]">
+                        © 2026 <span className="text-[#51a2ff]">SkyMaintain</span>. All Rights Reserved.
+                    </p>
+                    <p className="mt-2 text-xs text-[#6a7282]">
+                        SkyMaintain is a product of EncycloAMTs LLC.
+                    </p>
+                    <p className="mt-1 text-xs text-[#6a7282]">
+                        A Regulatory-Compliant Architecture for AI-Assisted Aircraft Maintenance Decision Support
+                    </p>
+                    <p className="mt-4 text-xs text-[#6a7282]">
+                        <strong>Partner Disclosure:</strong> SkyMaintain displays sponsored partner content. Sponsorship does not influence AI responses, maintenance recommendations, or compliance assessments.
+                    </p>
+                </div>
+            </div>
+            </footer >
+        </div >
     );
 }

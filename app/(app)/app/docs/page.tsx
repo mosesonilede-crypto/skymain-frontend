@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 type UploadedDoc = {
     filename: string;
@@ -80,6 +81,8 @@ export default function DocumentationPage() {
     const [discRemedy, setDiscRemedy] = useState("");
     const [discManual, setDiscManual] = useState("");
     const [localUploads, setLocalUploads] = useState<UploadedDoc[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
 
     const uploadedDocs: UploadedDoc[] = useMemo(() => {
         const base = docsData?.uploadedDocs || [
@@ -121,19 +124,40 @@ export default function DocumentationPage() {
         return `${mb.toFixed(1)} MB`;
     }
 
-    function handleUploadFiles(files: FileList | File[]) {
+    async function handleUploadFiles(files: FileList | File[]) {
         const list = Array.from(files || []);
         if (!list.length) return;
 
-        const newUploads: UploadedDoc[] = list.map((file) => ({
-            filename: file.name,
-            date: new Date().toLocaleDateString(),
-            size: formatFileSize(file.size),
-            category: "Maintenance Records",
-        }));
+        setUploadError(null);
+        setUploading(true);
+
+        const uploaded: UploadedDoc[] = [];
+        for (const file of list) {
+            const path = `${aircraftRegistration}/${Date.now()}-${file.name}`;
+            const { error } = await supabase.storage.from("documents").upload(path, file, {
+                cacheControl: "3600",
+                upsert: false,
+            });
+
+            if (error) {
+                setUploadError(error.message || "Failed to upload file.");
+                continue;
+            }
+
+            uploaded.push({
+                filename: file.name,
+                date: new Date().toLocaleDateString(),
+                size: formatFileSize(file.size),
+                category: "Maintenance Records",
+            });
+        }
+
+        setUploading(false);
+
+        if (!uploaded.length) return;
 
         setLocalUploads((prev) => {
-            const merged = [...newUploads, ...prev];
+            const merged = [...uploaded, ...prev];
             return merged.filter(
                 (doc, idx, arr) => arr.findIndex((d) => d.filename === doc.filename) === idx
             );
@@ -325,8 +349,20 @@ export default function DocumentationPage() {
                         />
                     </div>
 
+                    {uploadError ? (
+                        <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                            {uploadError}
+                        </div>
+                    ) : null}
+
+                    {uploading ? (
+                        <div className="mt-3 text-sm text-slate-500">Uploading files...</div>
+                    ) : null}
+
                     <div className="mt-5">
-                        <div className="text-sm font-semibold text-slate-900">Uploaded Documents (3)</div>
+                        <div className="text-sm font-semibold text-slate-900">
+                            Uploaded Documents ({uploadedDocs.length})
+                        </div>
 
                         <div className="mt-3 space-y-3">
                             {uploadedDocs.map((d) => (

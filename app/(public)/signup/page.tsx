@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-
-const PENDING_KEY = "skymaintain.signup.pending";
-const VERIFIED_KEY = "skymaintain.signup.verified";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function SignUpPage() {
     const router = useRouter();
@@ -21,23 +19,18 @@ export default function SignUpPage() {
     const [error, setError] = React.useState<string | null>(null);
     const [verificationSent, setVerificationSent] = React.useState(false);
 
-    function sendVerification() {
-        if (typeof window === "undefined") return;
-        window.localStorage.setItem(
-            PENDING_KEY,
-            JSON.stringify({
-                email: email.trim(),
-                orgName: orgName.trim(),
-                fullName: fullName.trim(),
-                createdAt: Date.now(),
-            })
-        );
-        setVerificationSent(true);
+    async function resendVerification() {
+        const eTrim = email.trim();
+        if (!eTrim) return;
+        setSubmitting(true);
+        const { error } = await supabase.auth.resend({ type: "signup", email: eTrim });
+        setSubmitting(false);
+        if (error) {
+            setError(error.message);
+        }
     }
 
     function markVerified() {
-        if (typeof window === "undefined") return;
-        window.localStorage.setItem(VERIFIED_KEY, "true");
         router.push("/signin?verified=1");
     }
 
@@ -70,10 +63,22 @@ export default function SignUpPage() {
         }
 
         setSubmitting(true);
-        await new Promise((r) => setTimeout(r, 400));
+        const { error } = await supabase.auth.signUp({
+            email: eTrim,
+            password,
+            options: {
+                data: { full_name: nTrim, org_name: oTrim },
+                emailRedirectTo: `${window.location.origin}/signin?verified=1`,
+            },
+        });
         setSubmitting(false);
 
-        sendVerification();
+        if (error) {
+            setError(error.message);
+            return;
+        }
+
+        setVerificationSent(true);
     }
 
     return (
@@ -126,12 +131,12 @@ export default function SignUpPage() {
                             <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-900">
                                 <div className="font-semibold">Verification email sent</div>
                                 <p className="mt-1 text-emerald-800">
-                                    Check {email || "your inbox"} and verify your email to activate the account.
+                                    Check {email || "your inbox"} for the verification email (OTP or link) to activate your account.
                                 </p>
                                 <div className="mt-4 flex flex-wrap gap-3">
                                     <button
                                         type="button"
-                                        onClick={sendVerification}
+                                        onClick={resendVerification}
                                         className="rounded-lg border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-50"
                                     >
                                         Resend verification
