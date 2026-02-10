@@ -38,6 +38,11 @@ export default function LandingSignupForm() {
             return;
         }
 
+        if (!supabase) {
+            setError("Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+            return;
+        }
+
         setSubmitting(true);
         const { error: signUpError } = await supabase.auth.signUp({
             email: eTrim,

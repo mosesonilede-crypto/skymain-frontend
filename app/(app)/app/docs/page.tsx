@@ -131,6 +131,12 @@ export default function DocumentationPage() {
         setUploadError(null);
         setUploading(true);
 
+        if (!supabase) {
+            setUploadError("Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+            setUploading(false);
+            return;
+        }
+
         const uploaded: UploadedDoc[] = [];
         for (const file of list) {
             const path = `${aircraftRegistration}/${Date.now()}-${file.name}`;

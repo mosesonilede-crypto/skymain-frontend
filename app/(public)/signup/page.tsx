@@ -22,6 +22,10 @@ export default function SignUpPage() {
     async function resendVerification() {
         const eTrim = email.trim();
         if (!eTrim) return;
+        if (!supabase) {
+            setError("Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+            return;
+        }
         setSubmitting(true);
         const { error } = await supabase.auth.resend({ type: "signup", email: eTrim });
         setSubmitting(false);
@@ -37,6 +41,11 @@ export default function SignUpPage() {
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
+
+        if (!supabase) {
+            setError("Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+            return;
+        }
 
         const eTrim = email.trim();
         const oTrim = orgName.trim();
