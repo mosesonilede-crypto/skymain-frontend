@@ -3,50 +3,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import PublicHeader from "@/components/public/PublicHeader";
+
+const footerIcon = "https://www.figma.com/api/mcp/asset/031aef08-7a5b-463c-adda-e9b5a01e356d";
 
 export default function PublicChrome({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const hideChrome = pathname === "/get-started" || pathname === "/";
+    const hideChrome = pathname === "/get-started";
 
     return (
         <div className="min-h-dvh bg-white text-slate-900">
-            {hideChrome ? null : (
-                <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-                    <div className="mx-auto flex max-w-[1148px] items-center justify-between px-8 py-4">
-                        <Link href="/" className="flex items-center gap-2">
-                            <img src="/brand/SkyMaintain_logo.png" alt="SkyMaintain" className="h-8 w-8 object-contain" />
-                            <span className="text-xl font-bold text-slate-900">SkyMaintain</span>
-                        </Link>
-
-                        <nav className="hidden items-center gap-6 md:flex">
-                            <Link href="/app/welcome" className="text-base text-slate-600 hover:text-slate-900">
-                                Platform
-                            </Link>
-                            <Link href="/compliance" className="text-base text-slate-600 hover:text-slate-900">
-                                Compliance
-                            </Link>
-                            <Link href="/regulatory-governance-accountability" className="text-base text-slate-600 hover:text-slate-900">
-                                Governance
-                            </Link>
-                            <Link href="/security" className="text-base text-slate-600 hover:text-slate-900">
-                                Security
-                            </Link>
-                            <Link href="/contact" className="text-base text-slate-600 hover:text-slate-900">
-                                Contact
-                            </Link>
-                            <Link href="/signin" className="text-sm text-slate-600 hover:text-slate-900">
-                                Sign In
-                            </Link>
-                            <Link
-                                href="/contact?intent=demo"
-                                className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white"
-                            >
-                                Request Demo
-                            </Link>
-                        </nav>
-                    </div>
-                </header>
-            )}
+            {hideChrome ? null : <PublicHeader />}
 
             <main>{children}</main>
 
@@ -54,7 +21,7 @@ export default function PublicChrome({ children }: { children: React.ReactNode }
                 <footer className="bg-slate-900">
                     <div className="mx-auto flex max-w-[1084px] flex-col items-center gap-4 px-8 py-10 text-center">
                         <div className="flex items-center gap-2">
-                            <img src="/brand/SkyMaintain_logo.png" alt="SkyMaintain" className="h-8 w-8 object-contain" />
+                            <img src={footerIcon} alt="" className="h-8 w-8" />
                             <span className="text-2xl font-bold text-white">SkyMaintain</span>
                         </div>
                         <p className="text-base text-slate-300">
@@ -64,6 +31,15 @@ export default function PublicChrome({ children }: { children: React.ReactNode }
                     </div>
                     <div className="border-t border-slate-800">
                         <div className="mx-auto flex max-w-[1084px] flex-col items-center gap-6 px-8 py-8 text-sm text-slate-400 md:flex-row md:justify-center">
+                            <Link href="/platform" className="hover:text-slate-200">
+                                Platform
+                            </Link>
+                            <Link href="/platform-features" className="hover:text-slate-200">
+                                Platform Features
+                            </Link>
+                            <Link href="/enterprise" className="hover:text-slate-200">
+                                Enterprise
+                            </Link>
                             <Link href="/privacy" className="hover:text-slate-200">
                                 Privacy Policy
                             </Link>
@@ -72,9 +48,6 @@ export default function PublicChrome({ children }: { children: React.ReactNode }
                             </Link>
                             <Link href="/compliance" className="hover:text-slate-200">
                                 Compliance
-                            </Link>
-                            <Link href="/regulatory-governance-accountability" className="hover:text-slate-200">
-                                Governance
                             </Link>
                             <Link href="/security" className="hover:text-slate-200">
                                 Security
