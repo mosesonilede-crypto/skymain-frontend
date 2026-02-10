@@ -11,7 +11,6 @@ export default function GetStartedLayout({ children }: { children: React.ReactNo
         <div className="min-h-dvh bg-white text-slate-900">
             <PublicHeader />
             <main>{children}</main>
-            {/* No footer here - page has its own custom footer */}
         </div>
     );
 }
