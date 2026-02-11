@@ -36,6 +36,7 @@ const navItems = [
     { href: "/app/dashboard", label: "Dashboard", icon: <img alt="" className="h-5 w-5" src={iconDashboard} /> },
     { href: "/app/docs", label: "Documentation", icon: <img alt="" className="h-5 w-5" src={iconDocs} /> },
     { href: "/app/alerts", label: "Predictive Alerts", icon: <img alt="" className="h-5 w-5" src={iconAlerts} /> },
+    { href: "/app/maintenance-intelligence", label: "Maintenance Intelligence", icon: <img alt="" className="h-5 w-5" src={iconInsights} />, tall: true },
     { href: "/app/logs", label: "Maintenance Logs", icon: <img alt="" className="h-5 w-5" src={iconLogs} /> },
     { href: "/app/reports", label: "Reports", icon: <img alt="" className="h-5 w-5" src={iconReports} /> },
     { href: "/app/compliance", label: "Regulatory Compliance", icon: <img alt="" className="h-5 w-5" src={iconCompliance} />, tall: true },
