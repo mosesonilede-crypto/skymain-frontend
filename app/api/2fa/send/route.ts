@@ -39,13 +39,19 @@ async function sendEmail(code: string, destination: string) {
 
     await transport.verify();
 
-    await transport.sendMail({
+    const result = await transport.sendMail({
         from,
         to: destination,
         subject: "Your SkyMaintain verification code",
         text: `Your SkyMaintain verification code is ${code}. It expires in 5 minutes.`,
         html: `<p>Your SkyMaintain verification code is <strong>${code}</strong>.</p><p>This code expires in 5 minutes.</p>`,
     });
+
+    return {
+        messageId: result?.messageId,
+        accepted: result?.accepted ?? [],
+        rejected: result?.rejected ?? [],
+    };
 }
 
 async function sendSms(code: string, destination: string) {
@@ -112,10 +118,12 @@ export async function POST(req: Request) {
         usedMock = true;
     }
 
+    let emailResult: { messageId?: string; accepted: unknown[]; rejected: unknown[] } | null = null;
+
     if (!usedMock) {
         try {
             if (body.method === "email") {
-                await sendEmail(code, body.destination);
+                emailResult = await sendEmail(code, body.destination);
             } else {
                 await sendSms(code, body.destination);
             }
@@ -131,7 +139,13 @@ export async function POST(req: Request) {
         }
     }
 
-    const response = NextResponse.json({ ok: true, mockCode: usedMock ? code : undefined });
+    const response = NextResponse.json({
+        ok: true,
+        mockCode: usedMock ? code : undefined,
+        sent: !usedMock,
+        provider: body.method,
+        email: body.method === "email" ? emailResult : undefined,
+    });
     response.cookies.set({
         name: COOKIE_NAME,
         value: token,

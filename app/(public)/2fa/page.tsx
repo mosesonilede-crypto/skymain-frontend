@@ -54,6 +54,7 @@ export default function TwoFactorPage() {
     const [email] = React.useState(user?.email || "manager@skywings.com");
     const [mockOTP, setMockOTP] = React.useState<string | null>(null);
     const [sendError, setSendError] = React.useState<string | null>(null);
+    const [sendStatus, setSendStatus] = React.useState<string | null>(null);
     const [sending, setSending] = React.useState(false);
     const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
@@ -94,6 +95,7 @@ export default function TwoFactorPage() {
     async function sendOtp() {
         setSendError(null);
         setMockOTP(null);
+        setSendStatus(null);
         const destination = email.trim();
 
         if (!destination && method !== "authenticator") {
@@ -115,6 +117,11 @@ export default function TwoFactorPage() {
             }
             if (data?.mockCode) {
                 setMockOTP(data.mockCode);
+                setSendStatus("Mock code generated. Email provider is not active in this mode.");
+            } else if (data?.email?.accepted?.length) {
+                setSendStatus("Email accepted by provider. Check your inbox or spam folder.");
+            } else {
+                setSendStatus("Request sent. If it doesn’t arrive, check your spam folder or provider logs.");
             }
         } catch (error) {
             setSendError(error instanceof Error ? error.message : "Failed to send code.");
@@ -220,6 +227,11 @@ export default function TwoFactorPage() {
                     {sendError ? (
                         <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                             {sendError}
+                        </div>
+                    ) : null}
+                    {sendStatus ? (
+                        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                            {sendStatus}
                         </div>
                     ) : null}
                     <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700">
