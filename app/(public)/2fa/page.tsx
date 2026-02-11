@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { supabase } from "@/lib/supabaseClient";
 
 function HelpCenterFab() {
     // Route all help into /contact unless a dedicated page exists
@@ -48,7 +49,7 @@ function HelpCenterFab() {
 
 export default function TwoFactorPage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, login } = useAuth();
 
     const [method, setMethod] = React.useState<"email" | "authenticator">("email");
     const [email] = React.useState(user?.email || "manager@skywings.com");
@@ -123,8 +124,8 @@ export default function TwoFactorPage() {
             } else {
                 setSendStatus("Request sent. If it doesn’t arrive, check your spam folder or provider logs.");
             }
-        } catch (error) {
-            setSendError(error instanceof Error ? error.message : "Failed to send code.");
+        } catch (sendErrorCaught) {
+            setSendError(sendErrorCaught instanceof Error ? sendErrorCaught.message : "Failed to send code.");
         } finally {
             setSending(false);
         }
@@ -162,8 +163,37 @@ export default function TwoFactorPage() {
                 setError(data?.error || "Verification failed.");
                 return;
             }
-        } catch (error) {
-            setError(error instanceof Error ? error.message : "Verification failed.");
+
+            let authUser = user;
+
+            if (!authUser && typeof window !== "undefined") {
+                const storedUser = localStorage.getItem("SKYMAINTAIN_USER");
+                if (storedUser) {
+                    try {
+                        authUser = JSON.parse(storedUser);
+                    } catch {
+                        localStorage.removeItem("SKYMAINTAIN_USER");
+                    }
+                }
+            }
+
+            if (!authUser && supabase) {
+                const { data: supabaseData } = await supabase.auth.getUser();
+                const supabaseUser = supabaseData?.user;
+                if (supabaseUser?.email) {
+                    authUser = {
+                        email: supabaseUser.email,
+                        orgName: (supabaseUser.user_metadata?.org_name as string | undefined) || "SkyMaintain",
+                        role: "fleet_manager",
+                    };
+                }
+            }
+
+            if (authUser) {
+                await login(authUser);
+            }
+        } catch (verifyError) {
+            setError(verifyError instanceof Error ? verifyError.message : "Verification failed.");
             return;
         } finally {
             setSubmitting(false);
