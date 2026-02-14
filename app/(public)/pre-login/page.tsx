@@ -65,6 +65,7 @@ export default function PreLoginPage() {
     const [email, setEmail] = useState("");
     const [organization, setOrganization] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
 
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -165,12 +166,21 @@ export default function PreLoginPage() {
                                         <div className="relative">
                                             <img alt="" className="absolute left-3 top-2.5 size-4" src={imgLoginLock} />
                                             <input
-                                                type="password"
+                                                type={showPassword ? "text" : "password"}
                                                 value={password}
                                                 onChange={(event) => setPassword(event.target.value)}
                                                 placeholder="••••••••"
-                                                className="w-full h-9 bg-[#f3f3f5] rounded-[8px] pl-10 pr-3 text-[14px] text-[#0a0a0a] placeholder:text-[#717182]"
+                                                className="w-full h-9 bg-[#f3f3f5] rounded-[8px] pl-10 pr-14 text-[14px] text-[#0a0a0a] placeholder:text-[#717182]"
                                             />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword((prev) => !prev)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-[#4a5565] hover:text-[#0a0a0a]"
+                                                aria-label={showPassword ? "Hide password" : "Show password"}
+                                                aria-pressed={showPassword}
+                                            >
+                                                {showPassword ? "Hide" : "Show"}
+                                            </button>
                                         </div>
                                     </div>
 

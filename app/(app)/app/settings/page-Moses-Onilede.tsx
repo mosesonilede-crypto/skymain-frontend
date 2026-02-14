@@ -140,9 +140,19 @@ export default function SettingsPage() {
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [passwordSaving, setPasswordSaving] = useState(false);
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
+    const closeChangePasswordModal = useCallback(() => {
+        setChangePasswordOpen(false);
+        setShowCurrentPassword(false);
+        setShowNewPassword(false);
+        setShowConfirmPassword(false);
+    }, []);
 
     // Aircraft & Fleet state
     const [flightHoursFormat, setFlightHoursFormat] = useState<"decimal" | "hhmm">("decimal");
@@ -805,7 +815,7 @@ export default function SettingsPage() {
             setNewPassword("");
             setConfirmPassword("");
             window.setTimeout(() => {
-                setChangePasswordOpen(false);
+                closeChangePasswordModal();
                 setPasswordSuccess(null);
             }, 1200);
         } catch {
@@ -4795,7 +4805,7 @@ export default function SettingsPage() {
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => setChangePasswordOpen(false)}
+                                        onClick={closeChangePasswordModal}
                                         className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
                                     >
                                         Close
@@ -4805,30 +4815,63 @@ export default function SettingsPage() {
                                 <div className="mt-4 space-y-3">
                                     <label className="flex flex-col gap-1 text-sm text-slate-700">
                                         Current Password
-                                        <input
-                                            type="password"
-                                            value={currentPassword}
-                                            onChange={(e) => setCurrentPassword(e.target.value)}
-                                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type={showCurrentPassword ? "text" : "password"}
+                                                value={currentPassword}
+                                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 pr-14 text-sm text-slate-900"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCurrentPassword((prev) => !prev)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-600 hover:text-slate-900"
+                                                aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
+                                                aria-pressed={showCurrentPassword}
+                                            >
+                                                {showCurrentPassword ? "Hide" : "Show"}
+                                            </button>
+                                        </div>
                                     </label>
                                     <label className="flex flex-col gap-1 text-sm text-slate-700">
                                         New Password
-                                        <input
-                                            type="password"
-                                            value={newPassword}
-                                            onChange={(e) => setNewPassword(e.target.value)}
-                                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type={showNewPassword ? "text" : "password"}
+                                                value={newPassword}
+                                                onChange={(e) => setNewPassword(e.target.value)}
+                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 pr-14 text-sm text-slate-900"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowNewPassword((prev) => !prev)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-600 hover:text-slate-900"
+                                                aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                                                aria-pressed={showNewPassword}
+                                            >
+                                                {showNewPassword ? "Hide" : "Show"}
+                                            </button>
+                                        </div>
                                     </label>
                                     <label className="flex flex-col gap-1 text-sm text-slate-700">
                                         Confirm New Password
-                                        <input
-                                            type="password"
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type={showConfirmPassword ? "text" : "password"}
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 pr-14 text-sm text-slate-900"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-600 hover:text-slate-900"
+                                                aria-label={showConfirmPassword ? "Hide confirm new password" : "Show confirm new password"}
+                                                aria-pressed={showConfirmPassword}
+                                            >
+                                                {showConfirmPassword ? "Hide" : "Show"}
+                                            </button>
+                                        </div>
                                     </label>
 
                                     {passwordError ? (
@@ -4846,7 +4889,7 @@ export default function SettingsPage() {
                                 <div className="mt-5 flex justify-end gap-2">
                                     <button
                                         type="button"
-                                        onClick={() => setChangePasswordOpen(false)}
+                                        onClick={closeChangePasswordModal}
                                         className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
                                     >
                                         Cancel

@@ -14,6 +14,8 @@ export default function SignUpPage() {
     const [email, setEmail] = React.useState("");
     const [password, setPassword] = React.useState("");
     const [confirm, setConfirm] = React.useState("");
+    const [showPassword, setShowPassword] = React.useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
     const [accept, setAccept] = React.useState(false);
 
     const [submitting, setSubmitting] = React.useState(false);
@@ -206,24 +208,46 @@ export default function SignUpPage() {
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700">Password</label>
-                                    <input
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        type="password"
-                                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
-                                        placeholder="Create a password"
-                                    />
+                                    <div className="relative mt-1">
+                                        <input
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            type={showPassword ? "text" : "password"}
+                                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-16 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
+                                            placeholder="Create a password"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword((prev) => !prev)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-600 hover:text-slate-900"
+                                            aria-label={showPassword ? "Hide password" : "Show password"}
+                                            aria-pressed={showPassword}
+                                        >
+                                            {showPassword ? "Hide" : "Show"}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700">Confirm Password</label>
-                                    <input
-                                        value={confirm}
-                                        onChange={(e) => setConfirm(e.target.value)}
-                                        type="password"
-                                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
-                                        placeholder="Re-enter password"
-                                    />
+                                    <div className="relative mt-1">
+                                        <input
+                                            value={confirm}
+                                            onChange={(e) => setConfirm(e.target.value)}
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-16 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
+                                            placeholder="Re-enter password"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-600 hover:text-slate-900"
+                                            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                                            aria-pressed={showConfirmPassword}
+                                        >
+                                            {showConfirmPassword ? "Hide" : "Show"}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <label className="flex items-start gap-2 text-sm text-slate-600">

@@ -15,6 +15,7 @@ export default function SignInPage() {
     const [orgName, setOrgName] = React.useState("");
     const [licenseCode, setLicenseCode] = React.useState("");
     const [password, setPassword] = React.useState("");
+    const [showPassword, setShowPassword] = React.useState(false);
     const [remember, setRemember] = React.useState(true);
 
     const [submitting, setSubmitting] = React.useState(false);
@@ -182,14 +183,25 @@ export default function SignInPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700">Password</label>
-                                <input
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    type="password"
-                                    autoComplete="current-password"
-                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
-                                    placeholder="Enter your password"
-                                />
+                                <div className="relative mt-1">
+                                    <input
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        type={showPassword ? "text" : "password"}
+                                        autoComplete="current-password"
+                                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-16 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
+                                        placeholder="Enter your password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword((prev) => !prev)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-600 hover:text-slate-900"
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                        aria-pressed={showPassword}
+                                    >
+                                        {showPassword ? "Hide" : "Show"}
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="flex items-center justify-between gap-4">
