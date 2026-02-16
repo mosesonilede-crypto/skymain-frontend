@@ -19,6 +19,20 @@ type LogItem = {
     notes?: string;
 };
 
+type ApiLog = {
+    id?: string;
+    title?: string;
+    description?: string;
+    technician?: string;
+    date?: string;
+    durationHours?: number;
+    status?: string;
+    type?: string;
+    category?: string;
+    parts?: string[];
+    notes?: string;
+};
+
 type UpcomingTask = {
     id: string;
     title: string;
@@ -64,14 +78,14 @@ export default function MaintenanceLogsPage() {
             const data = await response.json();
 
             if (data.logs && data.logs.length > 0) {
-                const mappedLogs: LogItem[] = data.logs.map((log: any) => ({
-                    id: log.id,
-                    title: log.title,
+                const mappedLogs: LogItem[] = data.logs.map((log: ApiLog) => ({
+                    id: log.id || "",
+                    title: log.title || "",
                     description: log.description || "Maintenance work completed",
-                    technician: log.technician,
-                    dateISO: new Date(log.date).toISOString().split("T")[0],
+                    technician: log.technician || "",
+                    dateISO: new Date(log.date || Date.now()).toISOString().split("T")[0],
                     durationHours: log.durationHours || 0,
-                    status: mapStatus(log.status),
+                    status: mapStatus(log.status || ""),
                     category: log.type || log.category || "General",
                     parts: log.parts || [],
                     notes: log.notes || "",

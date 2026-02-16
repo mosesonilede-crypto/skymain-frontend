@@ -36,6 +36,24 @@ type SBItem = {
     status: "Compliant" | "Pending" | "Overdue";
 };
 
+type ComplianceAd = {
+    id?: string;
+    title?: string;
+    authority?: string;
+    effective?: string;
+    complianceDate?: string;
+    status?: string;
+};
+
+type ComplianceSb = {
+    id?: string;
+    title?: string;
+    category?: string;
+    effective?: string;
+    complianceDate?: string;
+    status?: string;
+};
+
 type CertificateItem = {
     type: string;
     status: "Valid" | "Expiring Soon" | "Expired";
@@ -150,8 +168,7 @@ export default function RegulatoryCompliancePage() {
     const [selectedUpdate, setSelectedUpdate] = useState<RegulatoryUpdate | null>(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
-    const [taskCreated, setTaskCreated] = useState(false);
-    const [hiddenUpdates, setHiddenUpdates] = useState<number[]>([]);
+    const [hiddenUpdates] = useState<number[]>([]);
     const [showUpdates, setShowUpdates] = useState(true);
 
     const fetchComplianceData = useCallback(async () => {
@@ -179,7 +196,7 @@ export default function RegulatoryCompliancePage() {
 
             const data = await response.json();
 
-            const mappedAds: ADItem[] = (Array.isArray(data.ads) ? data.ads : []).map((item: any) => ({
+            const mappedAds: ADItem[] = (Array.isArray(data.ads) ? data.ads : []).map((item: ComplianceAd) => ({
                 id: item.id || "Unknown",
                 title: item.title || "Untitled directive",
                 authority: item.authority || "Unknown",
@@ -188,7 +205,7 @@ export default function RegulatoryCompliancePage() {
                 status: normalizeComplianceStatus(item.status),
             }));
 
-            const mappedSbs: SBItem[] = (Array.isArray(data.sbs) ? data.sbs : []).map((item: any) => ({
+            const mappedSbs: SBItem[] = (Array.isArray(data.sbs) ? data.sbs : []).map((item: ComplianceSb) => ({
                 id: item.id || "Unknown",
                 title: item.title || "Untitled bulletin",
                 category: item.category || "Unspecified",
@@ -407,7 +424,7 @@ export default function RegulatoryCompliancePage() {
                 )}
                 {!showUpdates && (
                     <div className="text-center py-4 text-slate-500">
-                        <p className="text-sm">Updates hidden. Click "Show" to view.</p>
+                        <p className="text-sm">Updates hidden. Click &quot;Show&quot; to view.</p>
                     </div>
                 )}
             </Panel>
@@ -492,9 +509,7 @@ export default function RegulatoryCompliancePage() {
                     onClose={() => {
                         setIsCreateTaskModalOpen(false);
                         setSelectedUpdate(null);
-                        setTaskCreated(false);
                     }}
-                    onTaskCreated={() => setTaskCreated(true)}
                     aircraftModel={aircraftModel}
                 />
             )}
@@ -885,17 +900,6 @@ function RefreshIcon({ animate }: { animate?: boolean }) {
     );
 }
 
-function RobotIcon() {
-    return (
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <rect x="4" y="8" width="16" height="12" rx="3" />
-            <path d="M12 4v4" />
-            <circle cx="9" cy="14" r="1" />
-            <circle cx="15" cy="14" r="1" />
-        </svg>
-    );
-}
-
 // View Details Modal Component
 function ViewDetailsModal({
     update,
@@ -1096,12 +1100,10 @@ function ViewDetailsModal({
 function CreateTaskModal({
     update,
     onClose,
-    onTaskCreated,
     aircraftModel
 }: {
     update: RegulatoryUpdate;
     onClose: () => void;
-    onTaskCreated: () => void;
     aircraftModel: string;
 }) {
     const router = useRouter();
@@ -1125,8 +1127,6 @@ function CreateTaskModal({
 
         setIsSubmitting(false);
         setTaskCreatedLocal(true);
-        onTaskCreated();
-
         // Auto close after success
         setTimeout(() => {
             onClose();

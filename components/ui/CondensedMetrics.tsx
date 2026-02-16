@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MetricCard, TrendIndicator } from "./TrendIndicator";
+import { TrendIndicator } from "./TrendIndicator";
 import { WhyThisMatters } from "./WhyThisMatters";
 
 interface Metric {

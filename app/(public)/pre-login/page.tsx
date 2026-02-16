@@ -57,8 +57,6 @@ const imgLoginEmail = "https://www.figma.com/api/mcp/asset/a7bb699c-160b-4e4d-a5
 const imgLoginOrg = "https://www.figma.com/api/mcp/asset/f7a6352d-299b-4171-89d0-84a454e9e5bb";
 const imgLoginLock = "https://www.figma.com/api/mcp/asset/06f60c78-2174-4421-b27d-c4db7dd3681f";
 const imgLoginArrow = "https://www.figma.com/api/mcp/asset/536b49f5-3b47-4b06-a26d-f34ef185d44d";
-const imgLoginDemoA = "https://www.figma.com/api/mcp/asset/56ba247a-9a2d-484a-b277-6d3dbe4a0bfe";
-const imgLoginDemoB = "https://www.figma.com/api/mcp/asset/69bbe477-5fe5-4ed8-9492-cf58425f4516";
 
 export default function PreLoginPage() {
     const [showLogin, setShowLogin] = useState(true);

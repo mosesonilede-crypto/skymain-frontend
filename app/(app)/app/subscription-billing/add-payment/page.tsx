@@ -102,7 +102,7 @@ export default function AddPaymentMethodPage() {
             <div className="mb-6">
                 <h1 className="text-lg font-semibold text-slate-900">Add Payment Method</h1>
                 <p className="mt-1 text-sm text-slate-600">
-                    Add a new payment method for your organization's subscription billing.
+                    Add a new payment method for your organization&apos;s subscription billing.
                 </p>
             </div>
 
@@ -113,11 +113,10 @@ export default function AddPaymentMethodPage() {
                     <button
                         type="button"
                         onClick={() => setPaymentType("card")}
-                        className={`flex items-center gap-3 rounded-xl border p-4 transition-colors ${
-                            paymentType === "card"
+                        className={`flex items-center gap-3 rounded-xl border p-4 transition-colors ${paymentType === "card"
                                 ? "border-violet-300 bg-violet-50 shadow-[0_0_0_2px_rgba(167,139,250,0.35)]"
                                 : "border-slate-200 bg-white hover:bg-slate-50"
-                        }`}
+                            }`}
                     >
                         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${paymentType === "card" ? "bg-violet-100" : "bg-slate-100"}`}>
                             <svg className={`h-5 w-5 ${paymentType === "card" ? "text-violet-600" : "text-slate-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -133,11 +132,10 @@ export default function AddPaymentMethodPage() {
                     <button
                         type="button"
                         onClick={() => setPaymentType("bank")}
-                        className={`flex items-center gap-3 rounded-xl border p-4 transition-colors ${
-                            paymentType === "bank"
+                        className={`flex items-center gap-3 rounded-xl border p-4 transition-colors ${paymentType === "bank"
                                 ? "border-violet-300 bg-violet-50 shadow-[0_0_0_2px_rgba(167,139,250,0.35)]"
                                 : "border-slate-200 bg-white hover:bg-slate-50"
-                        }`}
+                            }`}
                     >
                         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${paymentType === "bank" ? "bg-violet-100" : "bg-slate-100"}`}>
                             <svg className={`h-5 w-5 ${paymentType === "bank" ? "text-violet-600" : "text-slate-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -153,11 +151,10 @@ export default function AddPaymentMethodPage() {
                     <button
                         type="button"
                         onClick={() => setPaymentType("wire")}
-                        className={`flex items-center gap-3 rounded-xl border p-4 transition-colors ${
-                            paymentType === "wire"
+                        className={`flex items-center gap-3 rounded-xl border p-4 transition-colors ${paymentType === "wire"
                                 ? "border-violet-300 bg-violet-50 shadow-[0_0_0_2px_rgba(167,139,250,0.35)]"
                                 : "border-slate-200 bg-white hover:bg-slate-50"
-                        }`}
+                            }`}
                     >
                         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${paymentType === "wire" ? "bg-violet-100" : "bg-slate-100"}`}>
                             <svg className={`h-5 w-5 ${paymentType === "wire" ? "text-violet-600" : "text-slate-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -177,7 +174,7 @@ export default function AddPaymentMethodPage() {
                 {paymentType === "card" && (
                     <div className="rounded-2xl border border-slate-200 bg-white p-5">
                         <div className="text-sm font-semibold text-slate-900 mb-4">Card Details</div>
-                        
+
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="cardNumber" className="block text-sm font-medium text-slate-700 mb-1">
@@ -266,7 +263,7 @@ export default function AddPaymentMethodPage() {
 
                             <div className="border-t border-slate-200 pt-4 mt-4">
                                 <div className="text-sm font-semibold text-slate-900 mb-4">Billing Address</div>
-                                
+
                                 <div className="space-y-4">
                                     <div>
                                         <label htmlFor="billingAddress" className="block text-sm font-medium text-slate-700 mb-1">
@@ -360,7 +357,7 @@ export default function AddPaymentMethodPage() {
                 {paymentType === "bank" && (
                     <div className="rounded-2xl border border-slate-200 bg-white p-5">
                         <div className="text-sm font-semibold text-slate-900 mb-4">Bank Account Details</div>
-                        
+
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="bankName" className="block text-sm font-medium text-slate-700 mb-1">
@@ -471,7 +468,7 @@ export default function AddPaymentMethodPage() {
                 {paymentType === "wire" && (
                     <div className="rounded-2xl border border-slate-200 bg-white p-5">
                         <div className="text-sm font-semibold text-slate-900 mb-4">Wire Transfer Details</div>
-                        
+
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="wireBank" className="block text-sm font-medium text-slate-700 mb-1">

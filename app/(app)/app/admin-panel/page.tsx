@@ -215,9 +215,8 @@ function RegulatoryAuditLogsSection() {
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [authCode, setAuthCode] = useState("");
     const [authError, setAuthError] = useState("");
-    const [isExpanded, setIsExpanded] = useState(false);
     const [logs, setLogs] = useState<AuditLogEntry[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [downloadFormat, setDownloadFormat] = useState<"csv" | "json" | "pdf">("csv");
 
@@ -236,17 +235,10 @@ function RegulatoryAuditLogsSection() {
         setAuthError("Audit log access requires a configured compliance service.");
     }
 
-    function loadLogs() {
-        setIsLoading(true);
-        setLogs([]);
-        setIsLoading(false);
-    }
-
     function handleRevokeAccess() {
         setIsAuthorized(false);
         setAuthCode("");
         setLogs([]);
-        setIsExpanded(false);
         setShowPreview(false);
     }
 

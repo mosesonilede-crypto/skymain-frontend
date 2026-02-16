@@ -130,7 +130,6 @@ export async function POST(req: Request) {
         try {
             if (body.method === "email") {
                 emailResult = await sendEmail(code, body.destination);
-                // eslint-disable-next-line no-console
                 console.info("2FA email send result", {
                     destination: body.destination,
                     messageId: emailResult?.messageId,

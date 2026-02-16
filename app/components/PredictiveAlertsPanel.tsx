@@ -5,7 +5,6 @@
  * specHash: sha256:68cfbaa617ec8f0afa3fee5ac40cc57eac58f985ee925ef2cb8df2bcd327a19d
  */
 
-/* eslint-disable @next/next/no-img-element */
 "use client";
 import React from "react";
 import { Info } from "lucide-react";

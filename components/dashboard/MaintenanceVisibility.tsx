@@ -20,6 +20,17 @@ interface MaintenanceVisibilityProps {
     events?: MaintenanceEvent[];
 }
 
+type ApiMaintenanceLog = {
+    id?: string;
+    title?: string;
+    type?: string;
+    category?: string;
+    priority?: string;
+    severity?: string;
+    date?: string;
+    status?: string;
+};
+
 function normalizeEventType(raw?: string): MaintenanceEvent["type"] {
     const value = (raw || "").toLowerCase();
     if (value.includes("scheduled") || value.includes("check") || value.includes("inspection")) {
@@ -66,9 +77,9 @@ export function MaintenanceVisibility({ events: overrideEvents }: MaintenanceVis
                     throw new Error("Unable to load maintenance activity.");
                 }
                 const data = await response.json();
-                const mapped: MaintenanceEvent[] = (data.logs || []).map((log: any) => ({
-                    id: log.id,
-                    title: log.title,
+                const mapped: MaintenanceEvent[] = (data.logs || []).map((log: ApiMaintenanceLog) => ({
+                    id: log.id || "",
+                    title: log.title || "",
                     type: normalizeEventType(log.type || log.category),
                     priority: normalizePriority(log.priority || log.severity),
                     aircraft: selectedAircraft.registration,
@@ -266,9 +277,9 @@ export function MaintenanceSummaryCard({ events: overrideEvents }: { events?: Ma
                     throw new Error("Unable to load maintenance summary.");
                 }
                 const data = await response.json();
-                const mapped: MaintenanceEvent[] = (data.logs || []).map((log: any) => ({
-                    id: log.id,
-                    title: log.title,
+                const mapped: MaintenanceEvent[] = (data.logs || []).map((log: ApiMaintenanceLog) => ({
+                    id: log.id || "",
+                    title: log.title || "",
                     type: normalizeEventType(log.type || log.category),
                     priority: normalizePriority(log.priority || log.severity),
                     aircraft: selectedAircraft.registration,
@@ -294,7 +305,7 @@ export function MaintenanceSummaryCard({ events: overrideEvents }: { events?: Ma
     return (
         <div className="bg-white rounded-xl border border-slate-200 p-4">
             <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-slate-900">Today's Maintenance</h4>
+                <h4 className="font-medium text-slate-900">Today&apos;s Maintenance</h4>
                 <span className="text-xs text-slate-500">{total} total</span>
             </div>
 

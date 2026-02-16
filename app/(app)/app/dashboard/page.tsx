@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -31,6 +30,18 @@ import {
 import { useAircraft } from "@/lib/AircraftContext";
 import BackToHub from "@/components/app/BackToHub";
 
+type DashboardSnapshot = {
+    aircraft?: {
+        serialNumber?: string;
+    };
+};
+
+type NotificationItem = {
+    id: string;
+    severity?: string;
+    text?: string;
+};
+
 
 export default function DashboardPage() {
     const { selectedAircraft, setSelectedAircraft, allAircraft } = useAircraft();
@@ -42,40 +53,50 @@ export default function DashboardPage() {
     const notificationDropdownRef = useRef<HTMLDivElement>(null);
 
     // Live data states
-    const [dashboardData, setDashboardData] = useState<any>(null);
-    const [notifications, setNotifications] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-
-    // Fetch live dashboard data
-    async function fetchDashboardData() {
-        if (!selectedAircraft?.registration) return;
-
-        setIsLoading(true);
-        try {
-            const [dashResponse, notifResponse] = await Promise.all([
-                fetch(`/api/dashboard/${selectedAircraft.registration}`),
-                fetch("/api/notifications"),
-            ]);
-
-            if (dashResponse.ok) {
-                const data = await dashResponse.json();
-                setDashboardData(data);
-            }
-
-            if (notifResponse.ok) {
-                const data = await notifResponse.json();
-                setNotifications(data.notifications);
-            }
-        } catch (error) {
-            console.error("Error fetching dashboard data:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    }
-
+    const [dashboardData, setDashboardData] = useState<DashboardSnapshot | null>(null);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     // Fetch data when aircraft changes
     useEffect(() => {
-        fetchDashboardData();
+        let cancelled = false;
+
+        const fetchDashboardData = async () => {
+            if (!selectedAircraft?.registration) return;
+            try {
+                const [dashResponse, notifResponse] = await Promise.all([
+                    fetch(`/api/dashboard/${selectedAircraft.registration}`),
+                    fetch("/api/notifications"),
+                ]);
+
+                if (cancelled) return;
+
+                if (dashResponse.ok) {
+                    const data = (await dashResponse.json()) as DashboardSnapshot;
+                    setDashboardData(data);
+                }
+
+                if (notifResponse.ok) {
+                    const data = (await notifResponse.json()) as { notifications?: unknown[] };
+                    const items = Array.isArray(data.notifications) ? data.notifications : [];
+                    const mapped = items.map((item, idx) => {
+                        const raw = item as { id?: string | number; severity?: string; text?: string; message?: string };
+                        return {
+                            id: raw.id ? String(raw.id) : `notif-${idx}`,
+                            severity: raw.severity,
+                            text: raw.text || raw.message || "",
+                        };
+                    });
+                    setNotifications(mapped);
+                }
+            } catch (error) {
+                console.error("Error fetching dashboard data:", error);
+            }
+        };
+
+        void fetchDashboardData();
+
+        return () => {
+            cancelled = true;
+        };
     }, [selectedAircraft?.registration]);
 
     // Close dropdowns when clicking outside

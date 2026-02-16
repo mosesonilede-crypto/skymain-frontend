@@ -10,7 +10,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { Info } from "lucide-react";
 import BackToHub from "@/components/app/BackToHub";
-import { useAircraft, Aircraft } from "@/lib/AircraftContext";
+import { useAircraft } from "@/lib/AircraftContext";
 
 
 interface PredictedAlert {

@@ -52,7 +52,7 @@ export default function GlobalError({
                             >
                                 Try Again
                             </button>
-                            <a
+                            <Link
                                 href="/"
                                 style={{
                                     backgroundColor: "#fff",
@@ -65,7 +65,7 @@ export default function GlobalError({
                                 }}
                             >
                                 Homepage
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>

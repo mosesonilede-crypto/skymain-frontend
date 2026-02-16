@@ -229,7 +229,6 @@ export default function AdminPanelPage() {
     const baseUrl = useMemo(() => getPublicEnv("NEXT_PUBLIC_API_BASE_URL", ""), []);
 
     const [activeTab, setActiveTab] = useState<"overview" | "billing">("overview");
-    const [source, setSource] = useState<"mock" | "live">("mock");
     const [payload, setPayload] = useState<AdminPanelPayload>(() => mockPayload());
     const [loading, setLoading] = useState<boolean>(mode !== "mock");
     const [error, setError] = useState<string>("");
@@ -279,14 +278,12 @@ export default function AdminPanelPage() {
 
             if (mode === "mock") {
                 setPayload(mockPayload());
-                setSource("mock");
                 setLoading(false);
                 return;
             }
 
             if (!baseUrl) {
                 setPayload(mockPayload());
-                setSource("mock");
                 setLoading(false);
                 return;
             }
@@ -297,11 +294,9 @@ export default function AdminPanelPage() {
                 const live = await fetchLive(baseUrl);
                 if (cancelled) return;
                 setPayload(live);
-                setSource("live");
             } catch (e) {
                 if (cancelled) return;
                 setPayload(mockPayload());
-                setSource("mock");
                 setError(e instanceof Error ? e.message : "Failed to load live data");
             } finally {
                 if (!cancelled) setLoading(false);

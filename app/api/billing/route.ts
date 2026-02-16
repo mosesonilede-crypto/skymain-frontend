@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDataMode } from "@/lib/dataService";
 import { getStripe, PLAN_DETAILS } from "@/lib/stripe";
-import type Stripe from "stripe";
 
 type BillingCycle = "Monthly" | "Annual";
 

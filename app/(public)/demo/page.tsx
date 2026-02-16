@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -46,13 +47,16 @@ export default function DemoPage() {
                                 onClick={() => setIsPlaying(true)}
                             >
                                 {/* YouTube Thumbnail */}
-                                <img
+                                <Image
                                     src={`https://img.youtube.com/vi/${YOUTUBE_VIDEO_ID}/maxresdefault.jpg`}
                                     alt="SkyMaintain Demo Video"
-                                    className="h-full w-full object-cover"
-                                    onError={(e) => {
-                                        // Fallback to hqdefault if maxresdefault doesn't exist
-                                        (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${YOUTUBE_VIDEO_ID}/hqdefault.jpg`;
+                                    fill
+                                    unoptimized
+                                    sizes="100vw"
+                                    className="object-cover"
+                                    onError={(event) => {
+                                        const target = event.currentTarget as HTMLImageElement;
+                                        target.src = `https://img.youtube.com/vi/${YOUTUBE_VIDEO_ID}/hqdefault.jpg`;
                                     }}
                                 />
                                 {/* Overlay */}

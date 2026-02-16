@@ -16,7 +16,6 @@ const imgIcon25 = "https://www.figma.com/api/mcp/asset/aea83b5c-d5b9-402a-a8d3-0
 const imgIcon26 = "https://www.figma.com/api/mcp/asset/9219b256-e730-4592-9ccc-e83305d7d13e";
 const imgIcon27 = "https://www.figma.com/api/mcp/asset/f443bf24-f6dc-4527-ae10-a8e18564f076";
 const imgIcon28 = "https://www.figma.com/api/mcp/asset/ff69b9aa-edca-4462-aeb4-d16534a42f50";
-const imgIcon29 = "https://www.figma.com/api/mcp/asset/3a85baf1-9147-4b25-9ed7-ab17831e6589";
 
 type DataMode = "mock" | "live" | "hybrid";
 

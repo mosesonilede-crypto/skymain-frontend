@@ -18,7 +18,6 @@ export type DecisionEventRecord = {
 
 export async function persistDecisionEvent(event: DecisionEventRecord): Promise<void> {
     if (!supabaseServer) {
-        // eslint-disable-next-line no-console
         console.warn("Supabase server client not configured. Decision event not persisted.");
         return;
     }
@@ -39,7 +38,6 @@ export async function persistDecisionEvent(event: DecisionEventRecord): Promise<
         actor_role: event.actorRole,
     });
     if (error) {
-        // eslint-disable-next-line no-console
         console.error("Failed to persist decision event:", error);
     }
 }
