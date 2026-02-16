@@ -50,7 +50,7 @@ export default function TwoFactorPage() {
     const { user, login } = useAuth();
 
     const [method, setMethod] = React.useState<"email" | "authenticator">("email");
-    const [email] = React.useState(user?.email || "");
+    const [email, setEmail] = React.useState("");
     const [sendError, setSendError] = React.useState<string | null>(null);
     const [sendStatus, setSendStatus] = React.useState<string | null>(null);
     const [sending, setSending] = React.useState(false);
@@ -59,6 +59,20 @@ export default function TwoFactorPage() {
     const [code, setCode] = React.useState("");
     const [submitting, setSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+    React.useEffect(() => {
+        if (user?.email) {
+            setEmail(user.email);
+            return;
+        }
+
+        if (typeof window !== "undefined") {
+            const storedEmail = window.localStorage.getItem("skymaintain.userEmail") || "";
+            if (storedEmail) {
+                setEmail(storedEmail);
+            }
+        }
+    }, [user?.email]);
+
 
     const isComplete = code.replace(/\D/g, "").length === 6;
 
@@ -194,6 +208,7 @@ export default function TwoFactorPage() {
             if (authUser) {
                 authUser = {
                     ...authUser,
+                    orgName: authUser.orgName || storedOrg || "SkyMaintain",
                     role: resolveRole(authUser.role || storedRoleHint, storedLicenseCode, authUser.email),
                 };
             }
@@ -216,9 +231,12 @@ export default function TwoFactorPage() {
                 }
             }
 
-            if (authUser) {
-                await login(authUser);
+            if (!authUser) {
+                setError("Unable to resolve your session. Please sign in again.");
+                return;
             }
+
+            await login(authUser);
         } catch (verifyError) {
             setError(verifyError instanceof Error ? verifyError.message : "Verification failed.");
             return;

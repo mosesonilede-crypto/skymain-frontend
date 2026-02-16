@@ -77,6 +77,8 @@ export default function SignInPage() {
         if (typeof window !== "undefined") {
             window.localStorage.setItem("skymaintain.userRole", role);
             window.localStorage.setItem("skymaintain.licenseCode", lTrim);
+            window.localStorage.setItem("skymaintain.userEmail", eTrim);
+            window.localStorage.setItem("skymaintain.orgName", orgNameMeta);
         }
 
         // Persist authentication state
