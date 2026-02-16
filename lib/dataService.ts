@@ -20,11 +20,11 @@ export function getDataMode(): DataMode {
     if (raw === "live" || raw === "hybrid" || raw === "mock") {
         return raw;
     }
-    // Default based on environment
-    if (process.env.NODE_ENV === "production" && getApiBaseUrl()) {
-        return "hybrid"; // Production with backend configured defaults to hybrid
+    // Default to live to prevent accidental mock usage in production
+    if (getApiBaseUrl()) {
+        return "live";
     }
-    return "mock"; // Development defaults to mock
+    return "live";
 }
 
 /**
@@ -39,6 +39,8 @@ export function getApiBaseUrl(): string {
  */
 export function allowMockFallback(): boolean {
     const mode = getDataMode();
+    const allowFlag = (process.env.NEXT_PUBLIC_ALLOW_MOCK_FALLBACK || "").toLowerCase().trim() === "true";
+    if (!allowFlag) return false;
     return mode === "mock" || mode === "hybrid";
 }
 

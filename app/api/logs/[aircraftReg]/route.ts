@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchMaintenanceLogs } from "@/lib/integrations/cmms";
+import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { allowMockFallback } from "@/lib/runtimeFlags";
 
 // Realistic maintenance log data generator
 function generateMaintenanceLogs(aircraftReg: string) {
@@ -97,42 +100,29 @@ export async function GET(
         const { aircraftReg: reg } = await params;
         const aircraftReg = reg.toUpperCase();
 
-        // Check for live backend API
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
-        if (apiBase) {
-            try {
-                const backendResponse = await fetch(`${apiBase}/aircraft/${aircraftReg}/logs`, {
-                    headers: {
-                        "Accept": "application/json",
-                    },
-                });
-                if (backendResponse.ok) {
-                    const liveData = await backendResponse.json();
-                    return NextResponse.json(liveData, {
-                        headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
-                    });
-                }
-            } catch (error) {
-                console.warn("Backend API unavailable, using mock data");
-            }
-        }
-
-        // Generate mock data with realistic maintenance information
-        const mockData = {
-            aircraftReg,
-            logs: generateMaintenanceLogs(aircraftReg),
-            lastUpdated: new Date().toISOString(),
-            source: "mock",
-        };
-
-        return NextResponse.json(mockData, {
+        const data = await fetchMaintenanceLogs(aircraftReg);
+        return NextResponse.json({ ...data, source: "live" }, {
             headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
         });
     } catch (error) {
+        if (error instanceof IntegrationNotConfiguredError && allowMockFallback()) {
+            const mockData = {
+                aircraftReg,
+                logs: generateMaintenanceLogs(aircraftReg),
+                lastUpdated: new Date().toISOString(),
+                source: "mock",
+                fallback: true,
+            };
+
+            return NextResponse.json(mockData, {
+                headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
+            });
+        }
+
         console.error("Error fetching logs:", error);
         return NextResponse.json(
-            { error: "Failed to fetch logs" },
-            { status: 500 }
+            { error: "CMMS connector is not configured" },
+            { status: 503 }
         );
     }
 }

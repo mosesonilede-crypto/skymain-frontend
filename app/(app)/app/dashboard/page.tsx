@@ -31,22 +31,6 @@ import {
 import { useAircraft } from "@/lib/AircraftContext";
 import BackToHub from "@/components/app/BackToHub";
 
-// Mock data for aircraft selection
-const MOCK_AIRCRAFT = [
-    { id: 1, tailNumber: "N123AB", model: "Boeing 737-800", operator: "SkyWings Fleet" },
-    { id: 2, tailNumber: "N456CD", model: "Boeing 787-9", operator: "SkyWings Fleet" },
-    { id: 3, tailNumber: "N789EF", model: "Airbus A320", operator: "SkyWings Fleet" },
-    { id: 4, tailNumber: "N101GH", model: "Boeing 777-300ER", operator: "SkyWings Fleet" },
-];
-
-const MOCK_NOTIFICATIONS = [
-    { id: 1, text: "Critical hydraulic system alert", severity: "critical" },
-    { id: 2, text: "A-Check due in 50 days", severity: "warning" },
-    { id: 3, text: "Avionics software update available", severity: "info" },
-    { id: 4, text: "Engine oil change recommended", severity: "warning" },
-    { id: 5, text: "Landing gear inspection passed", severity: "success" },
-];
-
 
 export default function DashboardPage() {
     const { selectedAircraft, setSelectedAircraft, allAircraft } = useAircraft();

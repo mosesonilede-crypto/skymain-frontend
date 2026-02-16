@@ -1,155 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-
-/**
- * Aircraft API Route
- * 
- * This serverless function supports three modes:
- * - "mock": Returns hardcoded mock data for development/testing
- * - "live": Proxies requests to the configured backend API
- * - "hybrid": Tries live backend first, falls back to mock on failure
- * 
- * Configure via environment variables:
- * - NEXT_PUBLIC_DATA_MODE: "mock" | "live" | "hybrid"
- * - NEXT_PUBLIC_API_BASE_URL: Backend API URL (e.g., https://api.skymaintain.ai)
- */
-
-type DataMode = "mock" | "live" | "hybrid";
-
-function getDataMode(): DataMode {
-    const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "").toLowerCase().trim();
-    if (raw === "live" || raw === "hybrid" || raw === "mock") {
-        return raw;
-    }
-    // Default based on environment
-    const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
-    if (process.env.NODE_ENV === "production" && baseUrl) {
-        return "hybrid";
-    }
-    return "mock";
-}
-
-function getApiBaseUrl(): string {
-    return (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim().replace(/\/+$/, "");
-}
-
-// Mock aircraft data for development/testing
-const MOCK_AIRCRAFT = [
-    {
-        id: "N872LM",
-        registration: "N872LM",
-        model: "Airbus A320",
-        lastService: "2026-01-15",
-        manufacturer: "Airbus",
-        status: "active",
-    },
-    {
-        id: "N451KJ",
-        registration: "N451KJ",
-        model: "Boeing 737",
-        lastService: "2026-01-20",
-        manufacturer: "Boeing",
-        status: "active",
-    },
-    {
-        id: "N789QW",
-        registration: "N789QW",
-        model: "Airbus A380",
-        lastService: "2026-01-10",
-        manufacturer: "Airbus",
-        status: "active",
-    },
-    {
-        id: "N123XY",
-        registration: "N123XY",
-        model: "Boeing 777",
-        lastService: "2026-01-22",
-        manufacturer: "Boeing",
-        status: "maintenance",
-    },
-];
+import { createAircraft, fetchFleet } from "@/lib/integrations/cmms";
+import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { allowMockFallback } from "@/lib/runtimeFlags";
+import { DEFAULT_MOCK_AIRCRAFT } from "@/lib/dataService";
 
 export async function GET() {
-    const mode = getDataMode();
-    const baseUrl = getApiBaseUrl();
-
-    // If mode is mock, return mock data immediately
-    if (mode === "mock") {
+    try {
+        const data = await fetchFleet();
         return NextResponse.json(
-            { aircraft: MOCK_AIRCRAFT, source: "mock" },
+            { aircraft: data.aircraft, source: "live", lastUpdated: data.lastUpdated },
             { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
         );
-    }
-
-    // Try live backend
-    if (baseUrl) {
-        try {
-            const response = await fetch(`${baseUrl}/api/v1/aircraft`, {
-                headers: {
-                    "Content-Type": "application/json",
-                    // Add auth headers here if needed
-                },
-                // Cache for 1 minute, revalidate in background for 5 minutes
-                next: { revalidate: 60 },
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                return NextResponse.json(
-                    { aircraft: data.aircraft || data, source: "live" },
-                    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
-                );
-            }
-
-            // Backend returned error
-            if (mode === "hybrid") {
-                console.warn(`Backend returned ${response.status}, falling back to mock data`);
-                return NextResponse.json(
-                    { aircraft: MOCK_AIRCRAFT, source: "mock", fallback: true },
-                    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
-                );
-            }
-
+    } catch (error) {
+        if (error instanceof IntegrationNotConfiguredError && allowMockFallback()) {
             return NextResponse.json(
-                { error: `Backend error: ${response.status}` },
-                { status: response.status }
-            );
-        } catch (error) {
-            // Network error
-            if (mode === "hybrid") {
-                console.warn("Backend fetch failed, falling back to mock data:", error);
-                return NextResponse.json(
-                    { aircraft: MOCK_AIRCRAFT, source: "mock", fallback: true },
-                    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
-                );
-            }
-
-            console.error("Error fetching from backend:", error);
-            return NextResponse.json(
-                { error: "Failed to fetch aircraft data from backend" },
-                { status: 500 }
+                { aircraft: DEFAULT_MOCK_AIRCRAFT, source: "mock", fallback: true },
+                { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
             );
         }
-    }
 
-    // No base URL configured
-    if (mode === "live") {
+        console.error("Error fetching aircraft data:", error);
         return NextResponse.json(
-            { error: "NEXT_PUBLIC_API_BASE_URL is not configured" },
-            { status: 500 }
+            { error: "Aircraft connector is not configured" },
+            { status: 503 }
         );
     }
-
-    // Hybrid mode with no URL - use mock
-    return NextResponse.json(
-        { aircraft: MOCK_AIRCRAFT, source: "mock" },
-        { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
-    );
 }
 
 export async function POST(request: NextRequest) {
-    const mode = getDataMode();
-    const baseUrl = getApiBaseUrl();
-
     // Parse request body
     let body;
     try {
@@ -161,48 +39,23 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // Mock mode - simulate success
-    if (mode === "mock") {
-        const mockId = `MOCK-${Date.now()}`;
-        return NextResponse.json({
-            aircraft: { ...body, id: mockId },
-            source: "mock",
-            message: "Aircraft created (mock mode - not persisted)",
-        });
-    }
-
-    // Live/hybrid mode - proxy to backend
-    if (!baseUrl) {
-        return NextResponse.json(
-            { error: "NEXT_PUBLIC_API_BASE_URL is not configured" },
-            { status: 500 }
-        );
-    }
-
     try {
-        const response = await fetch(`${baseUrl}/api/v1/aircraft`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            return NextResponse.json({ aircraft: data.aircraft || data, source: "live" });
+        const created = await createAircraft(body);
+        return NextResponse.json({ aircraft: created, source: "live" });
+    } catch (error) {
+        if (error instanceof IntegrationNotConfiguredError && allowMockFallback()) {
+            const mockId = `MOCK-${Date.now()}`;
+            return NextResponse.json({
+                aircraft: { ...body, id: mockId },
+                source: "mock",
+                fallback: true,
+                message: "Aircraft created (mock fallback - not persisted)",
+            });
         }
 
-        return NextResponse.json(
-            { error: data.message || "Failed to create aircraft" },
-            { status: response.status }
-        );
-    } catch (error) {
         console.error("Error creating aircraft:", error);
         return NextResponse.json(
-            { error: "Failed to create aircraft" },
-            { status: 500 }
+            { error: "Aircraft connector is not configured" },
+            { status: 503 }
         );
     }
-}

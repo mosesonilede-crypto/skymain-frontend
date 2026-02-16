@@ -1,4 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { fetchAdminSummary } from "@/lib/integrations/erp";
+import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { allowMockFallback } from "@/lib/runtimeFlags";
 
 type AdminKpis = {
     totalAircraft: number;
@@ -78,18 +81,22 @@ function generateMockAdminData(): AdminPanelPayload {
 
 export async function GET() {
     try {
-        const adminData = generateMockAdminData();
+        const data = await fetchAdminSummary();
 
-        return NextResponse.json(adminData, {
-            headers: {
-                "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-            },
+        return NextResponse.json(data, {
+            headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
         });
     } catch (error) {
+        if (error instanceof IntegrationNotConfiguredError && allowMockFallback()) {
+            const data = generateMockAdminData();
+            return NextResponse.json({ ...data, fallback: true }, {
+                headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
+            });
+        }
+
         console.error("Error fetching admin data:", error);
         return NextResponse.json(
-            { error: "Failed to fetch admin data" },
-            { status: 500 }
+            { error: "ERP connector is not configured" },
+            { status: 503 }
         );
     }
-}

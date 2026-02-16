@@ -18,9 +18,11 @@ export async function GET() {
 
     // Check required environment variables
     const requiredEnvVars = [
-        "TWO_FA_SECRET",
-        "SMTP_HOST",
-        "SMTP_FROM",
+        "SKYMAINTAIN_CMMS_BASE_URL",
+        "SKYMAINTAIN_ERP_BASE_URL",
+        "SKYMAINTAIN_FLIGHT_OPS_BASE_URL",
+        "SKYMAINTAIN_ACMS_BASE_URL",
+        "SKYMAINTAIN_MANUALS_BASE_URL",
     ];
 
     const missingVars = requiredEnvVars.filter(v => !process.env[v]);
@@ -42,11 +44,18 @@ export async function GET() {
     }
 
     // Check data mode configuration
-    const dataMode = process.env.NEXT_PUBLIC_DATA_MODE || "mock";
+    const dataMode = process.env.NEXT_PUBLIC_DATA_MODE || "live";
     checks.push({
         name: "data_mode",
         status: dataMode === "live" ? "pass" : "warn",
         message: `Mode: ${dataMode}`,
+    });
+
+    const allowMockFallback = (process.env.ALLOW_MOCK_FALLBACK || "").toLowerCase() === "true";
+    checks.push({
+        name: "mock_fallback",
+        status: allowMockFallback ? "warn" : "pass",
+        message: allowMockFallback ? "Mock fallback is enabled" : "Mock fallback is disabled",
     });
 
     // Determine overall status

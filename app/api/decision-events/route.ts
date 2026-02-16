@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import { assertPolicyStampedAdvisory } from "@/lib/policy/advisory";
 import { evaluateRuleEngineDecision, RuleEngineInputSchema } from "@/lib/policy/ruleEngine";
+import { recordAuditEvent } from "@/lib/audit/logger";
+import { persistDecisionEvent } from "@/lib/audit/decisionEventStore";
+import { getUserContext, requireRole } from "@/lib/auth/rbac";
 
 const DecisionEventRequestSchema = z.object({
     advisory: z.unknown(),
@@ -36,6 +40,9 @@ globalForDecisionEvents.__decisionEventStore = decisionEventStore;
 
 export async function POST(req: Request) {
     try {
+        const user = getUserContext(req.headers);
+        requireRole(user, "Maintenance Engineer");
+
         const body = (await req.json()) as DecisionEventRequest;
         const parsed = DecisionEventRequestSchema.parse(body);
         const advisory = assertPolicyStampedAdvisory(parsed.advisory);
@@ -64,7 +71,7 @@ export async function POST(req: Request) {
         }
 
         const event: DecisionEvent = {
-            id: `de_${Date.now()}`,
+            id: `de_${randomUUID()}`,
             createdAt: new Date().toISOString(),
             ...parsed,
             advisory,
@@ -73,6 +80,37 @@ export async function POST(req: Request) {
         };
 
         decisionEventStore.events.push(event);
+        await persistDecisionEvent({
+            id: event.id,
+            createdAt: event.createdAt,
+            advisory: event.advisory,
+            authoritativeSources: event.authoritativeSources,
+            acknowledgement: event.acknowledgement,
+            disposition: event.disposition,
+            overrideRationale: event.overrideRationale,
+            userAction: event.userAction,
+            canCreateWorkorder: event.canCreateWorkorder,
+            ruleDecision: event.ruleDecision,
+            ruleInputs: event.ruleInputs,
+            actorId: user.userId,
+            actorRole: user.role,
+        });
+
+        await recordAuditEvent({
+            id: `audit_${randomUUID()}`,
+            occurredAt: new Date().toISOString(),
+            actorId: user.userId,
+            actorRole: user.role,
+            orgId: user.orgId,
+            action: "DECISION_EVENT",
+            resourceType: "DecisionEvent",
+            resourceId: event.id,
+            metadata: {
+                disposition: event.disposition,
+                userAction: event.userAction,
+                canCreateWorkorder: event.canCreateWorkorder,
+            },
+        });
         return NextResponse.json({ event });
     } catch (error) {
         return NextResponse.json(

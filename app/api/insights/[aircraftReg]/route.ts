@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchInsights } from "@/lib/integrations/acms";
+import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { allowMockFallback } from "@/lib/runtimeFlags";
 
 export async function GET(
     request: NextRequest,
@@ -8,45 +11,26 @@ export async function GET(
         const { aircraftReg: reg } = await params;
         const aircraftReg = reg.toUpperCase();
 
-        // Generate mock insights data - replace with real database queries
-        const mockData = {
-            predictiveAlert: {
-                aircraftRegistration: aircraftReg,
-                type: "Engine Bearing Health",
-                severity: "High",
-                confidence: 0.89,
-                predictedFailureDate: new Date(Date.now() + 259200000).toISOString(),
-                currentMetrics: {
-                    vibration: 4.2,
-                    temperature: 72.5,
-                    loadFactor: 0.85,
-                },
-                trend: "Deteriorating",
-                recommendation: "Schedule engine bearing replacement within 72 hours to prevent operational downtime.",
-            },
-            systemMetrics: [
-                { name: "Engine 1", value: 94, unit: "%" },
-                { name: "Engine 2", value: 91, unit: "%" },
-                { name: "Hydraulics", value: 87, unit: "%" },
-                { name: "Electrical", value: 98, unit: "%" },
-                { name: "Landing Gear", value: 92, unit: "%" },
-            ],
-            maintenanceInsights: [
-                "Engine bearing replacement should be completed within 72 hours",
-                "Hydraulic system maintenance is recommended in the next 30 days",
-                "Avionics software update available and should be scheduled",
-            ],
-            lastUpdated: new Date().toISOString(),
-        };
-
-        return NextResponse.json(mockData, {
+        const data = await fetchInsights(aircraftReg);
+        return NextResponse.json(data, {
             headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
         });
-    } catch (error) {
-        console.error("Error fetching insights:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch insights" },
-            { status: 500 }
-        );
+    };
+    if (error instanceof IntegrationNotConfiguredError && allowMockFallback()) {
+        return NextResponse.json({ predictiveAlert: null, systemMetrics: [], fallback: true }, {
+            headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
+        });
     }
+
+
+    return NextResponse.json(mockData, {
+            { error: "ACMS connector is not configured" },
+        { status: 503 }
+    } catch (error) {
+    console.error("Error fetching insights:", error);
+    return NextResponse.json(
+        { error: "Failed to fetch insights" },
+        { status: 500 }
+    );
+}
 }
