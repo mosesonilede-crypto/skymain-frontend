@@ -1,36 +1,24 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CONTACT_DEMO } from "@/lib/routes";
-
-// Figma asset URLs for node 39:10565
-const imgIcon = "https://www.figma.com/api/mcp/asset/b70c7f7e-06e7-4ec2-b0fa-6d2799ed72ec";
-const imgIcon1 = "https://www.figma.com/api/mcp/asset/a554a9f0-4258-4ed9-b209-7fa3e9917dd2";
-const imgVector = "https://www.figma.com/api/mcp/asset/a3ec0081-df3c-4d9a-a6d2-06fe100b849c";
-const imgVector1 = "https://www.figma.com/api/mcp/asset/59ebbcdf-b79a-4eee-b0d9-28a0474697bd";
-const imgVector2 = "https://www.figma.com/api/mcp/asset/2e72b2d3-70cd-405a-b370-6b692fb9ffe6";
-const imgVector3 = "https://www.figma.com/api/mcp/asset/50718dd1-4dc1-46ae-971a-b2d1448f50b3";
-const imgVector4 = "https://www.figma.com/api/mcp/asset/5fa4facb-c708-47ee-b15a-bacfd745ae0c";
-const imgVector5 = "https://www.figma.com/api/mcp/asset/dd3fecf2-81f3-4ca4-a798-11e991c4c635";
-const imgVector6 = "https://www.figma.com/api/mcp/asset/e9608c39-0e31-4e50-9bfb-5432eb2c3ad8";
-const imgVector7 = "https://www.figma.com/api/mcp/asset/986f1d6d-c91f-4442-984a-4d6868efe8dc";
-const imgVector8 = "https://www.figma.com/api/mcp/asset/4e3fc4ad-8805-4447-ac6d-dff810567641";
-const imgIcon2 = "https://www.figma.com/api/mcp/asset/d878af81-0a9e-4522-886f-452a748fd781";
-const imgIcon3 = "https://www.figma.com/api/mcp/asset/f8792ecd-9f96-49d9-ad0f-0e153d9e74f0";
-const imgIcon4 = "https://www.figma.com/api/mcp/asset/55240eb8-814d-43fc-aed3-a75df729deba";
-const imgIcon5 = "https://www.figma.com/api/mcp/asset/1bfa600e-7509-4642-ade2-197ff2ad129e";
-const imgIcon6 = "https://www.figma.com/api/mcp/asset/6b4038ec-b0b5-4766-8fbd-1f08ac4f0aba";
-const imgIcon7 = "https://www.figma.com/api/mcp/asset/2831f041-39e0-40e4-990f-effa6971d899";
-const imgIcon8 = "https://www.figma.com/api/mcp/asset/9555d71a-877f-4394-ac19-8041f279608a";
-const imgIcon9 = "https://www.figma.com/api/mcp/asset/18bd3007-3b7f-415a-9c41-5389566664a9";
-const imgIcon10 = "https://www.figma.com/api/mcp/asset/0d7425b9-af3e-4817-a208-bd8515434e9b";
-const imgVector9 = "https://www.figma.com/api/mcp/asset/1ac7a971-6f8a-472b-b4c3-d1023488ba0e";
-const imgVector10 = "https://www.figma.com/api/mcp/asset/d9c20a54-d090-4e4c-816a-dd62898c5dd8";
-const imgIcon11 = "https://www.figma.com/api/mcp/asset/3500639d-9951-4391-8a2f-90ce8dfb13d7";
-const imgIcon12 = "https://www.figma.com/api/mcp/asset/ed61789d-e109-466b-b099-65dfe00cbf75";
+import {
+    ArrowLeft,
+    ArrowRight,
+    Building2,
+    Check,
+    CheckCircle2,
+    ClipboardList,
+    Eye,
+    FileCheck,
+    Plane,
+    Shield,
+    ShieldCheck,
+    Users,
+    X,
+} from "lucide-react";
 
 export default function RegulatoryComplianceAutomationPage(): React.ReactElement {
     const router = useRouter();
@@ -57,9 +45,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                             boxShadow: "0px 10px 15px 0px rgba(0,0,0,0.1), 0px 4px 6px 0px rgba(0,0,0,0.1)",
                         }}
                     >
-                        <div className="relative" style={{ width: "28px", height: "28px" }}>
-                            <Image alt="Logo" src={imgVector10} width={28} height={28} unoptimized className="size-full object-contain" />
-                        </div>
+                        <Plane className="h-7 w-7 text-white" aria-hidden="true" />
                     </div>
                     <div className="flex flex-col">
                         <span
@@ -83,7 +69,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                         className="flex items-center gap-2 rounded-lg px-3"
                         style={{ height: "36px" }}
                     >
-                        <Image alt="Back" src={imgIcon11} width={16} height={16} unoptimized style={{ width: "16px", height: "16px" }} />
+                        <ArrowLeft className="h-4 w-4 text-slate-600" aria-hidden="true" />
                         <span style={{ fontSize: "14px", lineHeight: "20px", color: "#364153" }}>Back</span>
                     </button>
                     <Link
@@ -94,7 +80,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                         <span className="text-white" style={{ fontSize: "14px", lineHeight: "20px" }}>
                             Get Started
                         </span>
-                        <Image alt="Arrow" src={imgIcon12} width={16} height={16} unoptimized style={{ width: "16px", height: "16px" }} />
+                        <ArrowRight className="h-4 w-4 text-white" aria-hidden="true" />
                     </Link>
                 </div>
             </header>
@@ -196,7 +182,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                                     className="flex items-center gap-3 rounded-[10px] px-4"
                                     style={{ height: "60px", backgroundColor: "#f0fdf4" }}
                                 >
-                                    <Image alt="Check" src={imgIcon} width={24} height={24} unoptimized style={{ width: "24px", height: "24px" }} />
+                                    <CheckCircle2 className="h-6 w-6 text-emerald-600" aria-hidden="true" />
                                     <span style={{ fontSize: "18px", lineHeight: "28px", color: "#101828" }}>
                                         {item}
                                     </span>
@@ -255,7 +241,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                                         className="flex items-center gap-3 rounded-[10px] px-4 bg-white"
                                         style={{ height: "59.2px", border: "1.6px solid rgba(0,0,0,0.1)" }}
                                     >
-                                        <Image alt="Check" src={imgIcon1} width={20} height={20} unoptimized style={{ width: "20px", height: "20px" }} />
+                                        <Check className="h-5 w-5 text-emerald-600" aria-hidden="true" />
                                         <span style={{ fontSize: "16px", lineHeight: "24px", color: "#101828" }}>
                                             {item}
                                         </span>
@@ -297,9 +283,8 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                             className="flex flex-col gap-10 rounded-[14px] px-[33.6px] py-[33.6px]"
                             style={{ border: "1.6px solid rgba(0,0,0,0.1)" }}
                         >
-                            <div className="relative" style={{ width: "48px", height: "48px" }}>
-                                <Image alt="Vector" src={imgVector} width={40} height={28} unoptimized className="absolute" style={{ inset: "20.84% 8.33%", width: "40px", height: "28px" }} />
-                                <Image alt="Vector" src={imgVector1} width={12} height={12} unoptimized className="absolute" style={{ left: "37.5%", top: "37.5%", width: "12px", height: "12px" }} />
+                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50">
+                                <Eye className="h-6 w-6 text-emerald-600" aria-hidden="true" />
                             </div>
                             <h3 className="font-bold" style={{ fontSize: "24px", lineHeight: "32px", color: "#101828" }}>
                                 Improved Compliance Visibility
@@ -315,9 +300,8 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                             className="flex flex-col gap-10 rounded-[14px] px-[33.6px] py-[33.6px]"
                             style={{ border: "1.6px solid rgba(0,0,0,0.1)" }}
                         >
-                            <div className="relative" style={{ width: "48px", height: "48px" }}>
-                                <Image alt="Vector" src={imgVector2} width={40} height={40} unoptimized className="absolute" style={{ inset: "8.33%", width: "40px", height: "40px" }} />
-                                <Image alt="Vector" src={imgVector3} width={8} height={16} unoptimized className="absolute" style={{ left: "50%", top: "25%", width: "8px", height: "16px" }} />
+                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
+                                <ClipboardList className="h-6 w-6 text-blue-600" aria-hidden="true" />
                             </div>
                             <h3 className="font-bold" style={{ fontSize: "24px", lineHeight: "32px", color: "#101828" }}>
                                 Reduced Administrative Overhead
@@ -332,8 +316,8 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                             className="flex flex-col gap-10 rounded-[14px] px-[33.6px] py-[33.6px]"
                             style={{ border: "1.6px solid rgba(0,0,0,0.1)" }}
                         >
-                            <div className="relative" style={{ width: "48px", height: "48px" }}>
-                                <Image alt="Vector" src={imgVector4} width={40} height={34} unoptimized className="absolute" style={{ inset: "12.5% 8.33% 16.67%", width: "40px", height: "34px" }} />
+                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50">
+                                <FileCheck className="h-6 w-6 text-indigo-600" aria-hidden="true" />
                             </div>
                             <h3 className="font-bold" style={{ fontSize: "24px", lineHeight: "32px", color: "#101828" }}>
                                 Audit-Ready Documentation
@@ -348,11 +332,8 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                             className="flex flex-col gap-10 rounded-[14px] px-[33.6px] py-[33.6px]"
                             style={{ border: "1.6px solid rgba(0,0,0,0.1)" }}
                         >
-                            <div className="relative" style={{ width: "48px", height: "48px" }}>
-                                <Image alt="Vector" src={imgVector5} width={28} height={12} unoptimized className="absolute" style={{ left: "8.33%", top: "62.5%", width: "28px", height: "12px" }} />
-                                <Image alt="Vector" src={imgVector6} width={16} height={16} unoptimized className="absolute" style={{ left: "20.83%", top: "12.5%", width: "16px", height: "16px" }} />
-                                <Image alt="Vector" src={imgVector7} width={6} height={12} unoptimized className="absolute" style={{ left: "79.17%", top: "63.04%", width: "6px", height: "12px" }} />
-                                <Image alt="Vector" src={imgVector8} width={6} height={15} unoptimized className="absolute" style={{ left: "66.67%", top: "13.04%", width: "6px", height: "15px" }} />
+                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50">
+                                <Users className="h-6 w-6 text-amber-600" aria-hidden="true" />
                             </div>
                             <h3 className="font-bold" style={{ fontSize: "24px", lineHeight: "32px", color: "#101828" }}>
                                 Clear Accountability
@@ -375,7 +356,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                     <div className="flex flex-col gap-12 px-6 w-full">
                         {/* Header with Icon */}
                         <div className="flex flex-col items-center gap-4">
-                            <Image alt="Shield" src={imgIcon2} width={48} height={48} unoptimized style={{ width: "48px", height: "48px" }} />
+                            <Shield className="h-12 w-12 text-emerald-600" aria-hidden="true" />
                             <h2
                                 className="text-center font-bold"
                                 style={{ fontSize: "36px", lineHeight: "40px", color: "#101828" }}
@@ -406,7 +387,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                                     "Reinforces documented, human-approved compliance actions",
                                 ].map((item, idx) => (
                                     <div key={idx} className="flex items-center gap-3" style={{ height: "28px" }}>
-                                        <Image alt="Check" src={imgIcon} width={24} height={24} unoptimized style={{ width: "24px", height: "24px" }} />
+                                        <CheckCircle2 className="h-6 w-6 text-emerald-600" aria-hidden="true" />
                                         <span style={{ fontSize: "18px", lineHeight: "28px", color: "#364153" }}>
                                             {item}
                                         </span>
@@ -435,7 +416,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                 <section className="flex flex-col gap-12 px-[86px] pt-20 bg-white">
                     {/* Header with Icon */}
                     <div className="flex flex-col items-center gap-4">
-                        <Image alt="Users" src={imgIcon3} width={48} height={48} unoptimized style={{ width: "48px", height: "48px" }} />
+                        <Users className="h-12 w-12 text-blue-600" aria-hidden="true" />
                         <h2
                             className="text-center font-bold"
                             style={{ fontSize: "36px", lineHeight: "40px", color: "#101828" }}
@@ -466,7 +447,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                                     className="flex items-center gap-3 rounded-[10px] px-4"
                                     style={{ height: "60px", backgroundColor: "#eff6ff" }}
                                 >
-                                    <Image alt="X" src={imgIcon4} width={24} height={24} unoptimized style={{ width: "24px", height: "24px" }} />
+                                    <X className="h-6 w-6 text-blue-600" aria-hidden="true" />
                                     <span style={{ fontSize: "18px", lineHeight: "28px", color: "#101828" }}>
                                         {item}
                                     </span>
@@ -500,7 +481,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                     <div className="flex flex-col gap-12 px-6 w-full">
                         {/* Header with Icon */}
                         <div className="flex flex-col items-center gap-4">
-                            <Image alt="Trust" src={imgIcon5} width={48} height={48} unoptimized style={{ width: "48px", height: "48px" }} />
+                            <ShieldCheck className="h-12 w-12 text-indigo-600" aria-hidden="true" />
                             <h2
                                 className="text-center font-bold"
                                 style={{ fontSize: "36px", lineHeight: "40px", color: "#101828" }}
@@ -527,7 +508,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                                     "No sale or external monetization of regulatory information",
                                 ].map((item, idx) => (
                                     <div key={idx} className="flex items-center gap-3" style={{ height: "28px" }}>
-                                        <Image alt="Check" src={imgIcon6} width={24} height={24} unoptimized style={{ width: "24px", height: "24px" }} />
+                                        <Check className="h-6 w-6 text-indigo-600" aria-hidden="true" />
                                         <span style={{ fontSize: "18px", lineHeight: "28px", color: "#364153" }}>
                                             {item}
                                         </span>
@@ -555,7 +536,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                 <section className="flex flex-col gap-12 px-[86px] pt-20 bg-white">
                     {/* Header with Icon */}
                     <div className="flex flex-col items-center gap-4">
-                        <Image alt="Who" src={imgIcon7} width={48} height={48} unoptimized style={{ width: "48px", height: "48px" }} />
+                        <Users className="h-12 w-12 text-emerald-600" aria-hidden="true" />
                         <h2
                             className="text-center font-bold"
                             style={{ fontSize: "36px", lineHeight: "40px", color: "#101828" }}
@@ -588,7 +569,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                                     gridColumn: idx === 4 ? "span 1" : undefined,
                                 }}
                             >
-                                <Image alt="Building" src={imgIcon8} width={24} height={24} unoptimized style={{ width: "24px", height: "24px" }} />
+                                <Building2 className="h-6 w-6 text-emerald-600" aria-hidden="true" />
                                 <span
                                     className="font-bold"
                                     style={{
@@ -659,7 +640,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                                 <span style={{ fontSize: "18px", lineHeight: "28px", color: "#00a63e" }}>
                                     Start a Free Trial
                                 </span>
-                                <Image alt="Arrow" src={imgIcon9} width={20} height={20} unoptimized style={{ width: "20px", height: "20px" }} />
+                                <ArrowRight className="h-5 w-5 text-emerald-600" aria-hidden="true" />
                             </Link>
 
                             <Link
@@ -675,7 +656,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                                 <span className="text-white" style={{ fontSize: "18px", lineHeight: "28px" }}>
                                     Schedule a Demo
                                 </span>
-                                <Image alt="Arrow" src={imgIcon10} width={20} height={20} unoptimized style={{ width: "20px", height: "20px" }} />
+                                <ArrowRight className="h-5 w-5 text-white" aria-hidden="true" />
                             </Link>
                         </div>
                     </div>
@@ -697,9 +678,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                                     background: "linear-gradient(135deg, #155dfc 0%, #1447e6 100%)",
                                 }}
                             >
-                                <div className="relative" style={{ width: "20px", height: "20px" }}>
-                                    <Image alt="Logo" src={imgVector9} width={20} height={20} unoptimized className="size-full object-contain" />
-                                </div>
+                                <Plane className="h-5 w-5 text-white" aria-hidden="true" />
                             </div>
                             <span
                                 className="font-bold text-center text-white"
