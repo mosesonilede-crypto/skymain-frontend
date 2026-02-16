@@ -9,7 +9,10 @@ export type UserRole =
     | "maintenance_manager"  // Maintenance managers, commanders
     | "safety_qa"            // Safety officers, QA inspectors
     | "fleet_manager"        // Fleet operations (legacy support)
-    | "maintenance_engineer"; // Engineers (legacy support)
+    | "maintenance_engineer"  // Engineers (legacy support)
+    | "admin"
+    | "super_admin"
+    | "user";
 
 export interface User {
     email: string;

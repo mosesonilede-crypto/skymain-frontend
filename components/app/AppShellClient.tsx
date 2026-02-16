@@ -33,8 +33,9 @@ import AIMechanicFAB from "@/components/ai/AIMechanicFAB";
 import AIMechanicPanel from "@/components/ai/AIMechanicPanel";
 import { useAuth } from "@/lib/AuthContext";
 import { useSessionTimeout, SessionTimeoutWarning, clearSessionData } from "@/lib/SessionTimeout";
+import { deriveRoleFromLicenseCode, getStoredLicenseCode, hasAdminPanelAccess } from "@/lib/accessControl";
 
-const navItems = [
+const baseNavItems = [
     { href: "/app/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
     { href: "/app/docs", label: "Documentation", icon: <FileText className="h-5 w-5" /> },
     { href: "/app/alerts", label: "Predictive Alerts", icon: <Bell className="h-5 w-5" /> },
@@ -45,7 +46,6 @@ const navItems = [
     { href: "/app/compliance", label: "Regulatory Compliance", icon: <ShieldCheck className="h-5 w-5" />, tall: true },
     { href: "/app/insights", label: "AI Insights", icon: <Brain className="h-5 w-5" /> },
     { href: "/app/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
-    { href: "/app/admin-panel", label: "Admin Panel", icon: <Shield className="h-5 w-5" /> },
 ];
 
 type AppShellClientProps = {
@@ -59,8 +59,14 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const [aiContext, setAiContext] = useState<string | undefined>(undefined);
     const pathname = usePathname();
     const router = useRouter();
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const contentRef = useRef<HTMLDivElement>(null);
+
+    const effectiveRole = deriveRoleFromLicenseCode(getStoredLicenseCode(), user?.role);
+    const canViewAdminPanel = hasAdminPanelAccess(effectiveRole);
+    const navItems = canViewAdminPanel
+        ? [...baseNavItems, { href: "/app/admin-panel", label: "Admin Panel", icon: <Shield className="h-5 w-5" /> }]
+        : baseNavItems;
 
     // Session timeout management
     const { isWarningVisible, remainingSeconds, extendSession } = useSessionTimeout();

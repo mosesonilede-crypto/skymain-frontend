@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
+import { deriveRoleFromLicenseCode, getStoredLicenseCode } from "@/lib/accessControl";
 
 function HelpCenterFab() {
     // Route all help into /contact unless a dedicated page exists
@@ -177,20 +178,42 @@ export default function TwoFactorPage() {
                 }
             }
 
+            if (!authUser && typeof window !== "undefined") {
+                const storedEmail = window.localStorage.getItem("skymaintain.userEmail")?.trim();
+                const storedOrg =
+                    window.localStorage.getItem("skymaintain.orgName")?.trim() ||
+                    window.sessionStorage.getItem("skymaintain.orgName")?.trim();
+                const fallbackRole = window.localStorage.getItem("skymaintain.userRole") || undefined;
+                const resolvedRole = deriveRoleFromLicenseCode(getStoredLicenseCode(), fallbackRole);
+
+                if (storedEmail && storedOrg) {
+                    authUser = {
+                        email: storedEmail,
+                        orgName: storedOrg,
+                        role: resolvedRole as import("@/lib/AuthContext").UserRole,
+                    };
+                }
+            }
+
             if (!authUser && supabase) {
                 const { data: supabaseData } = await supabase.auth.getUser();
                 const supabaseUser = supabaseData?.user;
                 if (supabaseUser?.email) {
+                    const resolvedRole = deriveRoleFromLicenseCode(
+                        getStoredLicenseCode(),
+                        (supabaseUser.user_metadata?.role as string | undefined) || "fleet_manager"
+                    );
                     authUser = {
                         email: supabaseUser.email,
                         orgName: (supabaseUser.user_metadata?.org_name as string | undefined) || "SkyMaintain",
-                        role: "fleet_manager",
+                        role: resolvedRole as import("@/lib/AuthContext").UserRole,
                     };
                 }
             }
 
             if (authUser) {
-                await login(authUser);
+                const resolvedRole = deriveRoleFromLicenseCode(getStoredLicenseCode(), authUser.role);
+                await login({ ...authUser, role: resolvedRole as import("@/lib/AuthContext").UserRole });
             }
         } catch (verifyError) {
             setError(verifyError instanceof Error ? verifyError.message : "Verification failed.");

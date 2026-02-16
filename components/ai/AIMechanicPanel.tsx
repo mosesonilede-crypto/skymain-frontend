@@ -1,24 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bot, Eraser, FileText, Info, Send } from "lucide-react";
-
-// Figma asset icons from design node 131:1308
-const imgIconAdvisory = "https://www.figma.com/api/mcp/asset/dec716d7-ff14-4a49-9e48-a2b90f54c1d8";
-const imgIconCertified = "https://www.figma.com/api/mcp/asset/b6dd7baf-59af-4eba-acd0-1f03a126492d";
-const imgIconExplainable = "https://www.figma.com/api/mcp/asset/d4fcef94-bc4b-4d7c-b45a-efa0ed24d44d";
-const imgIconExpand = "https://www.figma.com/api/mcp/asset/956ef066-e300-447e-a022-ec8bec2ebec0";
-const imgIconClose = "https://www.figma.com/api/mcp/asset/d9b0181c-bde6-461e-b92a-d7c542969443";
-const imgIconDismiss = "https://www.figma.com/api/mcp/asset/5966d923-2b3a-46c2-af4e-570abfad559e";
-const imgIconEvidence = "https://www.figma.com/api/mcp/asset/8db10ccd-95f8-442e-a5c7-aa5df471edd1";
-const imgIconChevron = "https://www.figma.com/api/mcp/asset/91155f08-d4b4-4908-94c1-abc6c1bc1022";
-const imgIconRecommend = "https://www.figma.com/api/mcp/asset/40479525-01b9-43d3-90b1-b461526c9016";
-const imgIconRef = "https://www.figma.com/api/mcp/asset/e25e9c75-9ed3-4083-ab47-9157717e314d";
-const imgIconExternal = "https://www.figma.com/api/mcp/asset/c63112a2-8552-4410-9cc7-456d1d07eaec";
-const imgIconInfo = "https://www.figma.com/api/mcp/asset/7221853e-0725-44cb-af37-9c3a4e11472c";
-
-// Note: Most icons now use Figma asset images (imgIcon* constants above)
-// Keeping only essential SVG icons that are used inline
+import { Bot, ChevronDown, Eraser, ExternalLink, FileText, Info, Minus, Send, X } from "lucide-react";
 
 interface AIMechanicPanelProps {
     isOpen: boolean;
@@ -686,9 +669,9 @@ export default function AIMechanicPanel({
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-1 sm:gap-2">
-                            <Badge icon="shield" imgSrc={imgIconAdvisory}>Advisory</Badge>
-                            <Badge icon="certified" imgSrc={imgIconCertified}>Certified Sources</Badge>
-                            <Badge icon="explain" imgSrc={imgIconExplainable}>Explainable</Badge>
+                            <Badge icon="shield">Advisory</Badge>
+                            <Badge icon="certified">Certified Sources</Badge>
+                            <Badge icon="explain">Explainable</Badge>
                         </div>
                     </div>
                 </div>
@@ -703,8 +686,7 @@ export default function AIMechanicPanel({
                             className="flex h-7 w-8 sm:h-8 sm:w-9 items-center justify-center rounded-lg hover:bg-white/20 transition-colors"
                             title="Minimize"
                         >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={imgIconExpand} alt="" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" aria-hidden="true" />
                         </button>
                     )}
                     <button
@@ -714,8 +696,7 @@ export default function AIMechanicPanel({
                         className="flex h-7 w-8 sm:h-8 sm:w-9 items-center justify-center rounded-lg hover:bg-white/20 transition-colors pointer-events-auto"
                         title="Close (ESC)"
                     >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={imgIconClose} alt="" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" aria-hidden="true" />
                     </button>
                 </div>
             </div>
@@ -744,8 +725,7 @@ export default function AIMechanicPanel({
                     className="flex h-7 w-8 sm:h-8 sm:w-9 flex-shrink-0 items-center justify-center rounded-lg hover:bg-blue-100 transition-colors pointer-events-auto"
                     title="Dismiss"
                 >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgIconDismiss} alt="" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#155dfc]" aria-hidden="true" />
                 </button>
             </div>
 
@@ -822,19 +802,16 @@ export default function AIMechanicPanel({
                                 className="mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity"
                                 onClick={() => setShowEvidence((v) => !v)}
                             >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={imgIconEvidence} alt="" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#155dfc]" aria-hidden="true" />
                                 <span
                                     className="text-xs sm:text-sm font-bold"
                                     style={{ color: "#101828" }}
                                 >
                                     Supporting Evidence
                                 </span>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                    src={imgIconChevron}
-                                    alt=""
+                                <ChevronDown
                                     className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform duration-200 ${showEvidence ? "rotate-180" : ""}`}
+                                    aria-hidden="true"
                                 />
                             </button>
 
@@ -848,8 +825,7 @@ export default function AIMechanicPanel({
                                     }}
                                 >
                                     <div className="mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={imgIconRecommend} alt="" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                        <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#155dfc]" aria-hidden="true" />
                                         <span
                                             className="text-xs sm:text-sm font-bold"
                                             style={{ color: "#101828" }}
@@ -905,8 +881,7 @@ export default function AIMechanicPanel({
                             {showEvidence && message.references && message.references.length > 0 && (
                                 <div>
                                     <div className="mb-1.5 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={imgIconRef} alt="" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                        <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#155dfc]" aria-hidden="true" />
                                         <span
                                             className="text-xs sm:text-sm font-bold"
                                             style={{ color: "#101828" }}
@@ -943,8 +918,7 @@ export default function AIMechanicPanel({
                                                 style={{ color: "#155dfc" }}
                                             >
                                                 <span className="truncate">{ref.url}</span>
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img src={imgIconExternal} alt="" className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
+                                                <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" aria-hidden="true" />
                                             </a>
                                             {(ref.effectiveDate || ref.retrievedDate) && (
                                                 <p
@@ -1050,14 +1024,11 @@ export default function AIMechanicPanel({
     );
 }
 
-// Badge component - Updated to support Figma asset images
 function Badge({
     icon,
-    imgSrc,
     children,
 }: {
     icon: "shield" | "certified" | "explain";
-    imgSrc?: string;
     children: React.ReactNode;
 }) {
     const icons: Record<string, React.ReactNode> = {
@@ -1101,12 +1072,7 @@ function Badge({
             className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-white border-[0.8px] border-transparent"
             style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
         >
-            {imgSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={imgSrc} alt="" className="h-3 w-3" />
-            ) : (
-                icons[icon]
-            )}
+            {icons[icon]}
             {children}
         </span>
     );

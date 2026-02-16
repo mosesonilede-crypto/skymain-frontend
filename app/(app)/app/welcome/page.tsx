@@ -4,6 +4,8 @@
 import React from "react";
 import Link from "next/link";
 import { Eye, ShieldCheck } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
+import { deriveRoleFromLicenseCode, getStoredLicenseCode, hasAdminPanelAccess } from "@/lib/accessControl";
 
 interface JunctionCard {
     href: string;
@@ -15,6 +17,10 @@ interface JunctionCard {
 }
 
 export default function WelcomePage() {
+    const { user } = useAuth();
+    const effectiveRole = deriveRoleFromLicenseCode(getStoredLicenseCode(), user?.role);
+    const canViewAdminPanel = hasAdminPanelAccess(effectiveRole);
+
     const junctionCards: JunctionCard[] = [
         {
             href: "/app/dashboard",
@@ -72,6 +78,16 @@ export default function WelcomePage() {
             color: "from-slate-500 to-slate-600",
             action: "Configure"
         },
+        ...(canViewAdminPanel
+            ? [{
+                href: "/app/admin-panel",
+                icon: "🛡️",
+                title: "Admin Panel",
+                description: "Manage users, platform controls, and regulatory access workflows",
+                color: "from-cyan-600 to-cyan-700",
+                action: "Open Admin Panel"
+            }]
+            : []),
     ];
 
     return (

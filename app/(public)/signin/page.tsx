@@ -6,6 +6,7 @@ import * as React from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { getTrialStatus, startTrialIfMissing } from "@/lib/trial";
 import { supabase } from "@/lib/supabaseClient";
+import { deriveRoleFromLicenseCode } from "@/lib/accessControl";
 
 export default function SignInPage() {
     const router = useRouter();
@@ -81,8 +82,19 @@ export default function SignInPage() {
         const user = result.data.user;
         const orgNameMeta = (user?.user_metadata?.org_name as string | undefined) || oTrim;
 
-        // Persist authentication state
-        login({ email: eTrim, orgName: orgNameMeta, role: "fleet_manager" });
+        const resolvedRole = deriveRoleFromLicenseCode(lTrim, "fleet_manager");
+
+        if (typeof window !== "undefined") {
+            if (remember) {
+                window.localStorage.setItem("skymaintain.licenseCode", lTrim);
+                window.sessionStorage.removeItem("skymaintain.licenseCode");
+            } else {
+                window.sessionStorage.setItem("skymaintain.licenseCode", lTrim);
+                window.localStorage.removeItem("skymaintain.licenseCode");
+            }
+        }
+
+        login({ email: eTrim, orgName: orgNameMeta, role: resolvedRole as import("@/lib/AuthContext").UserRole });
         startTrialIfMissing();
 
         router.push("/2fa");

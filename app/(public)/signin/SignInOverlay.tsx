@@ -119,12 +119,17 @@ export default function SignInOverlay() {
         if (typeof window !== "undefined") {
             window.localStorage.setItem("skymaintain.userEmail", email.trim());
             const trimmedOrg = orgName.trim();
+            const trimmedLicense = licenseCode.trim();
             if (remember) {
                 window.localStorage.setItem("skymaintain.orgName", trimmedOrg);
+                window.localStorage.setItem("skymaintain.licenseCode", trimmedLicense);
                 window.sessionStorage.removeItem("skymaintain.orgName");
+                window.sessionStorage.removeItem("skymaintain.licenseCode");
             } else {
                 window.sessionStorage.setItem("skymaintain.orgName", trimmedOrg);
+                window.sessionStorage.setItem("skymaintain.licenseCode", trimmedLicense);
                 window.localStorage.removeItem("skymaintain.orgName");
+                window.localStorage.removeItem("skymaintain.licenseCode");
             }
         }
 
