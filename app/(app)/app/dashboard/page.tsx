@@ -55,6 +55,7 @@ export default function DashboardPage() {
     // Live data states
     const [dashboardData, setDashboardData] = useState<DashboardSnapshot | null>(null);
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
     // Fetch data when aircraft changes
     useEffect(() => {
         let cancelled = false;
@@ -62,12 +63,21 @@ export default function DashboardPage() {
         const fetchDashboardData = async () => {
             if (!selectedAircraft?.registration) return;
             try {
+                setIntegrationMessage(null);
                 const [dashResponse, notifResponse] = await Promise.all([
                     fetch(`/api/dashboard/${selectedAircraft.registration}`),
                     fetch("/api/notifications"),
                 ]);
 
                 if (cancelled) return;
+
+                if (dashResponse.status === 503) {
+                    const data = await dashResponse.json().catch(() => ({}));
+                    setIntegrationMessage(
+                        data?.error || "Dashboard data is unavailable until the flight ops integration is configured."
+                    );
+                    setDashboardData(null);
+                }
 
                 if (dashResponse.ok) {
                     const data = (await dashResponse.json()) as DashboardSnapshot;
@@ -158,6 +168,11 @@ export default function DashboardPage() {
         <div className="relative w-full">
             <div className="w-full max-w-[844px] mx-auto">
                 <BackToHub title="Dashboard" />
+                {integrationMessage ? (
+                    <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                        {integrationMessage}
+                    </div>
+                ) : null}
                 {!hasAircraft ? (
                     <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                         No aircraft are available yet. Connect your CMMS integration to load fleet data.

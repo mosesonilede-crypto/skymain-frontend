@@ -27,13 +27,23 @@ export default function AIInsightsPage() {
     const { selectedAircraft } = useAircraft();
     const [advancedOpen, setAdvancedOpen] = useState(false);
     const [insightsData, setInsightsData] = useState<InsightsData | null>(null);
+    const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
 
     // Fetch live insights data
     async function fetchInsightsData() {
         if (!selectedAircraft?.registration) return;
 
         try {
+            setIntegrationMessage(null);
             const response = await fetch(`/api/insights/${selectedAircraft.registration}`);
+            if (response.status === 503) {
+                const data = await response.json().catch(() => ({}));
+                setIntegrationMessage(
+                    data?.error || "AI insights are unavailable until the ACMS integration is configured."
+                );
+                setInsightsData(null);
+                return;
+            }
             if (response.ok) {
                 const data = await response.json();
                 setInsightsData(data);
@@ -75,6 +85,9 @@ export default function AIInsightsPage() {
             <BackToHub title="AI Insights" />
             <div className="pt-1">
                 <h1 className="text-2xl font-semibold tracking-tight text-slate-900">AI Insights</h1>
+                {integrationMessage ? (
+                    <p className="mt-2 text-sm text-slate-600">{integrationMessage}</p>
+                ) : null}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
