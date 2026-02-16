@@ -39,6 +39,7 @@ export function resolveSessionRole(input: { rawRole?: string | null; licenseCode
 
     const superAdminEmails = new Set([
         "mosesonilede@gmail.com",
+        "manager@skywings.com",
         ...((process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || "")
             .split(",")
             .map((item) => normalizeEmail(item))

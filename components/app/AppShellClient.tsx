@@ -159,14 +159,18 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                         </div>
 
                         <div className="border-t border-[#e5e7eb]">
-                            <div className="px-4 pt-[16.8px]">
+                            <div className="px-4 py-4 pb-8">
                                 <div className="flex items-center gap-3">
                                     <div className="h-10 w-10 overflow-hidden rounded-full">
                                         <UserCircle className="h-10 w-10 text-[#9ca3af]" />
                                     </div>
-                                    <div>
-                                        <div className="text-[14px] leading-5 text-[#0a0a0a]">manager</div>
-                                        <div className="text-[12px] leading-4 text-[#6a7282]">Fleet Manager</div>
+                                    <div className="overflow-hidden">
+                                        <div className="truncate text-[14px] leading-5 text-[#0a0a0a]">
+                                            {user?.email?.split("@")[0] || "User"}
+                                        </div>
+                                        <div className="truncate text-[12px] leading-4 text-[#6a7282] capitalize">
+                                            {(user?.role || roleHints.role || "User").replace(/_/g, " ")}
+                                        </div>
                                     </div>
                                 </div>
                                 <button
