@@ -4,6 +4,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
+import { useAuth, type UserRole } from "@/lib/AuthContext";
+import { resolveSessionRole } from "@/lib/auth/roles";
 
 import { CONTACT_SUPPORT } from "@/lib/routes";
 
@@ -78,6 +80,7 @@ async function loginRequest(payload: { email: string; password: string; orgName:
 
 export default function SignInOverlay() {
     const router = useRouter();
+    const { login } = useAuth();
     const mode = getDataMode();
 
     const [email, setEmail] = useState("");
@@ -116,22 +119,29 @@ export default function SignInOverlay() {
             return;
         }
 
+        const trimmedEmail = email.trim();
+        const trimmedOrg = orgName.trim();
+        const trimmedLicense = licenseCode.trim();
+        const resolvedRole = resolveSessionRole({
+            rawRole: typeof window !== "undefined" ? window.localStorage.getItem("skymaintain.userRole") : undefined,
+            licenseCode: trimmedLicense,
+            email: trimmedEmail,
+        }) as UserRole;
+
         if (typeof window !== "undefined") {
-            window.localStorage.setItem("skymaintain.userEmail", email.trim());
-            const trimmedOrg = orgName.trim();
-            const trimmedLicense = licenseCode.trim();
+            window.localStorage.setItem("skymaintain.userEmail", trimmedEmail);
+            window.localStorage.setItem("skymaintain.userRole", resolvedRole);
+            window.localStorage.setItem("skymaintain.licenseCode", trimmedLicense);
             if (remember) {
                 window.localStorage.setItem("skymaintain.orgName", trimmedOrg);
-                window.localStorage.setItem("skymaintain.licenseCode", trimmedLicense);
                 window.sessionStorage.removeItem("skymaintain.orgName");
-                window.sessionStorage.removeItem("skymaintain.licenseCode");
             } else {
                 window.sessionStorage.setItem("skymaintain.orgName", trimmedOrg);
-                window.sessionStorage.setItem("skymaintain.licenseCode", trimmedLicense);
                 window.localStorage.removeItem("skymaintain.orgName");
-                window.localStorage.removeItem("skymaintain.licenseCode");
             }
         }
+
+        await login({ email: trimmedEmail, orgName: trimmedOrg, role: resolvedRole });
 
         router.push("/2fa");
     }

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useAuth } from "@/lib/AuthContext";
+import { useAuth, type UserRole } from "@/lib/AuthContext";
+import { resolveSessionRole } from "@/lib/auth/roles";
 import { supabase } from "@/lib/supabaseClient";
-import { deriveRoleFromLicenseCode, getStoredLicenseCode } from "@/lib/accessControl";
 
 function HelpCenterFab() {
     // Route all help into /contact unless a dedicated page exists
@@ -65,6 +65,10 @@ export default function TwoFactorPage() {
     const [error, setError] = React.useState<string | null>(null);
 
     const isComplete = code.replace(/\D/g, "").length === 6;
+
+    function resolveRole(rawRole?: string | null, licenseCode?: string | null, emailValue?: string | null): UserRole {
+        return resolveSessionRole({ rawRole, licenseCode, email: emailValue }) as UserRole;
+    }
 
     function setDigit(index: number, digit: string) {
         const d = digit.replace(/\D/g, "").slice(-1);
@@ -166,6 +170,12 @@ export default function TwoFactorPage() {
             }
 
             let authUser = user;
+            const storedRoleHint = typeof window !== "undefined" ? window.localStorage.getItem("skymaintain.userRole") : undefined;
+            const storedLicenseCode = typeof window !== "undefined" ? window.localStorage.getItem("skymaintain.licenseCode") : undefined;
+            const storedEmail = typeof window !== "undefined" ? window.localStorage.getItem("skymaintain.userEmail") : undefined;
+            const storedOrg = typeof window !== "undefined"
+                ? window.localStorage.getItem("skymaintain.orgName") || window.sessionStorage.getItem("skymaintain.orgName")
+                : undefined;
 
             if (!authUser && typeof window !== "undefined") {
                 const storedUser = localStorage.getItem("SKYMAINTAIN_USER");
@@ -178,42 +188,41 @@ export default function TwoFactorPage() {
                 }
             }
 
-            if (!authUser && typeof window !== "undefined") {
-                const storedEmail = window.localStorage.getItem("skymaintain.userEmail")?.trim();
-                const storedOrg =
-                    window.localStorage.getItem("skymaintain.orgName")?.trim() ||
-                    window.sessionStorage.getItem("skymaintain.orgName")?.trim();
-                const fallbackRole = window.localStorage.getItem("skymaintain.userRole") || undefined;
-                const resolvedRole = deriveRoleFromLicenseCode(getStoredLicenseCode(), fallbackRole);
+            if (!authUser && storedEmail && storedOrg) {
+                authUser = {
+                    email: storedEmail,
+                    orgName: storedOrg,
+                    role: storedRoleHint || "fleet_manager",
+                };
+            }
 
-                if (storedEmail && storedOrg) {
-                    authUser = {
-                        email: storedEmail,
-                        orgName: storedOrg,
-                        role: resolvedRole as import("@/lib/AuthContext").UserRole,
-                    };
-                }
+            if (authUser) {
+                authUser = {
+                    ...authUser,
+                    role: resolveRole(authUser.role || storedRoleHint, storedLicenseCode, authUser.email),
+                };
             }
 
             if (!authUser && supabase) {
                 const { data: supabaseData } = await supabase.auth.getUser();
                 const supabaseUser = supabaseData?.user;
                 if (supabaseUser?.email) {
-                    const resolvedRole = deriveRoleFromLicenseCode(
-                        getStoredLicenseCode(),
-                        (supabaseUser.user_metadata?.role as string | undefined) || "fleet_manager"
-                    );
+                    const rawRole =
+                        (supabaseUser.app_metadata?.role as string | undefined) ||
+                        (supabaseUser.user_metadata?.role as string | undefined) ||
+                        storedRoleHint ||
+                        "fleet_manager";
+
                     authUser = {
                         email: supabaseUser.email,
                         orgName: (supabaseUser.user_metadata?.org_name as string | undefined) || "SkyMaintain",
-                        role: resolvedRole as import("@/lib/AuthContext").UserRole,
+                        role: resolveRole(rawRole, storedLicenseCode, supabaseUser.email),
                     };
                 }
             }
 
             if (authUser) {
-                const resolvedRole = deriveRoleFromLicenseCode(getStoredLicenseCode(), authUser.role);
-                await login({ ...authUser, role: resolvedRole as import("@/lib/AuthContext").UserRole });
+                await login(authUser);
             }
         } catch (verifyError) {
             setError(verifyError instanceof Error ? verifyError.message : "Verification failed.");

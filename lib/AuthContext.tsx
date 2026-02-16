@@ -4,15 +4,15 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 // Extended role types for role-based views
 export type UserRole =
+    | "admin"                // Organization admin
+    | "super_admin"          // Platform super admin
     | "technician"           // Front-line maintenance personnel
     | "supervisor"           // Shift supervisors, team leads
     | "maintenance_manager"  // Maintenance managers, commanders
     | "safety_qa"            // Safety officers, QA inspectors
     | "fleet_manager"        // Fleet operations (legacy support)
-    | "maintenance_engineer"  // Engineers (legacy support)
-    | "admin"
-    | "super_admin"
-    | "user";
+    | "maintenance_engineer" // Engineers (legacy support)
+    | "user";                // Generic fallback role
 
 export interface User {
     email: string;
@@ -39,12 +39,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Initialize from session API on mount
     useEffect(() => {
         async function checkSession() {
+            let sessionUserLoaded = false;
+
             try {
                 const res = await fetch("/api/auth/session", { credentials: "include" });
                 if (res.ok) {
                     const data = await res.json();
                     if (data.authenticated && data.user) {
                         setUser(data.user);
+                        sessionUserLoaded = true;
                     }
                 }
             } catch (e) {
@@ -52,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Fallback: check localStorage for backward compatibility
-            if (!user) {
+            if (!sessionUserLoaded) {
                 const storedUser = localStorage.getItem("SKYMAINTAIN_USER");
                 if (storedUser) {
                     try {

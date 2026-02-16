@@ -5,7 +5,7 @@ import React from "react";
 import Link from "next/link";
 import { Eye, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
-import { deriveRoleFromLicenseCode, getStoredLicenseCode, hasAdminPanelAccess } from "@/lib/accessControl";
+import { isAdminRole, resolveSessionRole } from "@/lib/auth/roles";
 
 interface JunctionCard {
     href: string;
@@ -18,8 +18,23 @@ interface JunctionCard {
 
 export default function WelcomePage() {
     const { user } = useAuth();
-    const effectiveRole = deriveRoleFromLicenseCode(getStoredLicenseCode(), user?.role);
-    const canViewAdminPanel = hasAdminPanelAccess(effectiveRole);
+    const [roleHints, setRoleHints] = React.useState<{ role?: string; licenseCode?: string; email?: string }>({});
+
+    React.useEffect(() => {
+        if (typeof window === "undefined") return;
+        setRoleHints({
+            role: window.localStorage.getItem("skymaintain.userRole") || undefined,
+            licenseCode: window.localStorage.getItem("skymaintain.licenseCode") || undefined,
+            email: window.localStorage.getItem("skymaintain.userEmail") || undefined,
+        });
+    }, []);
+
+    const resolvedRole = resolveSessionRole({
+        rawRole: user?.role || roleHints.role,
+        licenseCode: roleHints.licenseCode,
+        email: user?.email || roleHints.email,
+    });
+    const canAccessAdminPanel = isAdminRole(resolvedRole);
 
     const junctionCards: JunctionCard[] = [
         {
@@ -78,17 +93,18 @@ export default function WelcomePage() {
             color: "from-slate-500 to-slate-600",
             action: "Configure"
         },
-        ...(canViewAdminPanel
-            ? [{
-                href: "/app/admin-panel",
-                icon: "🛡️",
-                title: "Admin Panel",
-                description: "Manage users, platform controls, and regulatory access workflows",
-                color: "from-cyan-600 to-cyan-700",
-                action: "Open Admin Panel"
-            }]
-            : []),
     ];
+
+    if (canAccessAdminPanel) {
+        junctionCards.push({
+            href: "/app/admin-panel",
+            icon: "🛡️",
+            title: "Admin Panel",
+            description: "Manage aircraft, users, and regulatory access workflows",
+            color: "from-rose-500 to-rose-600",
+            action: "Open Admin Panel"
+        });
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-12">

@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/AuthContext";
+import { isAdminRole, resolveSessionRole } from "@/lib/auth/roles";
 
 type DataMode = "mock" | "live" | "hybrid";
 
@@ -60,7 +63,7 @@ function getPublicEnv(name: string, fallback: string) {
 
 function normalizeMode(value: string): DataMode {
     if (value === "live" || value === "hybrid" || value === "mock") return value;
-    return "mock";
+    return "live";
 }
 
 function mockPayload(): AdminPanelPayload {
@@ -1581,12 +1584,40 @@ function AccessCodeManagementSection() {
 }
 
 export default function AdminPanelPage() {
-    const mode = useMemo(() => normalizeMode(getPublicEnv("NEXT_PUBLIC_DATA_MODE", "mock")), []);
+    const router = useRouter();
+    const { user, isLoading: authLoading } = useAuth();
+    const [roleHints, setRoleHints] = useState<{ role?: string; licenseCode?: string; email?: string }>({});
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        setRoleHints({
+            role: window.localStorage.getItem("skymaintain.userRole") || undefined,
+            licenseCode: window.localStorage.getItem("skymaintain.licenseCode") || undefined,
+            email: window.localStorage.getItem("skymaintain.userEmail") || undefined,
+        });
+    }, []);
+
+    const resolvedRole = resolveSessionRole({
+        rawRole: user?.role || roleHints.role,
+        licenseCode: roleHints.licenseCode,
+        email: user?.email || roleHints.email,
+    });
+    const canAccessAdminPanel = isAdminRole(resolvedRole);
+
+    const mode = useMemo(() => normalizeMode(getPublicEnv("NEXT_PUBLIC_DATA_MODE", "live")), []);
+    const allowMockFallback = useMemo(
+        () => getPublicEnv("NEXT_PUBLIC_ALLOW_MOCK_FALLBACK", "false") === "true",
+        []
+    );
     const baseUrl = useMemo(() => getPublicEnv("NEXT_PUBLIC_API_BASE_URL", ""), []);
 
-    const [source, setSource] = useState<"mock" | "live">("mock");
-    const [payload, setPayload] = useState<AdminPanelPayload>(() => mockPayload());
-    const [loading, setLoading] = useState<boolean>(mode !== "mock");
+    const [source, setSource] = useState<"mock" | "live">(allowMockFallback ? "mock" : "live");
+    const [payload, setPayload] = useState<AdminPanelPayload>(() => (allowMockFallback ? mockPayload() : {
+        kpis: { totalAircraft: 0, activeUsers: 0, maintenanceRecords: 0, complianceRatePct: 0 },
+        users: [],
+        system: { licenseStatus: "Unknown", licenseExpires: "", storageUsedGb: 0, storageTotalGb: 0 },
+    }));
+    const [loading, setLoading] = useState<boolean>(mode !== "mock" || !allowMockFallback);
     const [error, setError] = useState<string>("");
 
     const [userList, setUserList] = useState<AdminUser[]>(() => mockPayload().users);
@@ -1630,6 +1661,13 @@ export default function AdminPanelPage() {
 
     const [submitError, setSubmitError] = useState<string>("");
     const [submitting, setSubmitting] = useState<boolean>(false);
+    const shouldBlock = authLoading || !canAccessAdminPanel;
+
+    useEffect(() => {
+        if (!authLoading && !canAccessAdminPanel) {
+            router.replace("/app/welcome");
+        }
+    }, [authLoading, canAccessAdminPanel, router]);
 
     useEffect(() => {
         setForm((f) => ({ ...f, aircraftType: selectedAircraftType, category: selectedCategory }));
@@ -1648,15 +1686,12 @@ export default function AdminPanelPage() {
             setError("");
 
             if (mode === "mock") {
-                setPayload(mockPayload());
-                setSource("mock");
-                setLoading(false);
-                return;
-            }
-
-            if (!baseUrl) {
-                setPayload(mockPayload());
-                setSource("mock");
+                if (allowMockFallback) {
+                    setPayload(mockPayload());
+                    setSource("mock");
+                } else {
+                    setError("Mock mode is disabled. Configure integrations for live data.");
+                }
                 setLoading(false);
                 return;
             }
@@ -1665,14 +1700,16 @@ export default function AdminPanelPage() {
 
             if (mode === "live") {
                 try {
-                    const live = await fetchLive(baseUrl);
+                    const live = await fetchLive("");
                     if (cancelled) return;
                     setPayload(live);
                     setSource("live");
                 } catch (e) {
                     if (cancelled) return;
-                    setPayload(mockPayload());
-                    setSource("mock");
+                    if (allowMockFallback) {
+                        setPayload(mockPayload());
+                        setSource("mock");
+                    }
                     setError(e instanceof Error ? e.message : "Failed to load live data");
                 } finally {
                     if (!cancelled) setLoading(false);
@@ -1681,14 +1718,16 @@ export default function AdminPanelPage() {
             }
 
             try {
-                const live = await fetchLive(baseUrl);
+                const live = await fetchLive("");
                 if (cancelled) return;
                 setPayload(live);
                 setSource("live");
             } catch (e) {
                 if (cancelled) return;
-                setPayload(mockPayload());
-                setSource("mock");
+                if (allowMockFallback) {
+                    setPayload(mockPayload());
+                    setSource("mock");
+                }
                 setError(e instanceof Error ? e.message : "Failed to load live data");
             } finally {
                 if (!cancelled) setLoading(false);
@@ -1699,7 +1738,7 @@ export default function AdminPanelPage() {
         return () => {
             cancelled = true;
         };
-    }, [mode, baseUrl]);
+    }, [mode, allowMockFallback]);
 
     useEffect(() => {
         setUserList(payload.users);
@@ -1813,9 +1852,18 @@ export default function AdminPanelPage() {
         try {
             setSubmitting(true);
 
-            if (mode === "mock" || !baseUrl) {
-                setIsRegisterOpen(false);
-                resetForm();
+            if (mode === "mock") {
+                if (allowMockFallback) {
+                    setIsRegisterOpen(false);
+                    resetForm();
+                    return;
+                }
+                setSubmitError("Mock mode is disabled. Configure live admin connector.");
+                return;
+            }
+
+            if (!baseUrl) {
+                setSubmitError("Admin connector base URL is not configured.");
                 return;
             }
 
@@ -1831,8 +1879,10 @@ export default function AdminPanelPage() {
                 setIsRegisterOpen(false);
                 resetForm();
             } catch (e) {
-                setIsRegisterOpen(false);
-                resetForm();
+                if (allowMockFallback) {
+                    setIsRegisterOpen(false);
+                    resetForm();
+                }
                 setError(e instanceof Error ? e.message : "Register aircraft failed (hybrid fallback).");
             }
         } catch (e) {
@@ -1840,6 +1890,10 @@ export default function AdminPanelPage() {
         } finally {
             setSubmitting(false);
         }
+    }
+
+    if (shouldBlock) {
+        return null;
     }
 
     return (

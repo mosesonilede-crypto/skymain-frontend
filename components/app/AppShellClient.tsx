@@ -8,7 +8,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -32,10 +32,10 @@ import AppSidebarNav from "@/components/app/AppSidebarNav";
 import AIMechanicFAB from "@/components/ai/AIMechanicFAB";
 import AIMechanicPanel from "@/components/ai/AIMechanicPanel";
 import { useAuth } from "@/lib/AuthContext";
+import { isAdminRole, resolveSessionRole } from "@/lib/auth/roles";
 import { useSessionTimeout, SessionTimeoutWarning, clearSessionData } from "@/lib/SessionTimeout";
-import { deriveRoleFromLicenseCode, getStoredLicenseCode, hasAdminPanelAccess } from "@/lib/accessControl";
 
-const baseNavItems = [
+const ALL_NAV_ITEMS = [
     { href: "/app/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
     { href: "/app/docs", label: "Documentation", icon: <FileText className="h-5 w-5" /> },
     { href: "/app/alerts", label: "Predictive Alerts", icon: <Bell className="h-5 w-5" /> },
@@ -46,6 +46,7 @@ const baseNavItems = [
     { href: "/app/compliance", label: "Regulatory Compliance", icon: <ShieldCheck className="h-5 w-5" />, tall: true },
     { href: "/app/insights", label: "AI Insights", icon: <Brain className="h-5 w-5" /> },
     { href: "/app/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
+    { href: "/app/admin-panel", label: "Admin Panel", icon: <Shield className="h-5 w-5" />, adminOnly: true },
 ];
 
 type AppShellClientProps = {
@@ -57,16 +58,29 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const [aiOpen, setAiOpen] = useState(false);
     const [aiInitialQuery, setAiInitialQuery] = useState<string | undefined>(undefined);
     const [aiContext, setAiContext] = useState<string | undefined>(undefined);
+    const roleHints = useMemo(() => {
+        if (typeof window === "undefined") {
+            return {} as { role?: string; licenseCode?: string; email?: string };
+        }
+        return {
+            role: window.localStorage.getItem("skymaintain.userRole") || undefined,
+            licenseCode: window.localStorage.getItem("skymaintain.licenseCode") || undefined,
+            email: window.localStorage.getItem("skymaintain.userEmail") || undefined,
+        };
+    }, []);
     const pathname = usePathname();
     const router = useRouter();
     const { logout, user } = useAuth();
     const contentRef = useRef<HTMLDivElement>(null);
-
-    const effectiveRole = deriveRoleFromLicenseCode(getStoredLicenseCode(), user?.role);
-    const canViewAdminPanel = hasAdminPanelAccess(effectiveRole);
-    const navItems = canViewAdminPanel
-        ? [...baseNavItems, { href: "/app/admin-panel", label: "Admin Panel", icon: <Shield className="h-5 w-5" /> }]
-        : baseNavItems;
+    const navItems = useMemo(() => {
+        const resolvedRole = resolveSessionRole({
+            rawRole: user?.role || roleHints.role,
+            licenseCode: roleHints.licenseCode,
+            email: user?.email || roleHints.email,
+        });
+        const canAccessAdmin = isAdminRole(resolvedRole);
+        return ALL_NAV_ITEMS.filter((item) => !item.adminOnly || canAccessAdmin);
+    }, [user?.role, user?.email, roleHints.role, roleHints.licenseCode, roleHints.email]);
 
     // Session timeout management
     const { isWarningVisible, remainingSeconds, extendSession } = useSessionTimeout();
@@ -140,9 +154,11 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                             </div>
                         </div>
 
-                        <AppSidebarNav items={navItems} />
+                        <div className="flex-1 overflow-y-auto">
+                            <AppSidebarNav items={navItems} />
+                        </div>
 
-                        <div className="mt-auto border-t border-[#e5e7eb]">
+                        <div className="border-t border-[#e5e7eb]">
                             <div className="px-4 pt-[16.8px]">
                                 <div className="flex items-center gap-3">
                                     <div className="h-10 w-10 overflow-hidden rounded-full">

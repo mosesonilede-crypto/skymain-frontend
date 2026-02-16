@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useAuth } from "@/lib/AuthContext";
+import { useAuth, type UserRole } from "@/lib/AuthContext";
+import { resolveSessionRole } from "@/lib/auth/roles";
 import { getTrialStatus, startTrialIfMissing } from "@/lib/trial";
 import { supabase } from "@/lib/supabaseClient";
-import { deriveRoleFromLicenseCode } from "@/lib/accessControl";
 
 export default function SignInPage() {
     const router = useRouter();
@@ -81,20 +81,19 @@ export default function SignInPage() {
 
         const user = result.data.user;
         const orgNameMeta = (user?.user_metadata?.org_name as string | undefined) || oTrim;
-
-        const resolvedRole = deriveRoleFromLicenseCode(lTrim, "fleet_manager");
+        const rawRole =
+            (user?.app_metadata?.role as string | undefined) ||
+            (user?.user_metadata?.role as string | undefined) ||
+            "fleet_manager";
+        const role = resolveSessionRole({ rawRole, licenseCode: lTrim, email: eTrim }) as UserRole;
 
         if (typeof window !== "undefined") {
-            if (remember) {
-                window.localStorage.setItem("skymaintain.licenseCode", lTrim);
-                window.sessionStorage.removeItem("skymaintain.licenseCode");
-            } else {
-                window.sessionStorage.setItem("skymaintain.licenseCode", lTrim);
-                window.localStorage.removeItem("skymaintain.licenseCode");
-            }
+            window.localStorage.setItem("skymaintain.userRole", role);
+            window.localStorage.setItem("skymaintain.licenseCode", lTrim);
         }
 
-        login({ email: eTrim, orgName: orgNameMeta, role: resolvedRole as import("@/lib/AuthContext").UserRole });
+        // Persist authentication state
+        login({ email: eTrim, orgName: orgNameMeta, role });
         startTrialIfMissing();
 
         router.push("/2fa");
