@@ -13,6 +13,7 @@ type ReportPayload = {
 export default function PrintReportPage() {
     const [report, setReport] = useState<ReportPayload | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
     const [aircraftReg, setAircraftReg] = useState<string>("");
 
     useEffect(() => {
@@ -53,7 +54,16 @@ export default function PrintReportPage() {
         const loadReport = async () => {
             try {
                 setError(null);
+                setIntegrationMessage(null);
                 const response = await fetch(`/api/reports/${reg}`, { signal: controller.signal });
+                if (response.status === 503) {
+                    const data = await response.json().catch(() => ({}));
+                    setIntegrationMessage(
+                        data?.error || "Report data is unavailable until the CMMS integration is configured."
+                    );
+                    setReport(null);
+                    return;
+                }
                 if (!response.ok) {
                     throw new Error("Unable to load report data.");
                 }
@@ -109,6 +119,11 @@ export default function PrintReportPage() {
                     This report summarizes current fleet readiness, predictive alerts, and compliance posture for the
                     last 30 days using live operational data.
                 </p>
+                {integrationMessage ? (
+                    <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                        {integrationMessage}
+                    </div>
+                ) : null}
                 {error ? (
                     <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                         {error}

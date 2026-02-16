@@ -19,14 +19,24 @@ export default function ReportsAnalyticsPage() {
     const model = selectedAircraft?.model || "Boeing 737-800";
     const [reportsData, setReportsData] = useState<ReportsData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
 
     // Fetch live reports data
     const fetchReportsData = useCallback(async () => {
         if (!selectedAircraft?.registration) return;
 
         setIsLoading(true);
+        setIntegrationMessage(null);
         try {
             const response = await fetch(`/api/reports/${selectedAircraft.registration}`);
+            if (response.status === 503) {
+                const data = await response.json().catch(() => ({}));
+                setIntegrationMessage(
+                    data?.error || "Reports are unavailable until the CMMS integration is configured."
+                );
+                setReportsData(null);
+                return;
+            }
             if (response.ok) {
                 const data = (await response.json()) as ReportsData;
                 setReportsData(data);
@@ -93,6 +103,9 @@ export default function ReportsAnalyticsPage() {
                 <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
                     Reports &amp; Analytics - {aircraftReg}
                 </h1>
+                {integrationMessage ? (
+                    <span className="text-sm text-slate-600">{integrationMessage}</span>
+                ) : null}
                 {isLoading ? <span className="text-sm text-slate-500">Loading...</span> : null}
                 <button
                     type="button"
