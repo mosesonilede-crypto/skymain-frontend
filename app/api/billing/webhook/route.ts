@@ -170,7 +170,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     if (!email && customerId) {
         try {
             const customer = await stripe.customers.retrieve(customerId);
-            if (typeof customer !== "string" && customer.email) {
+            if (!("deleted" in customer) && customer.email) {
                 email = customer.email;
             }
         } catch (error) {
