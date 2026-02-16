@@ -5,13 +5,10 @@
  * specHash: sha256:main-landing-page-v1
  */
 
-/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Activity, ArrowRight, ClipboardList, FileCheck, Shield, Star, Tag, Users, Zap } from "lucide-react";
+import { Activity, ArrowRight, ClipboardList, FileCheck, Plane, Shield, Star, Tag, Users, Zap } from "lucide-react";
 import LandingSignupForm from "@/components/public/LandingSignupForm";
-
-const imgLogo = "/brand/SkyMaintain_logo.png";
 
 export const metadata: Metadata = {
     title: "SkyMaintain | Regulatory-Grade AI for Aircraft Maintenance",
@@ -459,46 +456,60 @@ export default function MainLandingPage() {
             </section>
 
             {/* Footer */}
-            <footer className="bg-slate-900 py-12">
-                <div className="mx-auto max-w-[1084px] px-8">
-                    {/* Logo and tagline */}
-                    <div className="text-center">
-                        <div className="flex items-center justify-center gap-2">
-                            <img src={imgLogo} alt="SkyMaintain" className="h-8 w-12 object-contain" />
-                            <span className="text-2xl font-bold text-white">SkyMaintain</span>
+            <footer className="bg-[#101828] py-12">
+                <div className="mx-auto max-w-6xl px-6">
+                    <div className="grid gap-8 md:grid-cols-4">
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#155dfc]">
+                                    <Plane className="h-5 w-5 text-white" />
+                                </div>
+                                <span className="text-lg font-bold text-white">SkyMaintain</span>
+                            </div>
+                            <p className="mt-4 text-sm text-[#99a1af]">
+                                AI-powered aircraft maintenance platform ensuring safety, compliance, and efficiency.
+                            </p>
                         </div>
-                        <p className="mt-4 text-base text-slate-400">
-                            Enterprise AI for regulated aircraft maintenance operations.
-                        </p>
-                        <p className="mt-2 text-sm text-slate-500">
-                            Built for compliance. Designed for accountability.
-                        </p>
+
+                        <div>
+                            <h4 className="mb-4 font-bold text-white">Product</h4>
+                            <ul className="space-y-2">
+                                <li><Link href="/platform-features" className="text-[#d1d5dc] hover:text-white">Features</Link></li>
+                                <li><Link href="/pricing" className="text-[#d1d5dc] hover:text-white">Pricing</Link></li>
+                                <li><Link href="/security" className="text-[#d1d5dc] hover:text-white">Security</Link></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 className="mb-4 font-bold text-white">Company</h4>
+                            <ul className="space-y-2">
+                                <li><Link href="/about" className="text-[#d1d5dc] hover:text-white">About Us</Link></li>
+                                <li><Link href="/careers" className="text-[#d1d5dc] hover:text-white">Careers</Link></li>
+                                <li><Link href="/contact" className="text-[#d1d5dc] hover:text-white">Contact</Link></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 className="mb-4 font-bold text-white">Legal</h4>
+                            <ul className="space-y-2">
+                                <li><Link href="/privacy" className="text-[#d1d5dc] hover:text-white">Privacy Policy</Link></li>
+                                <li><Link href="/terms" className="text-[#d1d5dc] hover:text-white">Terms of Service</Link></li>
+                                <li><Link href="/compliance" className="text-[#d1d5dc] hover:text-white">Compliance</Link></li>
+                            </ul>
+                        </div>
                     </div>
 
-                    {/* Links */}
-                    <div className="mt-8 border-t border-slate-800 pt-8">
-                        <div className="flex flex-wrap items-center justify-center gap-6 text-base text-slate-400">
-                            <Link href="/privacy" className="hover:text-slate-200">
-                                Privacy Policy
-                            </Link>
-                            <Link href="/terms" className="hover:text-slate-200">
-                                Terms of Service
-                            </Link>
-                            <Link href="/regulatory-governance-accountability" className="hover:text-slate-200">
-                                Regulatory Governance &amp; Accountability
-                            </Link>
-                            <Link href="/compliance" className="hover:text-slate-200">
-                                Compliance
-                            </Link>
-                            <Link href="/security" className="hover:text-slate-200">
-                                Security
-                            </Link>
-                            <Link href="/contact" className="hover:text-slate-200">
-                                Contact
-                            </Link>
-                        </div>
-                        <p className="mt-6 text-center text-sm text-slate-500">
-                            © 2026 SkyMaintain. All rights reserved.
+                    <div className="mt-8 border-t border-[#1e2939] pt-8 text-center">
+                        <p className="text-sm text-[#d1d5dc]">
+                            © 2026 <span className="text-[#51a2ff]">SkyMaintain</span>. All Rights Reserved.
+                        </p>
+                        <p className="mt-2 text-xs text-[#6a7282]">SkyMaintain is a product of EncycloAMTs LLC.</p>
+                        <p className="mt-1 text-xs text-[#6a7282]">
+                            A Regulatory-Compliant Architecture for AI-Assisted Aircraft Maintenance Decision Support
+                        </p>
+                        <p className="mt-4 text-xs text-[#6a7282]">
+                            <strong>Partner Disclosure:</strong> SkyMaintain displays sponsored partner content. Sponsorship does not
+                            influence AI responses, maintenance recommendations, or compliance assessments.
                         </p>
                     </div>
                 </div>

@@ -141,6 +141,8 @@ const faqs: FAQ[] = [
 export default function GetStartedPage() {
     const [expandedFaqs, setExpandedFaqs] = useState<number[]>([0, 1, 2]);
     const { isAuthenticated, isLoading } = useAuth();
+    const [globalAeroSrc, setGlobalAeroSrc] = useState(imgGlobalAeroFleet);
+    const [aeroTechSrc, setAeroTechSrc] = useState(imgAviationParts);
 
     const toggleFaq = (index: number) => {
         setExpandedFaqs(prev =>
@@ -273,12 +275,13 @@ export default function GetStartedPage() {
                             {/* Right Image */}
                             <div className="relative h-64 md:h-auto">
                                 <Image
-                                    src={imgGlobalAeroFleet}
+                                    src={globalAeroSrc}
                                     alt="GlobalAero Airlines Fleet"
                                     fill
                                     sizes="(min-width: 768px) 50vw, 100vw"
                                     unoptimized
                                     className="absolute inset-0 h-full w-full object-cover"
+                                    onError={() => setGlobalAeroSrc(imgGlobalAeroFallback)}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                                 <span className="absolute right-4 top-4 rounded-lg bg-[#4a5565] px-3 py-1 text-xs text-white">
@@ -404,12 +407,13 @@ export default function GetStartedPage() {
                             {/* Left Image */}
                             <div className="relative h-64 md:h-auto">
                                 <Image
-                                    src={imgAviationParts}
+                                    src={aeroTechSrc}
                                     alt="Aviation Parts and Components"
                                     fill
                                     sizes="(min-width: 768px) 50vw, 100vw"
                                     unoptimized
                                     className="absolute inset-0 h-full w-full object-cover"
+                                    onError={() => setAeroTechSrc(imgAviationPartsFallback)}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent" />
                                 <span className="absolute left-4 top-4 rounded-lg bg-[#f54900] px-3 py-1 text-xs text-white">
