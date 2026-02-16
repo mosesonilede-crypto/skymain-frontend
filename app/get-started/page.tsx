@@ -8,12 +8,62 @@ import { startTrialIfMissing } from "@/lib/trial";
 import { useAuth } from "@/lib/AuthContext";
 
 // Image assets from Figma
-const imgGlobalAeroFleet = "/partners/globalaero.svg";
+const imgGlobalAeroFleet = "https://www.figma.com/api/mcp/asset/d3926b89-b96a-4544-93f0-14aa7cf8b92f";
 const imgAIPredictive = "https://www.figma.com/api/mcp/asset/c16c67db-c090-4e03-94e3-afbe9675c31f";
 const imgCompliance = "https://www.figma.com/api/mcp/asset/d5555a73-d1cd-44fc-8c01-5039f4ca20e8";
 const imgIoTMonitoring = "https://www.figma.com/api/mcp/asset/c82488e3-6f72-447b-94ac-c118957c7ad5";
 const imgSmartWorkflows = "https://www.figma.com/api/mcp/asset/afc7be7f-955f-45e8-ba64-eb332330262d";
-const imgAviationParts = "/partners/aerotech.svg";
+const imgAviationParts = "https://www.figma.com/api/mcp/asset/a5d2100f-d154-4213-995c-1b073c1f394c";
+
+const imgGlobalAeroFallback = `data:image/svg+xml;utf8,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="GlobalAero Airlines">
+    <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#1c398e" />
+            <stop offset="100%" stop-color="#312c85" />
+        </linearGradient>
+    </defs>
+    <rect width="1200" height="800" fill="url(#bg)" />
+    <g fill="#ffffff" font-family="Arial, Helvetica, sans-serif">
+        <text x="80" y="160" font-size="48" font-weight="700">GlobalAero Airlines</text>
+        <text x="80" y="230" font-size="22" opacity="0.9">Partner Fleet Showcase</text>
+    </g>
+    <g fill="#dbeafe" opacity="0.5">
+        <circle cx="1020" cy="140" r="120" />
+        <circle cx="1040" cy="560" r="160" />
+    </g>
+    <g fill="#ffffff" opacity="0.2">
+        <rect x="80" y="300" width="560" height="18" rx="9" />
+        <rect x="80" y="340" width="480" height="18" rx="9" />
+        <rect x="80" y="380" width="520" height="18" rx="9" />
+    </g>
+</svg>`
+)}`;
+
+const imgAviationPartsFallback = `data:image/svg+xml;utf8,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="AeroTech Parts and Supply">
+    <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#f54900" />
+            <stop offset="100%" stop-color="#e7000b" />
+        </linearGradient>
+    </defs>
+    <rect width="1200" height="800" fill="url(#bg)" />
+    <g fill="#ffffff" font-family="Arial, Helvetica, sans-serif">
+        <text x="80" y="160" font-size="48" font-weight="700">AeroTech Parts &amp; Supply</text>
+        <text x="80" y="230" font-size="22" opacity="0.9">Certified Parts Partner</text>
+    </g>
+    <g fill="#ffedd4" opacity="0.5">
+        <circle cx="1030" cy="170" r="110" />
+        <circle cx="980" cy="560" r="170" />
+    </g>
+    <g fill="#ffffff" opacity="0.2">
+        <rect x="80" y="300" width="560" height="18" rx="9" />
+        <rect x="80" y="340" width="520" height="18" rx="9" />
+        <rect x="80" y="380" width="480" height="18" rx="9" />
+    </g>
+</svg>`
+)}`;
 
 // Types
 type Stat = { value: string; label: string; icon: React.ReactNode };
