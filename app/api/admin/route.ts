@@ -242,10 +242,33 @@ export async function GET(req: NextRequest) {
 
         const allUsers = await listAllUsers();
 
-        const { data: profiles, error: profilesError } = await supabaseServer
-            .from("user_profiles")
-            .select("user_id,email,full_name,org_name,role,phone,country,subscription_status,subscription_plan,stripe_customer_id,payment_details,created_at,updated_at");
-        if (profilesError) throw profilesError;
+        let profiles: Array<{
+            user_id?: string;
+            email?: string | null;
+            full_name?: string | null;
+            org_name?: string | null;
+            role?: string | null;
+            phone?: string | null;
+            country?: string | null;
+            subscription_status?: string | null;
+            subscription_plan?: string | null;
+            stripe_customer_id?: string | null;
+            payment_details?: string | null;
+            created_at?: string | null;
+            updated_at?: string | null;
+        }> = [];
+        try {
+            const { data: profilesData, error: profilesError } = await supabaseServer
+                .from("user_profiles")
+                .select("user_id,email,full_name,org_name,role,phone,country,subscription_status,subscription_plan,stripe_customer_id,payment_details,created_at,updated_at");
+            if (profilesError) {
+                console.warn("Admin directory profiles unavailable:", profilesError);
+            } else {
+                profiles = profilesData || [];
+            }
+        } catch (profilesError) {
+            console.warn("Admin directory profiles query failed:", profilesError);
+        }
 
         const profileById = new Map((profiles || []).map((profile) => [profile.user_id, profile]));
         const profileByEmail = new Map(
@@ -353,8 +376,9 @@ export async function GET(req: NextRequest) {
         }
 
         console.error("Error fetching admin data:", error);
+        const detail = error instanceof Error ? error.message : "Unknown error";
         return NextResponse.json(
-            { error: "Admin directory is not configured" },
+            { error: "Admin directory is not configured", detail },
             { status: 503 }
         );
     }
