@@ -6,12 +6,27 @@
 type EnvRequirement = {
     name: string;
     required: boolean;
+    requiredInProduction?: boolean;
     validate?: (value: string) => boolean;
 };
 
 const ENV_REQUIREMENTS: EnvRequirement[] = [
     // Critical for 2FA
     { name: "TWO_FA_SECRET", required: true, validate: (v) => v.length >= 32 },
+
+    // Integration connectors (required for production use-ready deployments)
+    { name: "SKYMAINTAIN_CMMS_BASE_URL", required: false, requiredInProduction: true },
+    { name: "SKYMAINTAIN_ERP_BASE_URL", required: false, requiredInProduction: true },
+    { name: "SKYMAINTAIN_FLIGHT_OPS_BASE_URL", required: false, requiredInProduction: true },
+    { name: "SKYMAINTAIN_ACMS_BASE_URL", required: false, requiredInProduction: true },
+    { name: "SKYMAINTAIN_MANUALS_BASE_URL", required: false, requiredInProduction: true },
+    { name: "SKYMAINTAIN_INTEGRATION_API_KEY", required: false, requiredInProduction: true },
+    {
+        name: "SKYMAINTAIN_INTEGRATION_TIMEOUT_MS",
+        required: false,
+        requiredInProduction: true,
+        validate: (v) => Number.isFinite(Number(v)) && Number(v) > 0,
+    },
 
     // Email delivery
     { name: "SMTP_HOST", required: false },
@@ -36,7 +51,8 @@ export function validateEnvironment(): { valid: boolean; errors: string[]; warni
     for (const req of ENV_REQUIREMENTS) {
         const value = process.env[req.name];
 
-        if (req.required && !value) {
+        const isRequired = req.required || (req.requiredInProduction && isProduction);
+        if (isRequired && !value) {
             errors.push(`Missing required: ${req.name}`);
         } else if (!value && isProduction) {
             warnings.push(`Recommended: ${req.name}`);
