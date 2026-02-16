@@ -8,12 +8,12 @@ import { startTrialIfMissing } from "@/lib/trial";
 import { useAuth } from "@/lib/AuthContext";
 
 // Image assets from Figma
-const imgGlobalAeroFleet = "https://www.figma.com/api/mcp/asset/d3926b89-b96a-4544-93f0-14aa7cf8b92f";
+const imgGlobalAeroFleet = "/partners/globalaero.svg";
 const imgAIPredictive = "https://www.figma.com/api/mcp/asset/c16c67db-c090-4e03-94e3-afbe9675c31f";
 const imgCompliance = "https://www.figma.com/api/mcp/asset/d5555a73-d1cd-44fc-8c01-5039f4ca20e8";
 const imgIoTMonitoring = "https://www.figma.com/api/mcp/asset/c82488e3-6f72-447b-94ac-c118957c7ad5";
 const imgSmartWorkflows = "https://www.figma.com/api/mcp/asset/afc7be7f-955f-45e8-ba64-eb332330262d";
-const imgAviationParts = "https://www.figma.com/api/mcp/asset/a5d2100f-d154-4213-995c-1b073c1f394c";
+const imgAviationParts = "/partners/aerotech.svg";
 
 // Types
 type Stat = { value: string; label: string; icon: React.ReactNode };
