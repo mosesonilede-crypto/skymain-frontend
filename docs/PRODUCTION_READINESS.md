@@ -17,6 +17,13 @@ This document tracks the execution steps to make SkyMaintain use-ready for real 
 - `SKYMAINTAIN_INTEGRATION_TIMEOUT_MS`
 - `ALLOW_MOCK_FALLBACK` (optional, default false)
 
+**Production env readiness checklist (enforced)**
+- [ ] `TWO_FA_SECRET` set (min 32 chars)
+- [ ] `NEXT_PUBLIC_API_BASE_URL` set for live/hybrid
+- [ ] `SMTP_HOST` and `SMTP_FROM` set for live/hybrid
+- [ ] All `SKYMAINTAIN_*` integration envs set
+- [ ] `SKYMAINTAIN_INTEGRATION_TIMEOUT_MS` is a positive number
+
 ## 2) Data ownership, lineage, and retention policies
 - Governance model defined in [lib/policy/dataGovernance.ts](lib/policy/dataGovernance.ts).
 - Ingestion endpoint now validates governance metadata when `REQUIRE_GOVERNANCE_METADATA=true`.
