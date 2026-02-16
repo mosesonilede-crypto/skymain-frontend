@@ -149,6 +149,7 @@ export default function RegulatoryCompliancePage() {
     const [lastChecked, setLastChecked] = useState("Unavailable");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
 
     const [airworthiness, setAirworthiness] = useState<AirworthinessData>(() => createEmptyAirworthiness(""));
 
@@ -188,8 +189,24 @@ export default function RegulatoryCompliancePage() {
 
         setIsLoading(true);
         setError(null);
+        setIntegrationMessage(null);
         try {
             const response = await fetch(`/api/compliance/${aircraftReg}`);
+            if (response.status === 503) {
+                const data = await response.json().catch(() => ({}));
+                setIntegrationMessage(
+                    data?.error || "Compliance data is unavailable until the manuals integration is configured."
+                );
+                setAirworthiness(createEmptyAirworthiness(aircraftReg));
+                setAds([]);
+                setSbs([]);
+                setCertificates([]);
+                setAnnualInspection(EMPTY_ANNUAL_INSPECTION);
+                setApplicableUpdates([]);
+                setComplianceScore(EMPTY_SCORE);
+                setLastChecked("Unavailable");
+                return;
+            }
             if (!response.ok) {
                 throw new Error("Unable to load compliance data from the live service.");
             }
@@ -299,6 +316,11 @@ export default function RegulatoryCompliancePage() {
                         <span className="font-semibold text-slate-900">{aircraftModel}</span>
                     </span>
                 </div>
+                {integrationMessage ? (
+                    <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
+                        {integrationMessage}
+                    </div>
+                ) : null}
                 {error ? (
                     <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
                         {error}
