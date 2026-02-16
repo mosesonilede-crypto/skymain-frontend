@@ -195,7 +195,6 @@ export default function TwoFactorPage() {
                     role: storedRoleHint || "fleet_manager",
                 };
             }
-
             if (authUser) {
                 authUser = {
                     ...authUser,
