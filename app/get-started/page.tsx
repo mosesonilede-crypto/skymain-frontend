@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, ArrowRight, Check, Plane, Shield, TrendingDown, DollarSign, Zap, FileCheck, Activity, ClipboardList, Star, ExternalLink, Tag, Home } from "lucide-react";
 import { startTrialIfMissing } from "@/lib/trial";
 import { useAuth } from "@/lib/AuthContext";
