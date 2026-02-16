@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CONTACT_SUPPORT } from "@/lib/routes";
-
-type DataMode = "mock" | "live" | "hybrid";
 
 type BillingCycle = "Monthly" | "Annual";
 
@@ -46,108 +44,21 @@ type SubscriptionBillingPayload = {
     paymentMethods: PaymentMethod[];
     billingHistory: BillingInvoice[];
 };
+const EMPTY_PAYLOAD: SubscriptionBillingPayload = {
+    status: "Inactive",
+    currentPlanLabel: "Not available",
+    currentPlanPriceYear: 0,
+    nextBilling: "Not available",
+    autoRenewEnabled: false,
+    teamMembers: 0,
+    teamMembersAllowed: 0,
+    billingCycle: "Annual",
+    plans: [],
+    paymentMethods: [],
+    billingHistory: [],
+};
 
-function getPublicEnv(name: string, fallback: string) {
-    const v = process.env[name];
-    return (v ?? fallback).trim();
-}
-
-function normalizeMode(value: string): DataMode {
-    if (value === "live" || value === "hybrid" || value === "mock") return value;
-    return "mock";
-}
-
-function mockPayload(): SubscriptionBillingPayload {
-    return {
-        status: "Active",
-        currentPlanLabel: "professional",
-        currentPlanPriceYear: 4990,
-        nextBilling: "Feb 1, 2026",
-        autoRenewEnabled: true,
-        teamMembers: 5,
-        teamMembersAllowed: 25,
-        billingCycle: "Annual",
-        plans: [
-            {
-                id: "starter",
-                name: "Starter",
-                tagline: "Perfect for small operations",
-                priceYear: 1990,
-                savePerYear: 398,
-                bullets: [
-                    "Up to 5 aircraft",
-                    "Basic maintenance tracking",
-                    "Email support",
-                    "Standard compliance reports",
-                    "1 GB cloud storage",
-                    "Mobile app access",
-                ],
-            },
-            {
-                id: "professional",
-                name: "Professional",
-                tagline: "For growing fleets",
-                priceYear: 4990,
-                savePerYear: 998,
-                bullets: [
-                    "Up to 25 aircraft",
-                    "Advanced AI insights",
-                    "Priority support",
-                    "Real-time IoT integration",
-                    "Custom compliance reports",
-                    "50 GB cloud storage",
-                    "API access",
-                    "Multi-location support",
-                ],
-                badge: "Most Popular",
-                isCurrent: true,
-            },
-            {
-                id: "enterprise",
-                name: "Enterprise",
-                tagline: "For large airlines",
-                priceYear: 14990,
-                savePerYear: 2998,
-                bullets: [
-                    "Unlimited aircraft",
-                    "Advanced AI assistant",
-                    "24/7 dedicated support",
-                    "Custom integrations",
-                    "White-label options",
-                    "Unlimited storage",
-                    "Advanced analytics",
-                    "On-premise deployment option",
-                    "SLA guarantee",
-                    "Custom training",
-                ],
-            },
-        ],
-        paymentMethods: [{ id: "pm_1", label: "Visa •••• 4242", expires: "12/25", isDefault: true }],
-        billingHistory: [
-            {
-                date: "12/31/2024",
-                description: "SkyMaintain Professional - Annual Subscription",
-                amount: "$49.99",
-                status: "Paid",
-            },
-            {
-                date: "11/30/2024",
-                description: "SkyMaintain Professional - Monthly Subscription",
-                amount: "$4.99",
-                status: "Paid",
-            },
-            {
-                date: "10/31/2024",
-                description: "SkyMaintain Professional - Monthly Subscription",
-                amount: "$4.99",
-                status: "Paid",
-            },
-        ],
-    };
-}
-
-async function fetchLive(baseUrl: string): Promise<SubscriptionBillingPayload> {
-    void baseUrl;
+async function fetchLive(): Promise<SubscriptionBillingPayload> {
     // Use local API endpoint
     const url = "/api/billing";
     const res = await fetch(url, {
@@ -289,16 +200,13 @@ function PlanCard({
 export default function SubscriptionBillingPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const mode = useMemo(() => normalizeMode(getPublicEnv("NEXT_PUBLIC_DATA_MODE", "mock")), []);
-    const baseUrl = useMemo(() => getPublicEnv("NEXT_PUBLIC_API_BASE_URL", ""), []);
 
-    const [source, setSource] = useState<"mock" | "live">("mock");
-    const [payload, setPayload] = useState<SubscriptionBillingPayload>(() => mockPayload());
-    const [loading, setLoading] = useState<boolean>(mode !== "mock");
+    const [payload, setPayload] = useState<SubscriptionBillingPayload>(EMPTY_PAYLOAD);
+    const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>("");
     const [successMessage, setSuccessMessage] = useState<string>("");
 
-    const [cycle, setCycle] = useState<BillingCycle>(() => mockPayload().billingCycle);
+    const [cycle, setCycle] = useState<BillingCycle>("Annual");
 
     // Handle checkout success/cancel from URL params
     useEffect(() => {
@@ -320,61 +228,14 @@ export default function SubscriptionBillingPage() {
 
         async function run() {
             setError("");
-
-            if (mode === "mock") {
-                const p = mockPayload();
-                if (cancelled) return;
-                setPayload(p);
-                setCycle(p.billingCycle);
-                setSource("mock");
-                setLoading(false);
-                return;
-            }
-
-            if (!baseUrl) {
-                const p = mockPayload();
-                if (cancelled) return;
-                setPayload(p);
-                setCycle(p.billingCycle);
-                setSource("mock");
-                setLoading(false);
-                return;
-            }
-
             setLoading(true);
-
-            if (mode === "live") {
-                try {
-                    const live = await fetchLive(baseUrl);
-                    if (cancelled) return;
-                    setPayload(live);
-                    setCycle(live.billingCycle ?? "Annual");
-                    setSource("live");
-                } catch (e) {
-                    if (cancelled) return;
-                    const p = mockPayload();
-                    setPayload(p);
-                    setCycle(p.billingCycle);
-                    setSource("mock");
-                    setError(e instanceof Error ? e.message : "Failed to load billing data");
-                } finally {
-                    if (!cancelled) setLoading(false);
-                }
-                return;
-            }
-
             try {
-                const live = await fetchLive(baseUrl);
+                const live = await fetchLive();
                 if (cancelled) return;
                 setPayload(live);
                 setCycle(live.billingCycle ?? "Annual");
-                setSource("live");
             } catch (e) {
                 if (cancelled) return;
-                const p = mockPayload();
-                setPayload(p);
-                setCycle(p.billingCycle);
-                setSource("mock");
                 setError(e instanceof Error ? e.message : "Failed to load billing data");
             } finally {
                 if (!cancelled) setLoading(false);
@@ -385,7 +246,7 @@ export default function SubscriptionBillingPage() {
         return () => {
             cancelled = true;
         };
-    }, [mode, baseUrl]);
+    }, []);
 
     const [checkoutLoading, setCheckoutLoading] = useState(false);
 
@@ -467,7 +328,7 @@ export default function SubscriptionBillingPage() {
                         Manage your subscription, payment methods, and billing history
                     </div>
                     <div className="mt-2 text-xs text-slate-500">
-                        Data: {source}
+                        Data: live
                         {loading ? " • loading…" : ""}
                     </div>
                     {error ? (

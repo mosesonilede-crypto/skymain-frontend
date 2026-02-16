@@ -8,7 +8,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -72,6 +72,13 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const router = useRouter();
     const { logout, user } = useAuth();
     const contentRef = useRef<HTMLDivElement>(null);
+
+    // Handle manual logout with session cleanup
+    const handleLogout = useCallback(() => {
+        clearSessionData();
+        logout();
+        router.push("/");
+    }, [logout, router]);
     const navItems = useMemo(() => {
         const resolvedRole = resolveSessionRole({
             rawRole: user?.role || roleHints.role,
@@ -79,18 +86,15 @@ export default function AppShellClient({ children }: AppShellClientProps) {
             email: user?.email || roleHints.email,
         });
         const canAccessAdmin = isAdminRole(resolvedRole);
-        return ALL_NAV_ITEMS.filter((item) => !item.adminOnly || canAccessAdmin);
-    }, [user?.role, user?.email, roleHints.role, roleHints.licenseCode, roleHints.email]);
+        const baseItems = ALL_NAV_ITEMS.filter((item) => !item.adminOnly || canAccessAdmin);
+        return [
+            ...baseItems,
+            { label: "Logout", icon: <LogOut className="h-5 w-5" />, onClick: handleLogout },
+        ];
+    }, [user?.role, user?.email, roleHints.role, roleHints.licenseCode, roleHints.email, handleLogout]);
 
     // Session timeout management
     const { isWarningVisible, remainingSeconds, extendSession } = useSessionTimeout();
-
-    // Handle manual logout with session cleanup
-    const handleLogout = () => {
-        clearSessionData();
-        logout();
-        router.push("/");
-    };
 
     // Scroll to top when route changes
     useEffect(() => {
@@ -173,14 +177,6 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                                         </div>
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={handleLogout}
-                                    className="mt-3 flex h-8 w-full items-center justify-center gap-2 rounded-[8px] border border-black/10 bg-white text-[14px] text-[#0a0a0a] hover:bg-gray-50"
-                                >
-                                    <LogOut className="h-4 w-4" />
-                                    Logout
-                                </button>
                             </div>
                         </div>
                     </aside>

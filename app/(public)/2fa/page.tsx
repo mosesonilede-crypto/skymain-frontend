@@ -32,9 +32,6 @@ function HelpCenterFab() {
                         >
                             Account & access
                         </Link>
-                        <Link href="/contact?intent=demo" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                            Request a demo
-                        </Link>
                         <Link href="/contact?intent=pricing" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
                             Request pricing
                         </Link>
@@ -191,7 +188,7 @@ export default function TwoFactorPage() {
                 authUser = {
                     email: storedEmail,
                     orgName: storedOrg,
-                    role: storedRoleHint || "fleet_manager",
+                    role: resolveRole(storedRoleHint, storedLicenseCode, storedEmail),
                 };
             }
             if (authUser) {

@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useAircraft } from "@/lib/AircraftContext";
-import { useRouter } from "next/navigation";
 
 type AuthoritySource = {
     label: string;
@@ -21,7 +20,7 @@ type RegulatoryUpdate = {
 type ADItem = {
     id: string;
     title: string;
-    authority: "FAA" | "EASA";
+    authority: string;
     effective: string;
     complianceDate: string;
     status: "Compliant" | "Pending" | "Overdue";
@@ -30,7 +29,7 @@ type ADItem = {
 type SBItem = {
     id: string;
     title: string;
-    category: "Mandatory" | "Recommended";
+    category: string;
     issueDate: string;
     compliance: string;
     status: "Compliant" | "Pending" | "Overdue";
@@ -62,166 +61,89 @@ type AnnualInspectionData = {
     inspector: string;
 };
 
-type AircraftComplianceData = {
-    airworthiness: AirworthinessData;
-    certificates: CertificateItem[];
-    ads: ADItem[];
-    sbs: SBItem[];
-    annualInspection: AnnualInspectionData;
+const EMPTY_ANNUAL_INSPECTION: AnnualInspectionData = {
+    status: "Not available",
+    last: "Not available",
+    nextDue: "Not available",
+    inspector: "Not available",
 };
+
+const EMPTY_SCORE = {
+    percent: 0,
+    compliant: 0,
+    pending: 0,
+    overdue: 0,
+};
+
+function createEmptyAirworthiness(registration: string): AirworthinessData {
+    return {
+        status: "Unknown",
+        certificate: "Not available",
+        certificateStatus: "Not available",
+        certificateExpiry: "Not available",
+        registration: registration || "Not available",
+        annualInspection: "Not available",
+        issuingAuthority: "Not available",
+        nextRenewal: "Not available",
+    };
+}
+
+function normalizeComplianceStatus(status?: string): "Compliant" | "Pending" | "Overdue" {
+    const normalized = status?.toLowerCase();
+    if (normalized === "compliant" || normalized === "complete" || normalized === "completed") return "Compliant";
+    if (normalized === "overdue" || normalized === "late" || normalized === "past due") return "Overdue";
+    return "Pending";
+}
+
+function calculateComplianceScore(items: Array<{ status: "Compliant" | "Pending" | "Overdue" }>) {
+    const compliant = items.filter((item) => item.status === "Compliant").length;
+    const pending = items.filter((item) => item.status === "Pending").length;
+    const overdue = items.filter((item) => item.status === "Overdue").length;
+    const total = compliant + pending + overdue;
+    const percent = total > 0 ? Math.round((compliant / total) * 100) : 0;
+    return { percent, compliant, pending, overdue };
+}
+
+function formatLastChecked(value?: string) {
+    if (!value) return new Date().toLocaleString();
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "Unavailable";
+    return parsed.toLocaleString();
+}
+
+function getAirworthinessTone(status: string): "good" | "warn" | "bad" {
+    const normalized = status.toLowerCase();
+    if (normalized.includes("airworthy") || normalized.includes("current") || normalized.includes("valid")) {
+        return "good";
+    }
+    if (normalized.includes("due") || normalized.includes("pending") || normalized.includes("unknown")) {
+        return "warn";
+    }
+    return "bad";
+}
 
 export default function RegulatoryCompliancePage() {
     const { selectedAircraft } = useAircraft();
-    const aircraftReg = selectedAircraft?.registration || "N872LM";
-    const aircraftModel = selectedAircraft?.model || "Airbus A320";
+    const aircraftReg = selectedAircraft?.registration || "";
+    const aircraftModel = selectedAircraft?.model || "Unknown model";
 
-    const [lastChecked, setLastChecked] = useState("Loading...");
+    const [lastChecked, setLastChecked] = useState("Unavailable");
     const [isLoading, setIsLoading] = useState(false);
-    const [complianceData, setComplianceData] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
 
-    // Mock compliance data per aircraft (would come from API in production)
-    const mockComplianceByAircraft: Record<string, AircraftComplianceData> = useMemo(() => ({
-        "N872LM": {
-            airworthiness: {
-                status: "Airworthy",
-                certificate: "AWC-2018-N872LM",
-                certificateStatus: "Valid",
-                certificateExpiry: "6/14/2026",
-                registration: "Valid",
-                annualInspection: "Current",
-                issuingAuthority: "FAA",
-                nextRenewal: "6/9/2026",
-            },
-            certificates: [
-                { type: "Airworthiness Certificate", status: "Valid", number: "AWC-2018-N872LM", expires: "6/14/2026", authority: "FAA" },
-                { type: "Registration Certificate", status: "Valid", number: "REG-N872LM", expires: "6/9/2029", authority: "FAA" },
-                { type: "Insurance Certificate", status: "Valid", number: "INS-SKY-2025-872", expires: "12/31/2026", authority: "SkyInsure LLC" },
-            ],
-            ads: [
-                { id: "FAA-2025-0234", title: "Wing Spar Inspection", authority: "FAA", effective: "4/14/2025", complianceDate: "4/11/2025", status: "Compliant" },
-                { id: "FAA-2025-0189", title: "Engine Mount Inspection", authority: "FAA", effective: "3/20/2025", complianceDate: "3/15/2025", status: "Compliant" },
-            ],
-            sbs: [
-                { id: "SB-A320-32-1234", title: "Hydraulic System Enhancement", category: "Mandatory", issueDate: "6/14/2025", compliance: "8/19/2025", status: "Compliant" },
-                { id: "SB-A320-28-5678", title: "Fuel Tank Access Panel Inspection", category: "Recommended", issueDate: "10/31/2025", compliance: "—", status: "Pending" },
-            ],
-            annualInspection: { status: "Current", last: "6/9/2025", nextDue: "6/9/2026", inspector: "Michael Roberts (FAA IA-45678)" },
-        },
-        "N451KJ": {
-            airworthiness: {
-                status: "Airworthy",
-                certificate: "AWC-2019-N451KJ",
-                certificateStatus: "Valid",
-                certificateExpiry: "3/22/2026",
-                registration: "Valid",
-                annualInspection: "Current",
-                issuingAuthority: "FAA",
-                nextRenewal: "3/15/2026",
-            },
-            certificates: [
-                { type: "Airworthiness Certificate", status: "Valid", number: "AWC-2019-N451KJ", expires: "3/22/2026", authority: "FAA" },
-                { type: "Registration Certificate", status: "Valid", number: "REG-N451KJ", expires: "3/15/2028", authority: "FAA" },
-                { type: "Insurance Certificate", status: "Expiring Soon", number: "INS-SKY-2025-451", expires: "2/28/2026", authority: "SkyInsure LLC" },
-            ],
-            ads: [
-                { id: "FAA-2025-0156", title: "Rudder Control Check", authority: "FAA", effective: "2/10/2025", complianceDate: "2/8/2025", status: "Compliant" },
-            ],
-            sbs: [
-                { id: "SB-737-32-9012", title: "Landing Gear Inspection", category: "Mandatory", issueDate: "5/20/2025", compliance: "7/10/2025", status: "Compliant" },
-                { id: "SB-737-28-3456", title: "Avionics Software Update", category: "Recommended", issueDate: "11/15/2025", compliance: "—", status: "Pending" },
-            ],
-            annualInspection: { status: "Current", last: "3/15/2025", nextDue: "3/15/2026", inspector: "Sarah Johnson (FAA IA-12345)" },
-        },
-        "N789QW": {
-            airworthiness: {
-                status: "Airworthy",
-                certificate: "AWC-2020-N789QW",
-                certificateStatus: "Valid",
-                certificateExpiry: "9/30/2026",
-                registration: "Valid",
-                annualInspection: "Current",
-                issuingAuthority: "EASA",
-                nextRenewal: "9/15/2026",
-            },
-            certificates: [
-                { type: "Airworthiness Certificate", status: "Valid", number: "AWC-2020-N789QW", expires: "9/30/2026", authority: "EASA" },
-                { type: "Registration Certificate", status: "Valid", number: "REG-N789QW", expires: "9/15/2030", authority: "EASA" },
-                { type: "Insurance Certificate", status: "Valid", number: "INS-EU-2025-789", expires: "8/31/2026", authority: "EuroAviation Insurance" },
-            ],
-            ads: [
-                { id: "EASA-2025-0078", title: "Cabin Pressure Sensor Check", authority: "EASA", effective: "5/1/2025", complianceDate: "4/28/2025", status: "Compliant" },
-                { id: "EASA-2025-0092", title: "Wing Tip Inspection", authority: "EASA", effective: "6/15/2025", complianceDate: "6/10/2025", status: "Compliant" },
-            ],
-            sbs: [
-                { id: "SB-A380-32-7890", title: "Engine Cowling Reinforcement", category: "Mandatory", issueDate: "4/1/2025", compliance: "6/1/2025", status: "Compliant" },
-            ],
-            annualInspection: { status: "Current", last: "9/15/2025", nextDue: "9/15/2026", inspector: "Hans Mueller (EASA IA-78901)" },
-        },
-        "N123XY": {
-            airworthiness: {
-                status: "Airworthy",
-                certificate: "AWC-2017-N123XY",
-                certificateStatus: "Valid",
-                certificateExpiry: "11/20/2026",
-                registration: "Valid",
-                annualInspection: "Due Soon",
-                issuingAuthority: "FAA",
-                nextRenewal: "2/28/2026",
-            },
-            certificates: [
-                { type: "Airworthiness Certificate", status: "Valid", number: "AWC-2017-N123XY", expires: "11/20/2026", authority: "FAA" },
-                { type: "Registration Certificate", status: "Valid", number: "REG-N123XY", expires: "11/15/2027", authority: "FAA" },
-                { type: "Insurance Certificate", status: "Valid", number: "INS-SKY-2025-123", expires: "10/31/2026", authority: "SkyInsure LLC" },
-            ],
-            ads: [
-                { id: "FAA-2025-0201", title: "Fuel Line Inspection", authority: "FAA", effective: "1/20/2025", complianceDate: "1/18/2025", status: "Compliant" },
-                { id: "FAA-2026-0012", title: "APU Fire Suppression Check", authority: "FAA", effective: "2/15/2026", complianceDate: "—", status: "Pending" },
-            ],
-            sbs: [
-                { id: "SB-777-32-4567", title: "Flap Actuator Replacement", category: "Mandatory", issueDate: "8/10/2025", compliance: "10/5/2025", status: "Compliant" },
-                { id: "SB-777-28-8901", title: "Cockpit Display Upgrade", category: "Recommended", issueDate: "12/1/2025", compliance: "—", status: "Pending" },
-            ],
-            annualInspection: { status: "Due Soon", last: "2/28/2025", nextDue: "2/28/2026", inspector: "James Wilson (FAA IA-34567)" },
-        },
-    }), []);
+    const [airworthiness, setAirworthiness] = useState<AirworthinessData>(() => createEmptyAirworthiness(""));
 
-    // Get current aircraft data or default to N872LM
-    const currentMockData = mockComplianceByAircraft[aircraftReg] || mockComplianceByAircraft["N872LM"];
+    const [complianceScore, setComplianceScore] = useState(EMPTY_SCORE);
 
-    // Real data structures for live compliance data - initialized from mock based on selected aircraft
-    const [airworthiness, setAirworthiness] = useState(currentMockData.airworthiness);
+    const [ads, setAds] = useState<ADItem[]>([]);
 
-    const [complianceScore, setComplianceScore] = useState({
-        percent: 67,
-        compliant: 2,
-        pending: 1,
-        overdue: 0,
-    });
+    const [sbs, setSbs] = useState<SBItem[]>([]);
 
-    const [ads, setAds] = useState<ADItem[]>(currentMockData.ads);
+    const [certificates, setCertificates] = useState<CertificateItem[]>([]);
 
-    const [sbs, setSbs] = useState<SBItem[]>(currentMockData.sbs);
+    const [annualInspection, setAnnualInspection] = useState<AnnualInspectionData>(EMPTY_ANNUAL_INSPECTION);
 
-    const [certificates, setCertificates] = useState<CertificateItem[]>(currentMockData.certificates);
-
-    const [annualInspection, setAnnualInspection] = useState(currentMockData.annualInspection);
-
-    const [applicableUpdates, setApplicableUpdates] = useState<RegulatoryUpdate[]>([
-        {
-            kind: "New AD",
-            date: "2026-01-20",
-            effective: "2026-02-15",
-            title: "New Airworthiness Directive FAA-2026-0124",
-            subtitle: "Wing spar inspection requirement for selected aircraft type",
-        },
-        {
-            kind: "SB Update",
-            date: "2026-01-18",
-            effective: "2026-02-01",
-            title: "Service Bulletin Update: Hydraulic System Enhancement",
-            subtitle: "Updated procedures for hydraulic seal replacement",
-        },
-    ]);
+    const [applicableUpdates, setApplicableUpdates] = useState<RegulatoryUpdate[]>([]);
 
     // State for modals
     const [selectedUpdate, setSelectedUpdate] = useState<RegulatoryUpdate | null>(null);
@@ -231,73 +153,76 @@ export default function RegulatoryCompliancePage() {
     const [hiddenUpdates, setHiddenUpdates] = useState<number[]>([]);
     const [showUpdates, setShowUpdates] = useState(true);
 
-    // Update all state when aircraft changes
-    useEffect(() => {
-        const data = mockComplianceByAircraft[aircraftReg] || mockComplianceByAircraft["N872LM"];
-        setAirworthiness(data.airworthiness);
-        setAds(data.ads);
-        setSbs(data.sbs);
-        setCertificates(data.certificates);
-        setAnnualInspection(data.annualInspection);
+    const fetchComplianceData = useCallback(async () => {
+        if (!aircraftReg) {
+            setAirworthiness(createEmptyAirworthiness(""));
+            setAds([]);
+            setSbs([]);
+            setCertificates([]);
+            setAnnualInspection(EMPTY_ANNUAL_INSPECTION);
+            setComplianceScore(EMPTY_SCORE);
+            setApplicableUpdates([]);
+            setLastChecked("Select an aircraft");
+            setError(null);
+            setIsLoading(false);
+            return;
+        }
 
-        // Update compliance score based on current data
-        const compliant = data.ads.filter(a => a.status === "Compliant").length + data.sbs.filter(s => s.status === "Compliant").length;
-        const pending = data.ads.filter(a => a.status === "Pending").length + data.sbs.filter(s => s.status === "Pending").length;
-        const overdue = data.ads.filter(a => a.status === "Overdue").length + data.sbs.filter(s => s.status === "Overdue").length;
-        const total = compliant + pending + overdue;
-        const percent = total > 0 ? Math.round((compliant / total) * 100) : 100;
-        setComplianceScore({ percent, compliant, pending, overdue });
-
-        updateLastChecked();
-    }, [aircraftReg, mockComplianceByAircraft]);
-
-    // Fetch real compliance data
-    async function fetchComplianceData() {
         setIsLoading(true);
+        setError(null);
         try {
-            // Replace with your actual API endpoint
             const response = await fetch(`/api/compliance/${aircraftReg}`);
-            if (response.ok) {
-                const data = await response.json();
-                setAirworthiness(data.airworthiness);
-                setComplianceScore(data.score);
-                setAds(data.ads);
-                setSbs(data.sbs);
-                setCertificates(data.certificates);
-                setApplicableUpdates(data.updates);
-            } else {
-                // If API fails, use mock data for the selected aircraft
-                const mockData = mockComplianceByAircraft[aircraftReg] || mockComplianceByAircraft["N872LM"];
-                setAirworthiness(mockData.airworthiness);
-                setAds(mockData.ads);
-                setSbs(mockData.sbs);
-                setCertificates(mockData.certificates);
-                setAnnualInspection(mockData.annualInspection);
+            if (!response.ok) {
+                throw new Error("Unable to load compliance data from the live service.");
             }
-        } catch (error) {
-            console.error("Error fetching compliance data:", error);
-            // Fallback to mock data on error
-            const mockData = mockComplianceByAircraft[aircraftReg] || mockComplianceByAircraft["N872LM"];
-            setAirworthiness(mockData.airworthiness);
-            setAds(mockData.ads);
-            setSbs(mockData.sbs);
-            setCertificates(mockData.certificates);
-            setAnnualInspection(mockData.annualInspection);
+
+            const data = await response.json();
+
+            const mappedAds: ADItem[] = (Array.isArray(data.ads) ? data.ads : []).map((item: any) => ({
+                id: item.id || "Unknown",
+                title: item.title || "Untitled directive",
+                authority: item.authority || "Unknown",
+                effective: item.effective || "Unknown",
+                complianceDate: item.complianceDate || "Unknown",
+                status: normalizeComplianceStatus(item.status),
+            }));
+
+            const mappedSbs: SBItem[] = (Array.isArray(data.sbs) ? data.sbs : []).map((item: any) => ({
+                id: item.id || "Unknown",
+                title: item.title || "Untitled bulletin",
+                category: item.category || "Unspecified",
+                issueDate: item.effective || "Unknown",
+                compliance: item.complianceDate || "Unknown",
+                status: normalizeComplianceStatus(item.status),
+            }));
+
+            setAirworthiness(createEmptyAirworthiness(data.aircraftRegistration || aircraftReg));
+            setAds(mappedAds);
+            setSbs(mappedSbs);
+            setCertificates([]);
+            setAnnualInspection(EMPTY_ANNUAL_INSPECTION);
+            setApplicableUpdates([]);
+            setComplianceScore(calculateComplianceScore([...mappedAds, ...mappedSbs]));
+            setLastChecked(formatLastChecked(data.lastUpdated));
+        } catch (errorCaught) {
+            console.error("Error fetching compliance data:", errorCaught);
+            setError(errorCaught instanceof Error ? errorCaught.message : "Unable to load compliance data.");
+            setAirworthiness(createEmptyAirworthiness(aircraftReg));
+            setAds([]);
+            setSbs([]);
+            setCertificates([]);
+            setAnnualInspection(EMPTY_ANNUAL_INSPECTION);
+            setApplicableUpdates([]);
+            setComplianceScore(EMPTY_SCORE);
+            setLastChecked("Unavailable");
         } finally {
             setIsLoading(false);
-            updateLastChecked();
         }
-    }
+    }, [aircraftReg]);
 
-    // Update last checked timestamp
-    function updateLastChecked() {
-        const now = new Date();
-        const mm = String(now.getMonth() + 1);
-        const dd = String(now.getDate());
-        const yyyy = String(now.getFullYear());
-        const time = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
-        setLastChecked(`${mm}/${dd}/${yyyy} at ${time}`);
-    }
+    useEffect(() => {
+        fetchComplianceData();
+    }, [fetchComplianceData]);
 
     // Refresh handler
     async function refresh() {
@@ -337,6 +262,10 @@ export default function RegulatoryCompliancePage() {
         []
     );
 
+    const expiringCount = certificates.filter((c) => c.status === "Expiring Soon").length;
+    const expiringLabel = expiringCount === 1 ? "1 Expiring" : `${expiringCount} Expiring`;
+    const aircraftLabel = aircraftReg || "No aircraft selected";
+
     return (
         <section className="flex flex-col gap-6">
             <div>
@@ -348,15 +277,20 @@ export default function RegulatoryCompliancePage() {
                         Live Status
                     </span>
                     <span className="text-sm text-slate-600">
-                        Aircraft: <span className="font-semibold text-slate-900">{aircraftReg}</span> •{" "}
+                        Aircraft: <span className="font-semibold text-slate-900">{aircraftLabel}</span> •{" "}
                         <span className="font-semibold text-slate-900">{aircraftModel}</span>
                     </span>
                 </div>
+                {error ? (
+                    <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
+                        {error}
+                    </div>
+                ) : null}
             </div>
 
             <Panel title="Airworthiness Status">
                 <div className="grid gap-4 lg:grid-cols-4">
-                    <StatusPill label="Airworthy" tone="good" />
+                    <StatusPill label={airworthiness.status} tone={getAirworthinessTone(airworthiness.status)} />
                     <InfoTile label="Certificate" value={airworthiness.certificate} />
                     <InfoTile label="Certificate Status" value={airworthiness.certificateStatus} />
                     <InfoTile label="Certificate Expiry" value={airworthiness.certificateExpiry} />
@@ -497,15 +431,19 @@ export default function RegulatoryCompliancePage() {
                 title="Certificates & Inspections"
                 rightSlot={
                     <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
-                        1 Expiring
+                        {expiringLabel}
                     </span>
                 }
             >
                 <div className="space-y-3">
                     <div className="text-sm font-semibold text-slate-900">Active Certificates</div>
-                    {certificates.map((c) => (
-                        <CertRow key={c.number} item={c} />
-                    ))}
+                    {certificates.length === 0 ? (
+                        <div className="text-sm text-slate-500">No certificate records available.</div>
+                    ) : (
+                        certificates.map((c) => (
+                            <CertRow key={c.number} item={c} />
+                        ))
+                    )}
 
                     <div className="mt-4 text-sm font-semibold text-slate-900">Annual Inspection</div>
                     <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -1013,8 +951,8 @@ function ViewDetailsModal({
                         <div>
                             <div className="flex items-center gap-2">
                                 <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${update.kind === "New AD"
-                                        ? "bg-rose-50 text-rose-700 ring-rose-200"
-                                        : "bg-amber-50 text-amber-700 ring-amber-200"
+                                    ? "bg-rose-50 text-rose-700 ring-rose-200"
+                                    : "bg-amber-50 text-amber-700 ring-amber-200"
                                     }`}>
                                     {update.kind}
                                 </span>
@@ -1255,8 +1193,8 @@ function CreateTaskModal({
                     <div className="rounded-xl bg-slate-50 p-4">
                         <div className="flex items-center gap-2">
                             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${update.kind === "New AD"
-                                    ? "bg-rose-50 text-rose-700 ring-rose-200"
-                                    : "bg-amber-50 text-amber-700 ring-amber-200"
+                                ? "bg-rose-50 text-rose-700 ring-rose-200"
+                                : "bg-amber-50 text-amber-700 ring-amber-200"
                                 }`}>
                                 {update.kind}
                             </span>
@@ -1287,12 +1225,12 @@ function CreateTaskModal({
                                     type="button"
                                     onClick={() => setPriority(p)}
                                     className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${priority === p
-                                            ? p === "High"
-                                                ? "bg-rose-600 text-white"
-                                                : p === "Medium"
-                                                    ? "bg-amber-500 text-white"
-                                                    : "bg-emerald-600 text-white"
-                                            : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                                        ? p === "High"
+                                            ? "bg-rose-600 text-white"
+                                            : p === "Medium"
+                                                ? "bg-amber-500 text-white"
+                                                : "bg-emerald-600 text-white"
+                                        : "border border-slate-200 text-slate-600 hover:bg-slate-50"
                                         }`}
                                 >
                                     {p}
