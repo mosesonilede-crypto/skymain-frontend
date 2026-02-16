@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CONTACT_SUPPORT } from "@/lib/routes";
+import { useAuth } from "@/lib/AuthContext";
 
 type BillingCycle = "Monthly" | "Annual";
 
@@ -200,6 +201,7 @@ function PlanCard({
 export default function SubscriptionBillingPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { user } = useAuth();
 
     const [payload, setPayload] = useState<SubscriptionBillingPayload>(EMPTY_PAYLOAD);
     const [loading, setLoading] = useState<boolean>(true);
@@ -265,7 +267,8 @@ export default function SubscriptionBillingPage() {
                 body: JSON.stringify({
                     plan: planId,
                     interval,
-                    // Add customerEmail if available from auth context
+                    customerEmail: user?.email,
+                    orgName: user?.orgName,
                 }),
             });
 

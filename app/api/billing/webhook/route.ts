@@ -1,10 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripe } from "@/lib/stripe";
+import { getStripe, STRIPE_PRICES } from "@/lib/stripe";
+import { supabaseServer } from "@/lib/supabaseServer";
 import Stripe from "stripe";
 
 export const runtime = "nodejs";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+function resolvePlanFromPrice(priceId?: string | null): string | undefined {
+    if (!priceId) return undefined;
+    for (const [plan, prices] of Object.entries(STRIPE_PRICES)) {
+        if (prices.monthly === priceId || prices.yearly === priceId) {
+            return plan;
+        }
+    }
+    return undefined;
+}
+
+async function upsertProfileByEmail(payload: {
+    email: string;
+    fullName?: string | null;
+    orgName?: string | null;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionStatus?: string | null;
+    subscriptionPlan?: string | null;
+    paymentDetails?: string | null;
+}) {
+    if (!supabaseServer) return;
+
+    const { email, fullName, orgName, stripeCustomerId, stripeSubscriptionId, subscriptionStatus, subscriptionPlan, paymentDetails } = payload;
+    await supabaseServer
+        .from("user_profiles")
+        .upsert(
+            {
+                email,
+                full_name: fullName || undefined,
+                org_name: orgName || undefined,
+                stripe_customer_id: stripeCustomerId || undefined,
+                stripe_subscription_id: stripeSubscriptionId || undefined,
+                subscription_status: subscriptionStatus || undefined,
+                subscription_plan: subscriptionPlan || undefined,
+                payment_details: paymentDetails || undefined,
+            },
+            { onConflict: "email" }
+        );
+}
+
+async function updateProfileByCustomerId(payload: {
+    stripeCustomerId: string;
+    stripeSubscriptionId?: string | null;
+    subscriptionStatus?: string | null;
+    subscriptionPlan?: string | null;
+    paymentDetails?: string | null;
+}) {
+    if (!supabaseServer) return;
+
+    const { stripeCustomerId, stripeSubscriptionId, subscriptionStatus, subscriptionPlan, paymentDetails } = payload;
+    await supabaseServer
+        .from("user_profiles")
+        .update({
+            stripe_subscription_id: stripeSubscriptionId || undefined,
+            subscription_status: subscriptionStatus || undefined,
+            subscription_plan: subscriptionPlan || undefined,
+            payment_details: paymentDetails || undefined,
+        })
+        .eq("stripe_customer_id", stripeCustomerId);
+}
 
 export async function POST(req: NextRequest) {
     const stripe = getStripe();
@@ -97,14 +159,55 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
         interval: session.metadata?.interval,
     });
 
-    // TODO: Create/update user subscription in your database
-    // await db.subscriptions.create({
-    //     stripeCustomerId: session.customer,
-    //     stripeSubscriptionId: session.subscription,
-    //     email: session.customer_email,
-    //     plan: session.metadata?.plan,
-    //     status: 'active',
-    // });
+    if (!supabaseServer) return;
+    const stripe = getStripe();
+    if (!stripe) return;
+
+    const customerId = typeof session.customer === "string" ? session.customer : null;
+    const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
+
+    let email = session.customer_email || session.metadata?.userEmail || null;
+    if (!email && customerId) {
+        try {
+            const customer = await stripe.customers.retrieve(customerId);
+            if (typeof customer !== "string" && customer.email) {
+                email = customer.email;
+            }
+        } catch (error) {
+            console.error("Stripe customer lookup failed:", error);
+        }
+    }
+
+    let paymentDetails: string | null = null;
+    let planFromStripe: string | undefined = session.metadata?.plan;
+
+    if (subscriptionId) {
+        try {
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+                expand: ["default_payment_method", "items.data.price"],
+            });
+            const card = (subscription.default_payment_method as Stripe.PaymentMethod | null)?.card;
+            if (card) {
+                paymentDetails = `${card.brand.toUpperCase()} •••• ${card.last4} exp ${card.exp_month}/${card.exp_year}`;
+            }
+            planFromStripe = planFromStripe || resolvePlanFromPrice(subscription.items.data[0]?.price?.id);
+        } catch (error) {
+            console.error("Stripe subscription lookup failed:", error);
+        }
+    }
+
+    if (email) {
+        await upsertProfileByEmail({
+            email,
+            fullName: session.customer_details?.name || null,
+            orgName: session.metadata?.orgName || null,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscriptionId,
+            subscriptionStatus: "active",
+            subscriptionPlan: planFromStripe || null,
+            paymentDetails,
+        });
+    }
 }
 
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
@@ -116,7 +219,21 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
         currentPeriodEnd: new Date(subData.current_period_end * 1000).toISOString(),
     });
 
-    // TODO: Update subscription status in your database
+    const customerId = typeof subscription.customer === "string" ? subscription.customer : null;
+    if (!customerId) return;
+
+    const card = (subscription.default_payment_method as Stripe.PaymentMethod | null)?.card;
+    const paymentDetails = card
+        ? `${card.brand.toUpperCase()} •••• ${card.last4} exp ${card.exp_month}/${card.exp_year}`
+        : null;
+
+    await updateProfileByCustomerId({
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscription.id,
+        subscriptionStatus: subscription.status,
+        subscriptionPlan: resolvePlanFromPrice(subscription.items.data[0]?.price?.id),
+        paymentDetails,
+    });
 }
 
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
@@ -125,7 +242,15 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
         customerId: subscription.customer,
     });
 
-    // TODO: Mark subscription as canceled in your database
+    const customerId = typeof subscription.customer === "string" ? subscription.customer : null;
+    if (!customerId) return;
+
+    await updateProfileByCustomerId({
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscription.id,
+        subscriptionStatus: "canceled",
+        subscriptionPlan: resolvePlanFromPrice(subscription.items.data[0]?.price?.id),
+    });
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
@@ -136,7 +261,13 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         currency: invoice.currency,
     });
 
-    // TODO: Record payment in your database
+    const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
+    if (!customerId) return;
+
+    await updateProfileByCustomerId({
+        stripeCustomerId: customerId,
+        subscriptionStatus: "active",
+    });
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
@@ -146,5 +277,11 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
         attemptCount: invoice.attempt_count,
     });
 
-    // TODO: Notify user of failed payment, possibly via email
+    const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
+    if (!customerId) return;
+
+    await updateProfileByCustomerId({
+        stripeCustomerId: customerId,
+        subscriptionStatus: "past_due",
+    });
 }

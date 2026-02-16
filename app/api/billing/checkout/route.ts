@@ -9,6 +9,7 @@ type CheckoutBody = {
     interval: BillingInterval;
     customerEmail?: string;
     customerId?: string;
+    orgName?: string;
 };
 
 export async function POST(req: NextRequest) {
@@ -58,6 +59,8 @@ export async function POST(req: NextRequest) {
             metadata: {
                 plan: body.plan,
                 interval: body.interval,
+                userEmail: body.customerEmail || "",
+                orgName: body.orgName || "",
             },
         };
 
@@ -66,6 +69,7 @@ export async function POST(req: NextRequest) {
             sessionParams.customer = body.customerId;
         } else if (body.customerEmail) {
             sessionParams.customer_email = body.customerEmail;
+            sessionParams.client_reference_id = body.customerEmail;
         }
 
         const session = await stripe.checkout.sessions.create(sessionParams);

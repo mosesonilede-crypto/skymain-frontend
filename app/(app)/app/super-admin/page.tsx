@@ -19,6 +19,7 @@ type PlatformUser = {
     role: UserRole;
     subscriptionStatus: SubscriptionStatus;
     subscriptionPlan: string;
+    paymentDetails: string;
     createdAt: string;
     lastLoginAt: string | null;
     isActive: boolean;
@@ -81,13 +82,28 @@ const defaultPartnerContent: PartnerContent = {
     },
 };
 type AdminSummaryResponse = {
-    users?: Array<{ name?: string; email?: string; role?: string; status?: string }>;
+    users?: Array<{
+        id?: string;
+        name?: string;
+        email?: string;
+        role?: string;
+        status?: string;
+        subscriptionStatus?: string;
+        subscriptionPlan?: string;
+        paymentDetails?: string;
+        createdAt?: string;
+        lastLoginAt?: string | null;
+        phone?: string;
+        organization?: string;
+        country?: string;
+    }>;
 };
 
 function mapSubscriptionStatus(value?: string): SubscriptionStatus {
     const normalized = (value || "").toLowerCase();
     if (normalized.includes("active")) return "active";
     if (normalized.includes("trial")) return "trial";
+    if (normalized.includes("past_due")) return "expired";
     if (normalized.includes("cancel")) return "cancelled";
     if (normalized.includes("expire")) return "expired";
     return "pending";
@@ -155,7 +171,7 @@ export default function SuperAdminPage() {
             setDataError(null);
             setDataLoading(true);
             try {
-                const response = await fetch("/api/admin");
+                const response = await fetch("/api/admin", { credentials: "include" });
                 if (!response.ok) {
                     throw new Error("Live admin data is not available.");
                 }
@@ -164,20 +180,21 @@ export default function SuperAdminPage() {
                 if (cancelled) return;
 
                 const mappedUsers: PlatformUser[] = (data.users || []).map((item, index) => {
-                    const subscriptionStatus = mapSubscriptionStatus(item.status);
+                    const subscriptionStatus = mapSubscriptionStatus(item.subscriptionStatus || item.status);
                     return {
-                        id: `USR-${String(index + 1).padStart(3, "0")}`,
+                        id: item.id || `USR-${String(index + 1).padStart(3, "0")}`,
                         name: item.name || "Unknown User",
                         email: item.email || "Not available",
-                        phone: "Not available",
-                        organization: "Not available",
+                        phone: item.phone || "Not available",
+                        organization: item.organization || "Not available",
                         role: mapUserRole(item.role),
                         subscriptionStatus,
-                        subscriptionPlan: "Not available",
-                        createdAt: "",
-                        lastLoginAt: null,
+                        subscriptionPlan: item.subscriptionPlan || "Not available",
+                        paymentDetails: item.paymentDetails || "Not available",
+                        createdAt: item.createdAt || "",
+                        lastLoginAt: item.lastLoginAt || null,
                         isActive: subscriptionStatus === "active",
-                        country: "Not available",
+                        country: item.country || "Not available",
                     };
                 });
 
@@ -514,6 +531,8 @@ export default function SuperAdminPage() {
                                             <th className="px-4 py-3">Organization</th>
                                             <th className="px-4 py-3">Role</th>
                                             <th className="px-4 py-3">Subscription</th>
+                                            <th className="px-4 py-3">Payment</th>
+                                            <th className="px-4 py-3">Registered</th>
                                             <th className="px-4 py-3">Last Login</th>
                                             <th className="px-4 py-3">Actions</th>
                                         </tr>
@@ -521,7 +540,7 @@ export default function SuperAdminPage() {
                                     <tbody className="divide-y divide-slate-200">
                                         {filteredUsers.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">
+                                                <td colSpan={9} className="px-4 py-8 text-center text-sm text-slate-500">
                                                     No live platform users are available.
                                                 </td>
                                             </tr>
@@ -553,6 +572,14 @@ export default function SuperAdminPage() {
                                                     <td className="px-4 py-3">
                                                         <Pill label={user.subscriptionStatus} tone={subscriptionStatusColors[user.subscriptionStatus]} />
                                                         <div className="mt-1 text-xs text-slate-500">{user.subscriptionPlan}</div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-slate-600">
+                                                        {user.paymentDetails}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-slate-600">
+                                                        {user.createdAt
+                                                            ? new Date(user.createdAt).toLocaleDateString()
+                                                            : "Not available"}
                                                     </td>
                                                     <td className="px-4 py-3 text-sm text-slate-600">
                                                         {user.lastLoginAt
@@ -918,6 +945,13 @@ export default function SuperAdminPage() {
                                         <Pill label={selectedUser.subscriptionStatus} tone={subscriptionStatusColors[selectedUser.subscriptionStatus]} />
                                         <span className="ml-2 text-xs text-slate-500">{selectedUser.subscriptionPlan}</span>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="text-xs font-semibold text-slate-500 uppercase">Payment Details</div>
+                                <div className="mt-1 text-sm text-slate-900">
+                                    {selectedUser.paymentDetails}
                                 </div>
                             </div>
 
