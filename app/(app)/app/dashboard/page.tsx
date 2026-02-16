@@ -34,6 +34,7 @@ import BackToHub from "@/components/app/BackToHub";
 
 export default function DashboardPage() {
     const { selectedAircraft, setSelectedAircraft, allAircraft } = useAircraft();
+    const hasAircraft = Boolean(selectedAircraft);
     const [showAircraftMenu, setShowAircraftMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const [privacyMode, setPrivacyMode] = useState(false);
@@ -136,6 +137,11 @@ export default function DashboardPage() {
         <div className="relative w-full">
             <div className="w-full max-w-[844px] mx-auto">
                 <BackToHub title="Dashboard" />
+                {!hasAircraft ? (
+                    <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        No aircraft are available yet. Connect your CMMS integration to load fleet data.
+                    </div>
+                ) : null}
                 <div className="bg-white border-[#e5e7eb] border-b-[0.8px] border-solid rounded-[12px] px-6 pt-4 pb-3">
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="flex items-center gap-4 flex-wrap">
@@ -167,8 +173,10 @@ export default function DashboardPage() {
                                 >
                                     <Plane className="h-5 w-5 text-slate-700" />
                                     <div className="text-[14px] text-[#0a0a0a]">
-                                        {selectedAircraft?.registration}
-                                        <div className="text-[12px] text-[#6a7282]">{selectedAircraft?.model}</div>
+                                        {selectedAircraft?.registration || "No aircraft"}
+                                        <div className="text-[12px] text-[#6a7282]">
+                                            {selectedAircraft?.model || "Connect fleet to view models"}
+                                        </div>
                                     </div>
                                     <ChevronDown
                                         className={`h-4 w-4 transition-transform ${showAircraftMenu ? 'rotate-180' : ''}`}

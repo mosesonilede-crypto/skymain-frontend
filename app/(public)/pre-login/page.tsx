@@ -355,12 +355,6 @@ export default function PreLoginPage() {
                         </div>
                     </div>
 
-                    <div className="mt-4 bg-[#f3f4f6] rounded-[10px] p-3">
-                        <span className="font-bold text-xs text-[#4a5565]">DEV INFO: </span>
-                        <span className="text-xs text-[#4a5565]">
-                            Ad ID: ad-001-globalaero | Contract: 2026-01-01 to 2026-12-31 | Annual contract - Premium airline partner
-                        </span>
-                    </div>
                 </section>
 
                 {/* Platform Capabilities Section */}
@@ -631,12 +625,6 @@ export default function PreLoginPage() {
                         </div>
                     </div>
 
-                    <div className="mt-4 bg-[#f3f4f6] rounded-[10px] p-3">
-                        <span className="font-bold text-xs text-[#4a5565]">DEV INFO: </span>
-                        <span className="text-xs text-[#4a5565]">
-                            Ad ID: ad-002-aerotech | Contract: 2026-01-15 to 2026-07-15 | 6-month contract with promo code tracking
-                        </span>
-                    </div>
                 </section>
 
                 {/* Industry Partners Section */}

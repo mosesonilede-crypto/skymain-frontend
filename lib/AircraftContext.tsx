@@ -3,12 +3,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import {
     Aircraft,
-    DEFAULT_MOCK_AIRCRAFT,
     fetchAircraftList,
     addAircraft as addAircraftApi,
     updateAircraft as updateAircraftApi,
     deleteAircraft as deleteAircraftApi,
-    getDataMode,
 } from "./dataService";
 
 // Re-export Aircraft type for backwards compatibility
@@ -34,9 +32,9 @@ interface AircraftContextType {
 
 const AircraftContext = createContext<AircraftContextType | undefined>(undefined);
 
-function getInitialAircraft(aircraftList: Aircraft[]): Aircraft {
+function getInitialAircraft(aircraftList: Aircraft[]): Aircraft | null {
     if (typeof window === "undefined") {
-        return aircraftList[0] || DEFAULT_MOCK_AIRCRAFT[0];
+        return aircraftList[0] || null;
     }
     const stored = localStorage.getItem("SELECTED_AIRCRAFT");
     if (stored) {
@@ -51,15 +49,15 @@ function getInitialAircraft(aircraftList: Aircraft[]): Aircraft {
             // Fall through to default
         }
     }
-    return aircraftList[0] || DEFAULT_MOCK_AIRCRAFT[0];
+    return aircraftList[0] || null;
 }
 
 export function AircraftProvider({ children }: { children: ReactNode }) {
-    const [allAircraft, setAllAircraft] = useState<Aircraft[]>(DEFAULT_MOCK_AIRCRAFT);
-    const [selectedAircraft, setSelectedAircraftState] = useState<Aircraft>(
-        () => getInitialAircraft(DEFAULT_MOCK_AIRCRAFT)
+    const [allAircraft, setAllAircraft] = useState<Aircraft[]>([]);
+    const [selectedAircraft, setSelectedAircraftState] = useState<Aircraft | null>(
+        () => getInitialAircraft([])
     );
-    const [dataSource, setDataSource] = useState<"live" | "mock">("mock");
+    const [dataSource, setDataSource] = useState<"live" | "mock">("live");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [initialized, setInitialized] = useState(false);
@@ -84,9 +82,8 @@ export function AircraftProvider({ children }: { children: ReactNode }) {
         } catch (err) {
             console.error("Failed to fetch aircraft:", err);
             setError(err instanceof Error ? err.message : "Failed to load aircraft");
-            // Keep using mock data on error
-            setAllAircraft(DEFAULT_MOCK_AIRCRAFT);
-            setDataSource("mock");
+            setAllAircraft([]);
+            setDataSource("live");
         } finally {
             setIsLoading(false);
         }
@@ -96,11 +93,7 @@ export function AircraftProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!initialized) {
             setInitialized(true);
-            // Only fetch from API if not in pure mock mode
-            const mode = getDataMode();
-            if (mode !== "mock") {
-                refreshAircraft();
-            }
+            refreshAircraft();
         }
     }, [initialized, refreshAircraft]);
 

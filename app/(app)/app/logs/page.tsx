@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { useAircraft } from "@/lib/AircraftContext";
 
@@ -29,152 +29,15 @@ type UpcomingTask = {
     category: string;
 };
 
-// Mock maintenance logs data - used as fallback or when API unavailable
-function generateMockLogs(aircraftReg: string): LogItem[] {
-    return [
-        {
-            id: "log-1",
-            title: "A-Check Inspection",
-            description: "Complete A-Check including visual inspection, lubrication, and minor repairs",
-            technician: "John Anderson",
-            dateISO: "2026-02-08",
-            durationHours: 18,
-            status: "COMPLETED",
-            category: "A-Check",
-            parts: ["Oil Filter", "Brake Pads"],
-            notes: "All inspections passed. Aircraft cleared for service.",
-        },
-        {
-            id: "log-2",
-            title: "Avionics Software Update",
-            description: "Critical avionics software update for FMS and TCAS systems",
-            technician: "Sarah Williams",
-            dateISO: "2026-01-15",
-            durationHours: 4,
-            status: "COMPLETED",
-            category: "Avionics",
-            parts: [],
-            notes: "FMS updated to v3.2.1, TCAS updated to v2.1.0",
-        },
-        {
-            id: "log-3",
-            title: "Landing Gear Inspection",
-            description: "Routine landing gear inspection and hydraulic fluid check",
-            technician: "Mike Chen",
-            dateISO: "2026-02-05",
-            durationHours: 6,
-            status: "COMPLETED",
-            category: "Landing Gear",
-            parts: ["Hydraulic Fluid MIL-PRF-5606"],
-            notes: "Hydraulic seals replaced. Gear retraction test passed.",
-        },
-        {
-            id: "log-4",
-            title: "Engine Oil Analysis",
-            description: "Scheduled engine oil sampling and analysis for wear metal detection",
-            technician: "Emily Davis",
-            dateISO: "2026-02-01",
-            durationHours: 2,
-            status: "COMPLETED",
-            category: "Engine",
-            parts: ["Oil Sample Kit"],
-            notes: "Oil analysis results normal. No abnormal wear patterns detected.",
-        },
-        {
-            id: "log-5",
-            title: "Cabin Pressure System Check",
-            description: "Inspection of cabin pressurization system and outflow valves",
-            technician: "Robert Martinez",
-            dateISO: "2026-01-28",
-            durationHours: 5,
-            status: "COMPLETED",
-            category: "Pressurization",
-            parts: [],
-            notes: "System functioning within specifications. Outflow valve cleaned.",
-        },
-    ];
-}
-
-// Mock upcoming maintenance tasks
-function generateUpcomingTasks(aircraftReg: string): UpcomingTask[] {
-    return [
-        {
-            id: "task-1",
-            title: "Engine Borescope Inspection",
-            description: "Scheduled borescope inspection of both engines (CFM56-7B)",
-            dueDate: "2026-02-20",
-            estimatedHours: 8,
-            priority: "HIGH",
-            category: "Engine",
-        },
-        {
-            id: "task-2",
-            title: "APU Maintenance",
-            description: "APU 500-hour service including oil change and filter replacement",
-            dueDate: "2026-02-25",
-            estimatedHours: 4,
-            priority: "MEDIUM",
-            category: "APU",
-        },
-        {
-            id: "task-3",
-            title: "Wheel and Brake Assembly",
-            description: "Main gear wheel replacement and brake assembly inspection",
-            dueDate: "2026-03-01",
-            estimatedHours: 6,
-            priority: "MEDIUM",
-            category: "Landing Gear",
-        },
-    ];
-}
-
 export default function MaintenanceLogsPage() {
     const { selectedAircraft } = useAircraft();
-    const aircraftReg = selectedAircraft?.registration || "N123XY";
-
-    const [logs, setLogs] = useState<LogItem[]>(() => generateMockLogs(aircraftReg));
-    const [upcomingTasks, setUpcomingTasks] = useState<UpcomingTask[]>(() => generateUpcomingTasks(aircraftReg));
-    const [isLoading, setIsLoading] = useState(true);
+    const aircraftReg = selectedAircraft?.registration || "";
+    const [logs, setLogs] = useState<LogItem[]>([]);
+    const [upcomingTasks, setUpcomingTasks] = useState<UpcomingTask[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-    // Fetch logs data from API
-    const fetchLogsData = useCallback(async () => {
-        if (!aircraftReg) return;
-
-        setIsLoading(true);
-        try {
-            const response = await fetch(`/api/logs/${aircraftReg}`);
-            if (response.ok) {
-                const data = await response.json();
-
-                // Map API response to LogItem format
-                if (data.logs && data.logs.length > 0) {
-                    const mappedLogs: LogItem[] = data.logs.map((log: any) => ({
-                        id: log.id,
-                        title: log.title,
-                        description: log.description || "Maintenance work completed",
-                        technician: log.technician,
-                        dateISO: new Date(log.date).toISOString().split('T')[0],
-                        durationHours: log.durationHours || 0,
-                        status: mapStatus(log.status),
-                        category: log.type || log.category || "General",
-                        parts: log.parts || [],
-                        notes: log.notes || "",
-                    }));
-                    setLogs(mappedLogs);
-                }
-
-                setLastUpdated(new Date(data.lastUpdated || Date.now()));
-            }
-        } catch (error) {
-            console.error("Error fetching logs:", error);
-            // Keep using mock data on error
-        } finally {
-            setIsLoading(false);
-        }
-    }, [aircraftReg]);
-
-    // Map API status to our status type
     function mapStatus(status: string): LogStatus {
         const normalized = status?.toLowerCase();
         if (normalized === "completed" || normalized === "complete") return "COMPLETED";
@@ -182,15 +45,62 @@ export default function MaintenanceLogsPage() {
         return "SCHEDULED";
     }
 
-    // Fetch data when aircraft changes
-    useEffect(() => {
-        // Update mock data for the selected aircraft
-        setLogs(generateMockLogs(aircraftReg));
-        setUpcomingTasks(generateUpcomingTasks(aircraftReg));
+    const fetchLogsData = useCallback(async () => {
+        if (!aircraftReg) {
+            setLogs([]);
+            setUpcomingTasks([]);
+            setIsLoading(false);
+            return;
+        }
 
-        // Then try to fetch live data
+        setError(null);
+        setIsLoading(true);
+        try {
+            const response = await fetch(`/api/logs/${aircraftReg}`);
+            if (!response.ok) {
+                throw new Error("Unable to load maintenance logs from the live service.");
+            }
+
+            const data = await response.json();
+
+            if (data.logs && data.logs.length > 0) {
+                const mappedLogs: LogItem[] = data.logs.map((log: any) => ({
+                    id: log.id,
+                    title: log.title,
+                    description: log.description || "Maintenance work completed",
+                    technician: log.technician,
+                    dateISO: new Date(log.date).toISOString().split("T")[0],
+                    durationHours: log.durationHours || 0,
+                    status: mapStatus(log.status),
+                    category: log.type || log.category || "General",
+                    parts: log.parts || [],
+                    notes: log.notes || "",
+                }));
+                setLogs(mappedLogs);
+            } else {
+                setLogs([]);
+            }
+
+            if (Array.isArray(data.upcomingTasks)) {
+                setUpcomingTasks(data.upcomingTasks);
+            } else {
+                setUpcomingTasks([]);
+            }
+
+            setLastUpdated(new Date(data.lastUpdated || Date.now()));
+        } catch (errorCaught) {
+            console.error("Error fetching logs:", errorCaught);
+            setError(errorCaught instanceof Error ? errorCaught.message : "Unable to load maintenance logs.");
+            setLogs([]);
+            setUpcomingTasks([]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [aircraftReg]);
+
+    useEffect(() => {
         fetchLogsData();
-    }, [aircraftReg, fetchLogsData]);
+    }, [fetchLogsData]);
 
     return (
         <section className="flex flex-col gap-6">
@@ -198,8 +108,11 @@ export default function MaintenanceLogsPage() {
             <div className="flex items-center justify-between pt-1">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-                        Maintenance Logs - {aircraftReg}
+                        {aircraftReg ? `Maintenance Logs - ${aircraftReg}` : "Maintenance Logs"}
                     </h1>
+                    {error ? (
+                        <p className="mt-2 text-xs text-red-600">{error}</p>
+                    ) : null}
                     {lastUpdated && (
                         <p className="mt-1 text-xs text-slate-500">
                             Last updated: {lastUpdated.toLocaleString()}
@@ -218,7 +131,9 @@ export default function MaintenanceLogsPage() {
                 <div className="space-y-4">
                     {logs.length === 0 ? (
                         <div className="py-4 text-center text-sm text-slate-500">
-                            No maintenance logs found for {aircraftReg}
+                            {aircraftReg
+                                ? `No maintenance logs found for ${aircraftReg}`
+                                : "Select an aircraft to view maintenance logs."}
                         </div>
                     ) : (
                         logs.map((item) => (
@@ -231,8 +146,14 @@ export default function MaintenanceLogsPage() {
             <Panel title="Upcoming Maintenance Tasks">
                 {upcomingTasks.length === 0 ? (
                     <div className="py-2 text-sm text-slate-700">
-                        No upcoming maintenance tasks for {" "}
-                        <span className="font-semibold text-slate-900">{aircraftReg}</span>
+                        {aircraftReg ? (
+                            <>
+                                No upcoming maintenance tasks for{" "}
+                                <span className="font-semibold text-slate-900">{aircraftReg}</span>
+                            </>
+                        ) : (
+                            "Select an aircraft to view upcoming tasks."
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-4">

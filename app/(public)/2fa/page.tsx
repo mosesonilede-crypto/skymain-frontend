@@ -54,7 +54,6 @@ export default function TwoFactorPage() {
 
     const [method, setMethod] = React.useState<"email" | "authenticator">("email");
     const [email] = React.useState(user?.email || "");
-    const [mockOTP, setMockOTP] = React.useState<string | null>(null);
     const [sendError, setSendError] = React.useState<string | null>(null);
     const [sendStatus, setSendStatus] = React.useState<string | null>(null);
     const [sending, setSending] = React.useState(false);
@@ -100,7 +99,6 @@ export default function TwoFactorPage() {
 
     async function sendOtp() {
         setSendError(null);
-        setMockOTP(null);
         setSendStatus(null);
         const destination = email.trim();
 
@@ -122,9 +120,10 @@ export default function TwoFactorPage() {
                 return;
             }
             if (data?.mockCode) {
-                setMockOTP(data.mockCode);
-                setSendStatus("Mock code generated. Email provider is not active in this mode.");
-            } else if (data?.email?.accepted?.length) {
+                setSendError("Email delivery is not configured. Contact support to enable 2FA delivery.");
+                return;
+            }
+            if (data?.email?.accepted?.length) {
                 setSendStatus("Email accepted by provider. Check your inbox or spam folder.");
             } else {
                 setSendStatus("Request sent. If it doesn’t arrive, check your spam folder or provider logs.");
@@ -304,11 +303,6 @@ export default function TwoFactorPage() {
                             <>Enter the current 6-digit code from your authenticator app.</>
                         )}
                         <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                            {mockOTP ? (
-                                <span>
-                                    Mock code: <span className="font-semibold text-slate-700">{mockOTP}</span>
-                                </span>
-                            ) : null}
                             {method !== "authenticator" ? (
                                 <button
                                     type="button"
@@ -353,32 +347,6 @@ export default function TwoFactorPage() {
                                     />
                                 );
                             })}
-                        </div>
-
-                        <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-                            <div className="flex items-start justify-between gap-4">
-                                <div>
-                                    <div className="text-sm font-semibold text-slate-900">Demo Mode</div>
-                                    <div className="mt-1 text-sm text-slate-600">Use this code for testing.</div>
-                                </div>
-                                <button
-                                    type="button"
-                                    disabled={!mockOTP}
-                                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                    onClick={() => {
-                                        if (mockOTP) {
-                                            setCode(mockOTP);
-                                        }
-                                    }}
-                                >
-                                    Use {mockOTP ?? "demo"}
-                                </button>
-                            </div>
-
-                            <div className="mt-4 rounded-2xl bg-slate-900 px-6 py-4 text-center text-2xl font-bold tracking-widest text-white">
-                                {mockOTP}
-                            </div>
-
                         </div>
 
                         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

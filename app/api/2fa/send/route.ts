@@ -111,9 +111,10 @@ export async function POST(req: Request) {
     const expires = getOtpExpiry();
     const token = signPayload({ method: body.method, destination: body.destination, code, expires });
 
-    const mode = (process.env.NEXT_PUBLIC_DATA_MODE ?? "mock").toLowerCase();
-    const allowMockFallback = mode === "mock" || mode === "hybrid";
-    const allowMockEmail = mode === "mock";
+    const mode = (process.env.NEXT_PUBLIC_DATA_MODE ?? "live").toLowerCase();
+    const allowMockEnv = (process.env.ALLOW_MOCK_FALLBACK || "").toLowerCase().trim() === "true";
+    const allowMockFallback = process.env.NODE_ENV !== "production" && allowMockEnv && (mode === "mock" || mode === "hybrid");
+    const allowMockEmail = process.env.NODE_ENV !== "production" && allowMockEnv && mode === "mock";
     let usedMock = false;
 
     if (!isConfigured(body.method)) {

@@ -288,13 +288,6 @@ export default function GetStartedPage() {
                         </div>
                     </div>
 
-                    {/* Dev Info */}
-                    <div className="mt-4 rounded-lg bg-[#f3f4f6] p-3">
-                        <span className="text-xs font-bold text-[#4a5565]">DEV INFO: </span>
-                        <span className="text-xs text-[#4a5565]">
-                            Ad ID: ad-001-globalaero | Contract: 2026-01-01 to 2026-12-31 | Annual contract - Premium airline partner
-                        </span>
-                    </div>
                 </div>
             </section>
 
@@ -462,13 +455,6 @@ export default function GetStartedPage() {
                         </div>
                     </div>
 
-                    {/* Dev Info */}
-                    <div className="mt-4 rounded-lg bg-[#f3f4f6] p-3">
-                        <span className="text-xs font-bold text-[#4a5565]">DEV INFO: </span>
-                        <span className="text-xs text-[#4a5565]">
-                            Ad ID: ad-002-aerotech | Contract: 2026-01-15 to 2026-07-15 | 6-month contract with promo code tracking
-                        </span>
-                    </div>
                 </div>
             </section>
 

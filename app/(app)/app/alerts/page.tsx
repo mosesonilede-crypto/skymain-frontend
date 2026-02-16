@@ -12,8 +12,6 @@ import { Info } from "lucide-react";
 import BackToHub from "@/components/app/BackToHub";
 import { useAircraft, Aircraft } from "@/lib/AircraftContext";
 
-// Storage keys
-const AI_ALERTS_KEY = "skymaintain.aiPredictedAlerts";
 
 interface PredictedAlert {
     id: string;
@@ -42,75 +40,6 @@ interface AlertsApiResponse {
     alerts: AlertsApiItem[];
 }
 
-// Mock alert data for demo
-const MOCK_ALERTS: PredictedAlert[] = [
-    {
-        id: "alert-1",
-        severity: "critical",
-        title: "Hydraulic System Pressure Anomaly",
-        description: "Hydraulic system pressure trending downward, indicating potential seal degradation.",
-        component: "Hydraulic System - Left Main Gear",
-        predictedDate: "March 8, 2026",
-        confidence: 92,
-        source: "Sensor Analysis Engine",
-        aircraftRegistration: "N872LM",
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        recommendedAction: "Schedule hydraulic seal inspection within 50 flight hours"
-    },
-    {
-        id: "alert-2",
-        severity: "warning",
-        title: "Engine Oil Temperature Elevated",
-        description: "Oil temperature has increased by 8°C over the past 30 days of operations.",
-        component: "Engine #1 - Oil System",
-        predictedDate: "March 15, 2026",
-        confidence: 78,
-        source: "Thermal Trend Analysis",
-        aircraftRegistration: "N872LM",
-        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        recommendedAction: "Check oil cooler efficiency and clean if necessary"
-    },
-    {
-        id: "alert-3",
-        severity: "warning",
-        title: "Brake Pad Wear Threshold",
-        description: "Front wheel brake pad thickness approaching maintenance threshold based on wear rate.",
-        component: "Landing Gear - Brake System",
-        predictedDate: "March 22, 2026",
-        confidence: 85,
-        source: "Wear Rate Prediction",
-        aircraftRegistration: "N872LM",
-        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        recommendedAction: "Replace brake pads at next scheduled maintenance"
-    },
-    {
-        id: "alert-4",
-        severity: "info",
-        title: "Avionics Software Update Available",
-        description: "New firmware available for FMS system with performance enhancements.",
-        component: "Avionics - Flight Management System",
-        predictedDate: "April 1, 2026",
-        confidence: 100,
-        source: "OEM Bulletin Tracker",
-        aircraftRegistration: "N872LM",
-        createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-        recommendedAction: "Schedule software update during next available maintenance window"
-    },
-    {
-        id: "alert-5",
-        severity: "info",
-        title: "Routine A-Check Preparation",
-        description: "A-Check inspection due in approximately 50 days based on flight hours.",
-        component: "Aircraft - Scheduled Maintenance",
-        predictedDate: "March 26, 2026",
-        confidence: 100,
-        source: "Maintenance Schedule Engine",
-        aircraftRegistration: "N872LM",
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        recommendedAction: "Book maintenance facility slot 45 days in advance"
-    },
-];
-
 // Fleet Health Summary Data Type
 interface FleetHealthSummary {
     registration: string;
@@ -120,118 +49,32 @@ interface FleetHealthSummary {
     criticalAlerts: number;
     warningAlerts: number;
     infoAlerts: number;
-    lastInspection: string;
-    nextScheduledMaintenance: string;
-    flightHoursRemaining: number;
+    lastInspection?: string | null;
+    nextScheduledMaintenance?: string | null;
+    flightHoursRemaining?: number | null;
     engineHealth: "normal" | "attention" | "critical";
     hydraulicsHealth: "normal" | "attention" | "critical";
     avionicsHealth: "normal" | "attention" | "critical";
     structuralHealth: "normal" | "attention" | "critical";
 }
+const HEALTH_SCORE_WEIGHTS = {
+    critical: 20,
+    warning: 8,
+    info: 2,
+};
 
-// Generate mock fleet health data for all aircraft
-function generateFleetHealthData(allAircraft: Aircraft[], selectedReg: string): FleetHealthSummary[] {
-    const healthProfiles: Record<string, Partial<FleetHealthSummary>> = {
-        "N872LM": {
-            overallHealth: "good",
-            healthScore: 87,
-            criticalAlerts: 1,
-            warningAlerts: 2,
-            infoAlerts: 2,
-            lastInspection: "2026-01-15",
-            nextScheduledMaintenance: "2026-03-15",
-            flightHoursRemaining: 450,
-            engineHealth: "normal",
-            hydraulicsHealth: "attention",
-            avionicsHealth: "normal",
-            structuralHealth: "normal",
-        },
-        "N451KJ": {
-            overallHealth: "excellent",
-            healthScore: 95,
-            criticalAlerts: 0,
-            warningAlerts: 1,
-            infoAlerts: 1,
-            lastInspection: "2026-01-20",
-            nextScheduledMaintenance: "2026-04-20",
-            flightHoursRemaining: 680,
-            engineHealth: "normal",
-            hydraulicsHealth: "normal",
-            avionicsHealth: "normal",
-            structuralHealth: "normal",
-        },
-        "N789QW": {
-            overallHealth: "fair",
-            healthScore: 72,
-            criticalAlerts: 0,
-            warningAlerts: 3,
-            infoAlerts: 2,
-            lastInspection: "2026-01-10",
-            nextScheduledMaintenance: "2026-02-28",
-            flightHoursRemaining: 180,
-            engineHealth: "attention",
-            hydraulicsHealth: "normal",
-            avionicsHealth: "attention",
-            structuralHealth: "normal",
-        },
-        "N123XY": {
-            overallHealth: "poor",
-            healthScore: 58,
-            criticalAlerts: 2,
-            warningAlerts: 2,
-            infoAlerts: 1,
-            lastInspection: "2026-01-22",
-            nextScheduledMaintenance: "2026-02-15",
-            flightHoursRemaining: 85,
-            engineHealth: "critical",
-            hydraulicsHealth: "attention",
-            avionicsHealth: "normal",
-            structuralHealth: "attention",
-        },
-    };
+function computeOverallHealth(score: number): FleetHealthSummary["overallHealth"] {
+    if (score >= 90) return "excellent";
+    if (score >= 75) return "good";
+    if (score >= 60) return "fair";
+    if (score >= 40) return "poor";
+    return "critical";
+}
 
-    // Generate data for all aircraft in fleet
-    const fleetData: FleetHealthSummary[] = allAircraft.map((aircraft) => {
-        const profile = healthProfiles[aircraft.registration];
-        if (profile) {
-            return {
-                registration: aircraft.registration,
-                model: aircraft.model,
-                ...profile,
-            } as FleetHealthSummary;
-        }
-        // Generate random health data for aircraft without predefined profiles
-        const healthScore = Math.floor(Math.random() * 40) + 60; // 60-100
-        const overallHealth: FleetHealthSummary["overallHealth"] =
-            healthScore >= 90 ? "excellent" :
-                healthScore >= 75 ? "good" :
-                    healthScore >= 60 ? "fair" :
-                        healthScore >= 40 ? "poor" : "critical";
-
-        return {
-            registration: aircraft.registration,
-            model: aircraft.model,
-            overallHealth,
-            healthScore,
-            criticalAlerts: healthScore < 60 ? Math.floor(Math.random() * 3) : 0,
-            warningAlerts: Math.floor(Math.random() * 4),
-            infoAlerts: Math.floor(Math.random() * 3),
-            lastInspection: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            nextScheduledMaintenance: new Date(Date.now() + Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            flightHoursRemaining: Math.floor(Math.random() * 800) + 100,
-            engineHealth: Math.random() > 0.8 ? "attention" : "normal",
-            hydraulicsHealth: Math.random() > 0.9 ? "attention" : "normal",
-            avionicsHealth: Math.random() > 0.85 ? "attention" : "normal",
-            structuralHealth: "normal",
-        } as FleetHealthSummary;
-    });
-
-    // Sort so selected aircraft is first, then by health score ascending (worst first for attention)
-    return fleetData.sort((a, b) => {
-        if (a.registration === selectedReg) return -1;
-        if (b.registration === selectedReg) return 1;
-        return a.healthScore - b.healthScore;
-    });
+function deriveSystemHealth(critical: number, warning: number): FleetHealthSummary["engineHealth"] {
+    if (critical > 0) return "critical";
+    if (warning > 0) return "attention";
+    return "normal";
 }
 
 // Health status indicator component
@@ -375,12 +218,18 @@ function FleetHealthSpreadsheet({
                                             <HealthIndicator status={aircraft.structuralHealth} />
                                         </td>
                                         <td className="px-4 py-3 text-sm text-slate-600">
-                                            {new Date(aircraft.nextScheduledMaintenance).toLocaleDateString()}
+                                            {aircraft.nextScheduledMaintenance
+                                                ? new Date(aircraft.nextScheduledMaintenance).toLocaleDateString()
+                                                : "—"}
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className={`text-sm font-medium ${aircraft.flightHoursRemaining < 200 ? "text-amber-600" : "text-slate-700"}`}>
-                                                {aircraft.flightHoursRemaining}
-                                            </span>
+                                            {typeof aircraft.flightHoursRemaining === "number" ? (
+                                                <span className={`text-sm font-medium ${aircraft.flightHoursRemaining < 200 ? "text-amber-600" : "text-slate-700"}`}>
+                                                    {aircraft.flightHoursRemaining}
+                                                </span>
+                                            ) : (
+                                                <span className="text-sm text-slate-400">—</span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {!isSelected ? (
@@ -436,18 +285,6 @@ function FleetHealthSpreadsheet({
             )}
         </div>
     );
-}
-
-function getPredictedAlerts(): PredictedAlert[] {
-    if (typeof window === "undefined") return [];
-    const raw = window.localStorage.getItem(AI_ALERTS_KEY);
-    if (!raw) return [];
-    try {
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-    } catch {
-        return [];
-    }
 }
 
 function SeverityBadge({ severity }: { severity: PredictedAlert["severity"] }) {
@@ -540,11 +377,9 @@ export default function PredictiveAlertsPage() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-
-    // Generate fleet health data
-    const fleetHealthData = useMemo(() => {
-        return generateFleetHealthData(allAircraft, selectedAircraft?.registration || "");
-    }, [allAircraft, selectedAircraft?.registration]);
+    const [error, setError] = useState<string | null>(null);
+    const [fleetHealthData, setFleetHealthData] = useState<FleetHealthSummary[]>([]);
+    const [fleetError, setFleetError] = useState<string | null>(null);
 
     // Handle aircraft selection from spreadsheet
     const handleSelectAircraft = useCallback((registration: string) => {
@@ -558,45 +393,116 @@ export default function PredictiveAlertsPage() {
     async function fetchAlerts() {
         if (!selectedAircraft?.registration) return;
 
+        setError(null);
+
         try {
             const response = await fetch(`/api/alerts/${selectedAircraft.registration}`);
-            if (response.ok) {
-                const data: AlertsApiResponse = await response.json();
-                const formattedAlerts = data.alerts.map((alert) => ({
-                    id: alert.id,
-                    severity: alert.severity,
-                    title: alert.type,
-                    description: alert.recommendation,
-                    component: alert.type,
-                    predictedDate: new Date(alert.predictedFailureDate).toLocaleDateString(),
-                    confidence: Math.round(alert.confidence * 100),
-                    source: "AI Predictive Engine",
-                    aircraftRegistration: selectedAircraft.registration,
-                    createdAt: new Date().toISOString(),
-                    recommendedAction: alert.recommendation
-                }));
-                setAlerts(formattedAlerts);
-                setLastRefresh(new Date());
+            if (!response.ok) {
+                throw new Error("Unable to load alerts from the live service.");
             }
+            const data: AlertsApiResponse = await response.json();
+            const formattedAlerts = data.alerts.map((alert) => ({
+                id: alert.id,
+                severity: alert.severity,
+                title: alert.type,
+                description: alert.recommendation,
+                component: alert.type,
+                predictedDate: new Date(alert.predictedFailureDate).toLocaleDateString(),
+                confidence: Math.round(alert.confidence * 100),
+                source: "AI Predictive Engine",
+                aircraftRegistration: selectedAircraft.registration,
+                createdAt: new Date().toISOString(),
+                recommendedAction: alert.recommendation,
+            }));
+            setAlerts(formattedAlerts);
+            setLastRefresh(new Date());
         } catch (error) {
-            console.error("Error fetching alerts:", error);
-            // Fall back to mock data on error
-            const aircraftRegistration = selectedAircraft?.registration || "N872LM";
-            let alertsToShow = getPredictedAlerts();
-            if (alertsToShow.length === 0) {
-                alertsToShow = MOCK_ALERTS.filter(a => a.aircraftRegistration === aircraftRegistration);
-            } else {
-                alertsToShow = alertsToShow.filter(a => a.aircraftRegistration === aircraftRegistration);
-            }
-            setAlerts(alertsToShow);
+            console.error("Error fetching alerts:", errorCaught);
+            setError(errorCaught instanceof Error ? errorCaught.message : "Unable to load alerts.");
+            setAlerts([]);
         }
     }
+
+    const fetchFleetHealth = useCallback(async () => {
+        if (allAircraft.length === 0) {
+            setFleetHealthData([]);
+            return;
+        }
+
+        setFleetError(null);
+
+        try {
+            const results = await Promise.all(allAircraft.map(async (aircraft) => {
+                try {
+                    const response = await fetch(`/api/alerts/${aircraft.registration}`);
+                    if (!response.ok) {
+                        throw new Error("Alert fetch failed");
+                    }
+                    const data: AlertsApiResponse = await response.json();
+                    const counts = data.alerts.reduce(
+                        (acc, alert) => {
+                            acc[alert.severity] += 1;
+                            return acc;
+                        },
+                        { critical: 0, warning: 0, info: 0 } as Record<PredictedAlert["severity"], number>
+                    );
+                    const score = Math.max(
+                        0,
+                        100
+                        - counts.critical * HEALTH_SCORE_WEIGHTS.critical
+                        - counts.warning * HEALTH_SCORE_WEIGHTS.warning
+                        - counts.info * HEALTH_SCORE_WEIGHTS.info
+                    );
+                    const systemHealth = deriveSystemHealth(counts.critical, counts.warning);
+
+                    return {
+                        registration: aircraft.registration,
+                        model: aircraft.model,
+                        overallHealth: computeOverallHealth(score),
+                        healthScore: score,
+                        criticalAlerts: counts.critical,
+                        warningAlerts: counts.warning,
+                        infoAlerts: counts.info,
+                        lastInspection: aircraft.lastService ?? null,
+                        nextScheduledMaintenance: null,
+                        flightHoursRemaining: null,
+                        engineHealth: systemHealth,
+                        hydraulicsHealth: systemHealth,
+                        avionicsHealth: systemHealth,
+                        structuralHealth: systemHealth,
+                    } as FleetHealthSummary;
+                } catch {
+                    return null;
+                }
+            }));
+
+            const selectedReg = selectedAircraft?.registration || "";
+            const liveData = results.filter((item): item is FleetHealthSummary => item !== null);
+            const sorted = liveData.sort((a, b) => {
+                if (a.registration === selectedReg) return -1;
+                if (b.registration === selectedReg) return 1;
+                return a.healthScore - b.healthScore;
+            });
+            setFleetHealthData(sorted);
+            if (liveData.length === 0) {
+                setFleetError("Fleet health data is unavailable.");
+            }
+        } catch (fleetErrorCaught) {
+            console.error("Error fetching fleet health:", fleetErrorCaught);
+            setFleetError("Fleet health data is unavailable.");
+            setFleetHealthData([]);
+        }
+    }, [allAircraft, selectedAircraft?.registration]);
 
     /* eslint-disable react-hooks/exhaustive-deps */
     useEffect(() => {
         void fetchAlerts();
     }, [selectedAircraft?.registration]);
     /* eslint-enable react-hooks/exhaustive-deps */
+
+    useEffect(() => {
+        void fetchFleetHealth();
+    }, [fetchFleetHealth]);
 
     async function handleRefreshAlerts() {
         setIsRefreshing(true);
@@ -612,7 +518,7 @@ export default function PredictiveAlertsPage() {
             return;
         }
 
-        const reg = selectedAircraft?.registration || "N872LM";
+        const reg = selectedAircraft?.registration || "your aircraft";
 
         window.dispatchEvent(
             new CustomEvent("ai-mechanic:open", {
@@ -651,7 +557,7 @@ export default function PredictiveAlertsPage() {
         info: alerts.filter((a) => a.severity === "info").length,
     }), [alerts]);
 
-    const reg = selectedAircraft?.registration || "N872LM";
+    const reg = selectedAircraft?.registration || "No aircraft selected";
 
     return (
         <section className="flex flex-col gap-6">
@@ -719,6 +625,12 @@ export default function PredictiveAlertsPage() {
                     </div>
                 </div>
 
+                {error ? (
+                    <div className="mx-6 mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                        {error}
+                    </div>
+                ) : null}
+
                 <div className="p-6">
                     {filteredAlerts.length > 0 ? (
                         <div className="flex flex-col gap-4">
@@ -751,6 +663,11 @@ export default function PredictiveAlertsPage() {
             </div>
 
             {/* Fleet Health Summary Spreadsheet */}
+            {fleetError ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    {fleetError}
+                </div>
+            ) : null}
             <FleetHealthSpreadsheet
                 fleetData={fleetHealthData}
                 selectedReg={reg}

@@ -31,7 +31,7 @@ export function validateEnvironment(): { valid: boolean; errors: string[]; warni
     const errors: string[] = [];
     const warnings: string[] = [];
     const isProduction = process.env.NODE_ENV === "production";
-    const dataMode = (process.env.NEXT_PUBLIC_DATA_MODE || "mock").toLowerCase();
+    const dataMode = (process.env.NEXT_PUBLIC_DATA_MODE || "live").toLowerCase();
 
     for (const req of ENV_REQUIREMENTS) {
         const value = process.env[req.name];
@@ -46,12 +46,12 @@ export function validateEnvironment(): { valid: boolean; errors: string[]; warni
     }
 
     // Live mode specific checks
-    if (dataMode === "live") {
+    if (dataMode === "live" || dataMode === "hybrid") {
         if (!process.env.SMTP_HOST || !process.env.SMTP_FROM) {
             errors.push("SMTP configuration required for live mode");
         }
         if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
-            warnings.push("NEXT_PUBLIC_API_BASE_URL recommended for live mode");
+            errors.push("NEXT_PUBLIC_API_BASE_URL is required for live mode");
         }
     }
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { WhyThisMatters } from "@/components/ui/WhyThisMatters";
+import { useAircraft } from "@/lib/AircraftContext";
 
 type MaintenanceType = "all" | "unscheduled" | "scheduled";
 
@@ -15,21 +16,77 @@ interface MaintenanceEvent {
     status: "open" | "in_progress" | "pending_parts";
 }
 
-// Mock data for demonstration
-const MOCK_EVENTS: MaintenanceEvent[] = [
-    { id: "1", title: "Engine oil leak - Left engine", type: "unscheduled", priority: "high", aircraft: "N123AB", dueDate: "Today", status: "in_progress" },
-    { id: "2", title: "Cabin pressurization fault", type: "unscheduled", priority: "high", aircraft: "N456CD", dueDate: "Today", status: "open" },
-    { id: "3", title: "Landing light inoperative", type: "unscheduled", priority: "medium", aircraft: "N789EF", dueDate: "Today", status: "pending_parts" },
-    { id: "4", title: "A-Check due", type: "scheduled", priority: "medium", aircraft: "N321GH", dueDate: "Tomorrow", status: "open" },
-    { id: "5", title: "Tire replacement", type: "scheduled", priority: "low", aircraft: "N654IJ", dueDate: "In 3 days", status: "open" },
-    { id: "6", title: "APU inspection", type: "scheduled", priority: "medium", aircraft: "N987KL", dueDate: "In 5 days", status: "open" },
-];
-
 interface MaintenanceVisibilityProps {
     events?: MaintenanceEvent[];
 }
 
-export function MaintenanceVisibility({ events = MOCK_EVENTS }: MaintenanceVisibilityProps) {
+function normalizeEventType(raw?: string): MaintenanceEvent["type"] {
+    const value = (raw || "").toLowerCase();
+    if (value.includes("scheduled") || value.includes("check") || value.includes("inspection")) {
+        return "scheduled";
+    }
+    return "unscheduled";
+}
+
+function normalizePriority(raw?: string): MaintenanceEvent["priority"] {
+    const value = (raw || "").toLowerCase();
+    if (value.includes("high") || value.includes("critical")) return "high";
+    if (value.includes("low")) return "low";
+    return "medium";
+}
+
+function normalizeStatus(raw?: string): MaintenanceEvent["status"] {
+    const value = (raw || "").toLowerCase();
+    if (value.includes("progress")) return "in_progress";
+    if (value.includes("pending")) return "pending_parts";
+    return "open";
+}
+
+export function MaintenanceVisibility({ events: overrideEvents }: MaintenanceVisibilityProps) {
+    const { selectedAircraft } = useAircraft();
+    const [events, setEvents] = useState<MaintenanceEvent[]>(overrideEvents || []);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (overrideEvents) {
+            setEvents(overrideEvents);
+            return;
+        }
+
+        if (!selectedAircraft?.registration) return;
+
+        const controller = new AbortController();
+        const fetchEvents = async () => {
+            try {
+                setError(null);
+                const response = await fetch(`/api/logs/${selectedAircraft.registration}`, {
+                    signal: controller.signal,
+                });
+                if (!response.ok) {
+                    throw new Error("Unable to load maintenance activity.");
+                }
+                const data = await response.json();
+                const mapped: MaintenanceEvent[] = (data.logs || []).map((log: any) => ({
+                    id: log.id,
+                    title: log.title,
+                    type: normalizeEventType(log.type || log.category),
+                    priority: normalizePriority(log.priority || log.severity),
+                    aircraft: selectedAircraft.registration,
+                    dueDate: log.date ? new Date(log.date).toLocaleDateString() : "",
+                    status: normalizeStatus(log.status),
+                }));
+                setEvents(mapped);
+            } catch (errorCaught) {
+                if (errorCaught instanceof DOMException && errorCaught.name === "AbortError") return;
+                setError(errorCaught instanceof Error ? errorCaught.message : "Unable to load maintenance activity.");
+                setEvents([]);
+            }
+        };
+
+        void fetchEvents();
+        return () => controller.abort();
+    }, [overrideEvents, selectedAircraft?.registration]);
+
     const [filter, setFilter] = useState<MaintenanceType>("unscheduled"); // Default: Show Unscheduled First
 
     const unscheduledCount = events.filter((e) => e.type === "unscheduled").length;
@@ -110,6 +167,12 @@ export function MaintenanceVisibility({ events = MOCK_EVENTS }: MaintenanceVisib
                 ))}
             </div>
 
+            {error ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {error}
+                </div>
+            ) : null}
+
             {/* Events list */}
             <div className="space-y-2">
                 {filteredEvents.length === 0 ? (
@@ -179,10 +242,54 @@ function MaintenanceEventCard({ event }: { event: MaintenanceEvent }) {
 /**
  * Compact summary card for dashboard widgets
  */
-export function MaintenanceSummaryCard() {
-    const unscheduled = 3;
-    const scheduled = 5;
-    const total = unscheduled + scheduled;
+export function MaintenanceSummaryCard({ events: overrideEvents }: { events?: MaintenanceEvent[] } = {}) {
+    const { selectedAircraft } = useAircraft();
+    const [events, setEvents] = useState<MaintenanceEvent[]>(overrideEvents || []);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (overrideEvents) {
+            setEvents(overrideEvents);
+            return;
+        }
+
+        if (!selectedAircraft?.registration) return;
+
+        const controller = new AbortController();
+        const fetchEvents = async () => {
+            try {
+                setError(null);
+                const response = await fetch(`/api/logs/${selectedAircraft.registration}`, {
+                    signal: controller.signal,
+                });
+                if (!response.ok) {
+                    throw new Error("Unable to load maintenance summary.");
+                }
+                const data = await response.json();
+                const mapped: MaintenanceEvent[] = (data.logs || []).map((log: any) => ({
+                    id: log.id,
+                    title: log.title,
+                    type: normalizeEventType(log.type || log.category),
+                    priority: normalizePriority(log.priority || log.severity),
+                    aircraft: selectedAircraft.registration,
+                    dueDate: log.date ? new Date(log.date).toLocaleDateString() : "",
+                    status: normalizeStatus(log.status),
+                }));
+                setEvents(mapped);
+            } catch (errorCaught) {
+                if (errorCaught instanceof DOMException && errorCaught.name === "AbortError") return;
+                setError(errorCaught instanceof Error ? errorCaught.message : "Unable to load maintenance summary.");
+                setEvents([]);
+            }
+        };
+
+        void fetchEvents();
+        return () => controller.abort();
+    }, [overrideEvents, selectedAircraft?.registration]);
+
+    const unscheduled = events.filter((e) => e.type === "unscheduled").length;
+    const scheduled = events.filter((e) => e.type === "scheduled").length;
+    const total = events.length;
 
     return (
         <div className="bg-white rounded-xl border border-slate-200 p-4">
@@ -191,6 +298,11 @@ export function MaintenanceSummaryCard() {
                 <span className="text-xs text-slate-500">{total} total</span>
             </div>
 
+            {error ? (
+                <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    {error}
+                </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
                 <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
                     <div className="text-2xl font-bold text-amber-600">{unscheduled}</div>

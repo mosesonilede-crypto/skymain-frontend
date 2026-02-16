@@ -21,9 +21,9 @@ const imgIcon29 = "https://www.figma.com/api/mcp/asset/3a85baf1-9147-4b25-9ed7-a
 type DataMode = "mock" | "live" | "hybrid";
 
 function getDataMode(): DataMode {
-    const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "mock").toLowerCase();
+    const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "live").toLowerCase();
     if (raw === "live" || raw === "hybrid" || raw === "mock") return raw;
-    return "mock";
+    return "live";
 }
 
 function getApiBaseUrl(): string {
@@ -34,7 +34,7 @@ async function loginRequest(payload: { email: string; password: string; orgName:
     const mode = getDataMode();
 
     if (mode === "mock") {
-        return { ok: true as const };
+        return { ok: false as const, error: "Mock mode is disabled for production sign-in." };
     }
 
     const base = getApiBaseUrl();
@@ -69,7 +69,6 @@ async function loginRequest(payload: { email: string; password: string; orgName:
 export default function SignInOverlay() {
     const router = useRouter();
     const { login } = useAuth();
-    const mode = getDataMode();
 
     const [email, setEmail] = useState("");
     const [orgName, setOrgName] = useState("");

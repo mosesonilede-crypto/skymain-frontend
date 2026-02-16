@@ -18,9 +18,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: "Missing method or code." }, { status: 400 });
     }
 
-    const mode = (process.env.NEXT_PUBLIC_DATA_MODE ?? "mock").toLowerCase();
-    const allowMock = mode === "mock" || mode === "hybrid";
-    const mockCode = (process.env.NEXT_PUBLIC_MOCK_2FA_CODE || "123456").trim();
+    const mode = (process.env.NEXT_PUBLIC_DATA_MODE ?? "live").toLowerCase();
+    const allowMock = process.env.NODE_ENV !== "production" && (mode === "mock" || mode === "hybrid");
+    const mockCode = (process.env.NEXT_PUBLIC_MOCK_2FA_CODE || "").trim();
 
     if (allowMock && mockCode && body.code === mockCode) {
         return NextResponse.json({ ok: true, mockCode });
