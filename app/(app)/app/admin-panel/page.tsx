@@ -1463,7 +1463,7 @@ export default function AdminPanelPage() {
                                                     className="mt-2 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
                                                 >
                                                     <span>{form.manufacturer || "Select Manufacturer"}</span>
-                                                    <span className="text-slate-400">></span>
+                                                    <span className="text-slate-400">&gt;</span>
                                                 </button>
                                             </div>
 

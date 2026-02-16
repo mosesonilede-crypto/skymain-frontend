@@ -377,15 +377,13 @@ export default function RegisterAircraftPage() {
             return;
         }
 
+        if (!baseUrl) {
+            setSubmitError("Admin connector base URL is not configured.");
+            return;
+        }
+
         try {
             setSubmitting(true);
-
-            if (mode === "mock" || !baseUrl) {
-                // Simulate successful registration
-                router.push("/app/admin-panel");
-                return;
-            }
-
             await registerAircraftLive(baseUrl, registerForm);
             router.push("/app/admin-panel");
         } catch (e) {
@@ -412,19 +410,13 @@ export default function RegisterAircraftPage() {
             return;
         }
 
+        if (!baseUrl) {
+            setAddUserError("Admin connector base URL is not configured.");
+            return;
+        }
+
         try {
             setAddingUser(true);
-
-            if (mode === "mock" || !baseUrl) {
-                setPayload((prev) => ({
-                    ...prev,
-                    users: [...prev.users, { ...addUserForm }],
-                }));
-                setIsAddUserOpen(false);
-                setAddUserForm({ name: "", email: "", role: "Viewer", status: "Active" });
-                return;
-            }
-
             await addUserLive(baseUrl, addUserForm);
             setIsAddUserOpen(false);
             setAddUserForm({ name: "", email: "", role: "Viewer", status: "Active" });
@@ -441,21 +433,13 @@ export default function RegisterAircraftPage() {
         if (!editingUser) return;
         setEditUserError("");
 
+        if (!baseUrl) {
+            setEditUserError("Admin connector base URL is not configured.");
+            return;
+        }
+
         try {
             setSavingUser(true);
-
-            if (mode === "mock" || !baseUrl) {
-                setPayload((prev) => ({
-                    ...prev,
-                    users: prev.users.map((u) =>
-                        u.email === editingUser.email ? { ...u, ...editUserForm } : u
-                    ),
-                }));
-                setEditingUser(null);
-                setEditUserForm({});
-                return;
-            }
-
             await updateUserLive(baseUrl, editingUser.id || editingUser.email, editUserForm);
             setEditingUser(null);
             setEditUserForm({});

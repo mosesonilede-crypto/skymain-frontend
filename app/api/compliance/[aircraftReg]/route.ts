@@ -7,9 +7,10 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ aircraftReg: string }> }
 ) {
+    let aircraftReg = "";
     try {
         const { aircraftReg: reg } = await params;
-        const aircraftReg = reg.toUpperCase();
+        aircraftReg = reg.toUpperCase();
 
         const data = await fetchCompliance(aircraftReg);
 

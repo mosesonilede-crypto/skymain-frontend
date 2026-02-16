@@ -417,8 +417,8 @@ export default function PredictiveAlertsPage() {
             setAlerts(formattedAlerts);
             setLastRefresh(new Date());
         } catch (error) {
-            console.error("Error fetching alerts:", errorCaught);
-            setError(errorCaught instanceof Error ? errorCaught.message : "Unable to load alerts.");
+            console.error("Error fetching alerts:", error);
+            setError(error instanceof Error ? error.message : "Unable to load alerts.");
             setAlerts([]);
         }
     }
