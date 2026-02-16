@@ -1,6 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
@@ -149,7 +149,7 @@ export default function SignInOverlay() {
                                         "linear-gradient(135deg, rgb(21, 93, 252) 0%, rgb(20, 71, 230) 100%)",
                                 }}
                             >
-                                <img src={imgVector22} alt="" className="h-[24px] w-[24px]" />
+                                <Image src={imgVector22} alt="" width={24} height={24} unoptimized className="h-[24px] w-[24px]" />
                             </div>
                             <div>
                                 <div className="text-[20px] font-['Arial:Bold',sans-serif] text-[#0a0a0a]">
@@ -163,7 +163,7 @@ export default function SignInOverlay() {
                             className="flex h-[32px] w-[40px] items-center justify-center rounded-[8px]"
                             aria-label="Close login"
                         >
-                            <img src={imgIcon24} alt="" className="h-[20px] w-[20px]" />
+                            <Image src={imgIcon24} alt="" width={20} height={20} unoptimized className="h-[20px] w-[20px]" />
                         </Link>
                     </div>
 
@@ -171,7 +171,7 @@ export default function SignInOverlay() {
                         <label className="flex flex-col gap-[4px] text-[14px] text-[#0a0a0a]">
                             Email Address
                             <div className="relative">
-                                <img src={imgIcon25} alt="" className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
+                                <Image src={imgIcon25} alt="" width={16} height={16} unoptimized className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
                                 <input
                                     type="email"
                                     value={email}
@@ -185,7 +185,7 @@ export default function SignInOverlay() {
                         <label className="flex flex-col gap-[4px] text-[14px] text-[#0a0a0a]">
                             Organization Name
                             <div className="relative">
-                                <img src={imgIcon26} alt="" className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
+                                <Image src={imgIcon26} alt="" width={16} height={16} unoptimized className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
                                 <input
                                     type="text"
                                     value={orgName}
@@ -202,7 +202,7 @@ export default function SignInOverlay() {
                         <label className="flex flex-col gap-[4px] text-[14px] text-[#0a0a0a]">
                             License Code
                             <div className="relative">
-                                <img src={imgIcon28} alt="" className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
+                                <Image src={imgIcon28} alt="" width={16} height={16} unoptimized className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
                                 <input
                                     type="text"
                                     value={licenseCode}
@@ -217,7 +217,7 @@ export default function SignInOverlay() {
                         <label className="flex flex-col gap-[4px] text-[14px] text-[#0a0a0a]">
                             Password
                             <div className="relative">
-                                <img src={imgIcon27} alt="" className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
+                                <Image src={imgIcon27} alt="" width={16} height={16} unoptimized className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
                                 <input
                                     type="password"
                                     value={password}
@@ -249,7 +249,7 @@ export default function SignInOverlay() {
                             disabled={disabled}
                         >
                             {submitting ? "Signing In..." : "Sign In"}
-                            <img src={imgIcon23} alt="" className="h-[16px] w-[16px]" />
+                            <Image src={imgIcon23} alt="" width={16} height={16} unoptimized className="h-[16px] w-[16px]" />
                         </button>
 
                         {error && <div className="text-[12px] text-[#b42318]">{error}</div>}
