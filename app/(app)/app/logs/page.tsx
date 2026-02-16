@@ -50,6 +50,7 @@ export default function MaintenanceLogsPage() {
     const [upcomingTasks, setUpcomingTasks] = useState<UpcomingTask[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
     function mapStatus(status: string): LogStatus {
@@ -68,10 +69,21 @@ export default function MaintenanceLogsPage() {
         }
 
         setError(null);
+        setIntegrationMessage(null);
         setIsLoading(true);
         try {
             const response = await fetch(`/api/logs/${aircraftReg}`);
             if (!response.ok) {
+                if (response.status === 503) {
+                    const data = await response.json().catch(() => ({}));
+                    setIntegrationMessage(
+                        data?.error || "Maintenance logs are unavailable until the CMMS integration is configured."
+                    );
+                    setLogs([]);
+                    setUpcomingTasks([]);
+                    setLastUpdated(null);
+                    return;
+                }
                 throw new Error("Unable to load maintenance logs from the live service.");
             }
 
@@ -124,6 +136,11 @@ export default function MaintenanceLogsPage() {
                     <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
                         {aircraftReg ? `Maintenance Logs - ${aircraftReg}` : "Maintenance Logs"}
                     </h1>
+                    {integrationMessage ? (
+                        <p className="mt-2 text-xs text-slate-600">
+                            {integrationMessage}
+                        </p>
+                    ) : null}
                     {error ? (
                         <p className="mt-2 text-xs text-red-600">{error}</p>
                     ) : null}
