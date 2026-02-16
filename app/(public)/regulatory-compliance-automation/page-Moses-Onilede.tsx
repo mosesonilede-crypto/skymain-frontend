@@ -151,7 +151,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                         }}
                     >
                         Automated visibility and tracking tools that help maintenance organizations stay
-                        aligned with regulatory requirementsâ€”without replacing professional judgment.
+                        aligned with regulatory requirements--without replacing professional judgment.
                     </p>
                 </section>
 
@@ -446,7 +446,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                             className="text-center"
                             style={{ fontSize: "20px", lineHeight: "32.5px", color: "#364153", maxWidth: "679px" }}
                         >
-                            SkyMaintain is intentionally designed to supportâ€”not substituteâ€”regulatory
+                            SkyMaintain is intentionally designed to support--not substitute--regulatory
                             accountability.
                         </p>
                     </div>
@@ -644,7 +644,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                             style={{ fontSize: "20px", lineHeight: "32.5px", maxWidth: "838px" }}
                         >
                             Discover how structured automation can improve oversight, accountability, and audit
-                            readinessâ€”without sacrificing regulatory integrity.
+                            readiness--without sacrificing regulatory integrity.
                         </p>
 
                         <div className="flex items-center gap-4">
@@ -725,7 +725,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                             className="text-center"
                             style={{ fontSize: "14px", lineHeight: "20px", color: "#d1d5dc" }}
                         >
-                            Â© 2026 SkyMaintain. All rights reserved.
+                            (c) 2026 SkyMaintain. All rights reserved.
                         </p>
                         <p
                             className="text-center"

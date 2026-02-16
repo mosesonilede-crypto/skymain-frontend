@@ -17,8 +17,6 @@ import {
     X,
 } from "lucide-react";
 
-type DataMode = "mock" | "live" | "hybrid";
-
 type AdminKpis = {
     totalAircraft: number;
     activeUsers: number;
@@ -87,28 +85,6 @@ const USER_ROLES = ["Admin", "Fleet Manager", "Maintenance Engineer", "Viewer"];
 function getPublicEnv(name: string, fallback: string) {
     const v = process.env[name];
     return (v ?? fallback).trim();
-}
-
-function normalizeMode(value: string): DataMode {
-    if (value === "live" || value === "hybrid" || value === "mock") return value;
-    return "mock";
-}
-
-function mockPayload(): AdminPanelPayload {
-    return {
-        kpis: { totalAircraft: 24, activeUsers: 45, maintenanceRecords: 1234, complianceRatePct: 98 },
-        users: [
-            { name: "John Anderson", email: "john.anderson@skywings.com", role: "Admin", status: "Active" },
-            { name: "Sarah Mitchell", email: "sarah.mitchell@skywings.com", role: "Fleet Manager", status: "Active" },
-            { name: "Michael Chen", email: "michael.chen@skywings.com", role: "Maintenance Engineer", status: "Active" },
-        ],
-        system: {
-            licenseStatus: "Active",
-            licenseExpires: "December 31, 2026",
-            storageUsedGb: 42.5,
-            storageTotalGb: 100,
-        },
-    };
 }
 
 async function fetchLive(baseUrl: string): Promise<AdminPanelPayload> {
@@ -237,12 +213,15 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function RegisterAircraftPage() {
     const router = useRouter();
-    const mode = useMemo(() => normalizeMode(getPublicEnv("NEXT_PUBLIC_DATA_MODE", "mock")), []);
     const baseUrl = useMemo(() => getPublicEnv("NEXT_PUBLIC_API_BASE_URL", ""), []);
 
     const [activeTab, setActiveTab] = useState<"overview" | "billing">("overview");
-    const [payload, setPayload] = useState<AdminPanelPayload>(() => mockPayload());
-    const [loading, setLoading] = useState<boolean>(mode !== "mock");
+    const [payload, setPayload] = useState<AdminPanelPayload>({
+        kpis: { totalAircraft: 0, activeUsers: 0, maintenanceRecords: 0, complianceRatePct: 0 },
+        users: [],
+        system: { licenseStatus: "Unknown", licenseExpires: "", storageUsedGb: 0, storageTotalGb: 0 },
+    });
+    const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>("");
 
     // Register Aircraft Form State
@@ -296,14 +275,8 @@ export default function RegisterAircraftPage() {
         async function run() {
             setError("");
 
-            if (mode === "mock") {
-                setPayload(mockPayload());
-                setLoading(false);
-                return;
-            }
-
             if (!baseUrl) {
-                setPayload(mockPayload());
+                setError("Admin connector base URL is not configured.");
                 setLoading(false);
                 return;
             }
@@ -316,7 +289,11 @@ export default function RegisterAircraftPage() {
                 setPayload(live);
             } catch (e) {
                 if (cancelled) return;
-                setPayload(mockPayload());
+                setPayload({
+                    kpis: { totalAircraft: 0, activeUsers: 0, maintenanceRecords: 0, complianceRatePct: 0 },
+                    users: [],
+                    system: { licenseStatus: "Unknown", licenseExpires: "", storageUsedGb: 0, storageTotalGb: 0 },
+                });
                 setError(e instanceof Error ? e.message : "Failed to load live data");
             } finally {
                 if (!cancelled) setLoading(false);
@@ -327,7 +304,7 @@ export default function RegisterAircraftPage() {
         return () => {
             cancelled = true;
         };
-    }, [mode, baseUrl]);
+    }, [baseUrl]);
 
     const used = payload.system.storageUsedGb;
     const total = payload.system.storageTotalGb;

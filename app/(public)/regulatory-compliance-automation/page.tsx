@@ -725,7 +725,7 @@ export default function RegulatoryComplianceAutomationPage(): React.ReactElement
                             className="text-center"
                             style={{ fontSize: "14px", lineHeight: "20px", color: "#d1d5dc" }}
                         >
-                            Â© 2026 SkyMaintain. All rights reserved.
+                            (c) 2026 SkyMaintain. All rights reserved.
                         </p>
                         <p
                             className="text-center"

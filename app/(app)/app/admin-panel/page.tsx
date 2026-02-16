@@ -1,12 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { isAdminRole, resolveSessionRole } from "@/lib/auth/roles";
-
-type DataMode = "mock" | "live" | "hybrid";
 
 type AdminKpis = {
     totalAircraft: number;
@@ -61,30 +59,7 @@ function getPublicEnv(name: string, fallback: string) {
     return (v ?? fallback).trim();
 }
 
-function normalizeMode(value: string): DataMode {
-    if (value === "live" || value === "hybrid" || value === "mock") return value;
-    return "live";
-}
-
-function mockPayload(): AdminPanelPayload {
-    return {
-        kpis: { totalAircraft: 24, activeUsers: 45, maintenanceRecords: 1234, complianceRatePct: 98 },
-        users: [
-            { name: "John Anderson", email: "john.anderson@skywings.com", role: "Admin", status: "Active" },
-            { name: "Sarah Mitchell", email: "sarah.mitchell@skywings.com", role: "Fleet Manager", status: "Active" },
-            { name: "Michael Chen", email: "michael.chen@skywings.com", role: "Maintenance Engineer", status: "Active" },
-        ],
-        system: {
-            licenseStatus: "Active",
-            licenseExpires: "December 31, 2026",
-            storageUsedGb: 42.5,
-            storageTotalGb: 100,
-        },
-    };
-}
-
-async function fetchLive(baseUrl: string): Promise<AdminPanelPayload> {
-    void baseUrl;
+async function fetchLive(): Promise<AdminPanelPayload> {
     // Use local API endpoint
     const url = "/api/admin";
     const res = await fetch(url, {
@@ -124,7 +99,7 @@ async function registerAircraftLive(baseUrl: string, form: RegisterAircraftForm)
 
     if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(`POST /v1/admin/aircraft failed: ${res.status}${text ? ` • ${text}` : ""}`);
+        throw new Error(`POST /v1/admin/aircraft failed: ${res.status}${text ? ` - ${text}` : ""}`);
     }
 }
 
@@ -236,98 +211,6 @@ type AuditLogFilter = {
     user: string;
 };
 
-// Generate mock audit logs for demonstration
-function generateMockAuditLogs(): AuditLogEntry[] {
-    const now = new Date();
-    const logs: AuditLogEntry[] = [];
-
-    const actions: AuditLogEntry["action"][] = ["CREATE", "UPDATE", "DELETE", "VIEW", "EXPORT", "LOGIN", "LOGOUT"];
-    const categories: AuditLogEntry["category"][] = ["Aircraft", "Maintenance", "User", "Compliance", "System", "Report"];
-    const users = [
-        { name: "John Anderson", role: "Admin" },
-        { name: "Sarah Mitchell", role: "Fleet Manager" },
-        { name: "Michael Chen", role: "Maintenance Engineer" },
-        { name: "Emily Davis", role: "Compliance Officer" },
-    ];
-
-    const descriptions: Record<string, string[]> = {
-        Aircraft: [
-            "Aircraft N123XY registration data updated",
-            "New aircraft N456AB added to fleet",
-            "Aircraft N789CD status changed to In Maintenance",
-            "Aircraft N321EF compliance documents uploaded",
-            "Aircraft inspection schedule modified",
-        ],
-        Maintenance: [
-            "Maintenance log entry created for A-Check",
-            "Work order #WO-2026-0142 completed",
-            "Parts replacement recorded for landing gear",
-            "Engine borescope inspection logged",
-            "Maintenance schedule updated",
-        ],
-        User: [
-            "User account created for new technician",
-            "User role permissions modified",
-            "User access revoked",
-            "Password reset initiated",
-            "Two-factor authentication enabled",
-        ],
-        Compliance: [
-            "AD compliance status updated",
-            "Regulatory document submitted to FAA",
-            "Compliance certificate renewed",
-            "Audit trail exported for review",
-            "SB implementation recorded",
-        ],
-        System: [
-            "System backup completed successfully",
-            "Security settings updated",
-            "API access token generated",
-            "Database maintenance performed",
-            "System configuration changed",
-        ],
-        Report: [
-            "Monthly compliance report generated",
-            "Fleet status report exported",
-            "Maintenance cost analysis downloaded",
-            "Audit report prepared for FAA review",
-            "Incident report filed",
-        ],
-    };
-
-    // Generate 50 mock log entries over the past 30 days
-    for (let i = 0; i < 50; i++) {
-        const daysAgo = Math.floor(Math.random() * 30);
-        const hoursAgo = Math.floor(Math.random() * 24);
-        const minutesAgo = Math.floor(Math.random() * 60);
-
-        const logDate = new Date(now);
-        logDate.setDate(logDate.getDate() - daysAgo);
-        logDate.setHours(logDate.getHours() - hoursAgo);
-        logDate.setMinutes(logDate.getMinutes() - minutesAgo);
-
-        const category = categories[Math.floor(Math.random() * categories.length)];
-        const action = actions[Math.floor(Math.random() * actions.length)];
-        const user = users[Math.floor(Math.random() * users.length)];
-        const descList = descriptions[category];
-        const description = descList[Math.floor(Math.random() * descList.length)];
-
-        logs.push({
-            id: `LOG-${String(i + 1).padStart(5, "0")}`,
-            timestamp: logDate.toISOString(),
-            action,
-            category,
-            description,
-            user: user.name,
-            userRole: user.role,
-            ipAddress: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-        });
-    }
-
-    // Sort by timestamp descending (most recent first)
-    return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-}
-
 function RegulatoryAuditLogsSection() {
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [authCode, setAuthCode] = useState("");
@@ -348,27 +231,15 @@ function RegulatoryAuditLogsSection() {
 
     const [showPreview, setShowPreview] = useState(false);
 
-    // Simulated authorization codes (in production, this would be validated server-side)
-    const validAuthCodes = ["FAA-AUDIT-2026", "EASA-AUDIT-2026", "ADMIN-SUPER-ACCESS"];
-
     function handleAuthorize() {
         setAuthError("");
-        if (validAuthCodes.includes(authCode.toUpperCase().trim())) {
-            setIsAuthorized(true);
-            setIsExpanded(true);
-            loadLogs();
-        } else {
-            setAuthError("Invalid authorization code. Contact your system administrator for access.");
-        }
+        setAuthError("Audit log access requires a configured compliance service.");
     }
 
     function loadLogs() {
         setIsLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-            setLogs(generateMockAuditLogs());
-            setIsLoading(false);
-        }, 500);
+        setLogs([]);
+        setIsLoading(false);
     }
 
     function handleRevokeAccess() {
@@ -795,279 +666,8 @@ type AccessCode = {
     lastUsedIp: string | null;
     createdBy: string;
 };
-
-type CodeUsageLog = {
-    id: string;
-    codeId: string;
-    code: string;
-    agency: string;
-    usedAt: string;
-    usedBy: string;
-    ipAddress: string;
-    action: string;
-    success: boolean;
-};
-
-// Generate initial mock access codes
-function generateMockAccessCodes(): AccessCode[] {
-    return [
-        {
-            id: "AC-001",
-            code: "FAA-AUDIT-2026",
-            agency: "FAA",
-            agencyName: "Federal Aviation Administration",
-            contactName: "Robert Thompson",
-            contactEmail: "r.thompson@faa.gov",
-            purpose: "Annual safety audit and compliance review",
-            createdAt: "2026-01-15T09:00:00Z",
-            expiresAt: "2026-12-31T23:59:59Z",
-            usageLimit: "multi",
-            usageCount: 3,
-            maxUsageCount: 10,
-            status: "active",
-            lastUsedAt: "2026-02-05T14:30:00Z",
-            lastUsedBy: "Robert Thompson",
-            lastUsedIp: "203.0.113.45",
-            createdBy: "John Anderson",
-        },
-        {
-            id: "AC-002",
-            code: "EASA-AUDIT-2026",
-            agency: "EASA",
-            agencyName: "European Union Aviation Safety Agency",
-            contactName: "Marie Dubois",
-            contactEmail: "m.dubois@easa.europa.eu",
-            purpose: "EU regulatory compliance verification",
-            createdAt: "2026-01-20T10:00:00Z",
-            expiresAt: "2026-06-30T23:59:59Z",
-            usageLimit: "multi",
-            usageCount: 1,
-            maxUsageCount: 5,
-            status: "active",
-            lastUsedAt: "2026-01-25T11:15:00Z",
-            lastUsedBy: "Marie Dubois",
-            lastUsedIp: "192.0.2.100",
-            createdBy: "John Anderson",
-        },
-        {
-            id: "AC-003",
-            code: "CAAC-INV-2026-001",
-            agency: "CAAC",
-            agencyName: "Civil Aviation Administration of China",
-            contactName: "Wei Zhang",
-            contactEmail: "w.zhang@caac.gov.cn",
-            purpose: "Incident investigation - Flight SM2024-1234",
-            createdAt: "2026-02-01T08:00:00Z",
-            expiresAt: "2026-02-28T23:59:59Z",
-            usageLimit: "single",
-            usageCount: 1,
-            maxUsageCount: 1,
-            status: "exhausted",
-            lastUsedAt: "2026-02-03T09:45:00Z",
-            lastUsedBy: "Wei Zhang",
-            lastUsedIp: "198.51.100.75",
-            createdBy: "Sarah Mitchell",
-        },
-        {
-            id: "AC-004",
-            code: "ADMIN-SUPER-ACCESS",
-            agency: "Other",
-            agencyName: "SkyMaintain Internal",
-            contactName: "System Administrator",
-            contactEmail: "admin@skymaintain.ai",
-            purpose: "Internal system administration and testing",
-            createdAt: "2026-01-01T00:00:00Z",
-            expiresAt: "2026-12-31T23:59:59Z",
-            usageLimit: "unlimited",
-            usageCount: 15,
-            maxUsageCount: null,
-            status: "active",
-            lastUsedAt: "2026-02-08T10:00:00Z",
-            lastUsedBy: "John Anderson",
-            lastUsedIp: "192.168.1.100",
-            createdBy: "System",
-        },
-    ];
-}
-
-// Generate mock usage logs
-function generateMockUsageLogs(): CodeUsageLog[] {
-    return [
-        {
-            id: "UL-001",
-            codeId: "AC-001",
-            code: "FAA-AUDIT-2026",
-            agency: "FAA",
-            usedAt: "2026-02-05T14:30:00Z",
-            usedBy: "Robert Thompson",
-            ipAddress: "203.0.113.45",
-            action: "Audit logs downloaded (CSV format)",
-            success: true,
-        },
-        {
-            id: "UL-002",
-            codeId: "AC-001",
-            code: "FAA-AUDIT-2026",
-            agency: "FAA",
-            usedAt: "2026-02-02T10:15:00Z",
-            usedBy: "Robert Thompson",
-            ipAddress: "203.0.113.45",
-            action: "Viewed audit log preview",
-            success: true,
-        },
-        {
-            id: "UL-003",
-            codeId: "AC-002",
-            code: "EASA-AUDIT-2026",
-            agency: "EASA",
-            usedAt: "2026-01-25T11:15:00Z",
-            usedBy: "Marie Dubois",
-            ipAddress: "192.0.2.100",
-            action: "Audit logs downloaded (JSON format)",
-            success: true,
-        },
-        {
-            id: "UL-004",
-            codeId: "AC-003",
-            code: "CAAC-INV-2026-001",
-            agency: "CAAC",
-            usedAt: "2026-02-03T09:45:00Z",
-            usedBy: "Wei Zhang",
-            ipAddress: "198.51.100.75",
-            action: "Full audit trail exported for investigation",
-            success: true,
-        },
-        {
-            id: "UL-005",
-            codeId: "AC-004",
-            code: "ADMIN-SUPER-ACCESS",
-            agency: "Internal",
-            usedAt: "2026-02-08T10:00:00Z",
-            usedBy: "John Anderson",
-            ipAddress: "192.168.1.100",
-            action: "System testing - audit log access",
-            success: true,
-        },
-    ];
-}
-
 function AccessCodeManagementSection() {
-    const [accessCodes, setAccessCodes] = useState<AccessCode[]>(() => generateMockAccessCodes());
-    const [usageLogs, setUsageLogs] = useState<CodeUsageLog[]>(() => generateMockUsageLogs());
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-    const [isUsageLogModalOpen, setIsUsageLogModalOpen] = useState(false);
-    const [selectedCode, setSelectedCode] = useState<AccessCode | null>(null);
-    const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
-    const [filterStatus, setFilterStatus] = useState<string>("all");
-
-    // Form state for creating new code
-    const [newCodeForm, setNewCodeForm] = useState({
-        agency: "" as RegulatoryAgency | "",
-        agencyName: "",
-        contactName: "",
-        contactEmail: "",
-        purpose: "",
-        expiresAt: "",
-        usageLimit: "multi" as "single" | "multi" | "unlimited",
-        maxUsageCount: "5",
-    });
-
-    const agencyOptions: { value: RegulatoryAgency; label: string }[] = [
-        { value: "FAA", label: "FAA - Federal Aviation Administration (USA)" },
-        { value: "EASA", label: "EASA - European Union Aviation Safety Agency" },
-        { value: "CAAC", label: "CAAC - Civil Aviation Administration of China" },
-        { value: "TCCA", label: "TCCA - Transport Canada Civil Aviation" },
-        { value: "CASA", label: "CASA - Civil Aviation Safety Authority (Australia)" },
-        { value: "ANAC", label: "ANAC - Agência Nacional de Aviação Civil (Brazil)" },
-        { value: "DGCA", label: "DGCA - Directorate General of Civil Aviation (India)" },
-        { value: "Other", label: "Other Regulatory Agency" },
-    ];
-
-    function showNotification(type: "success" | "error", message: string) {
-        setNotification({ type, message });
-        setTimeout(() => setNotification(null), 4000);
-    }
-
-    function generateAccessCode(agency: string): string {
-        const prefix = agency.toUpperCase();
-        const year = new Date().getFullYear();
-        const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-        return `${prefix}-${year}-${random}`;
-    }
-
-    function handleCreateCode() {
-        if (!newCodeForm.agency || !newCodeForm.contactName || !newCodeForm.contactEmail || !newCodeForm.purpose || !newCodeForm.expiresAt) {
-            showNotification("error", "Please fill in all required fields.");
-            return;
-        }
-
-        const code = generateAccessCode(newCodeForm.agency);
-        const now = new Date().toISOString();
-
-        const newCode: AccessCode = {
-            id: `AC-${String(accessCodes.length + 1).padStart(3, "0")}`,
-            code,
-            agency: newCodeForm.agency as RegulatoryAgency,
-            agencyName: newCodeForm.agencyName || agencyOptions.find(a => a.value === newCodeForm.agency)?.label.split(" - ")[1] || newCodeForm.agency,
-            contactName: newCodeForm.contactName,
-            contactEmail: newCodeForm.contactEmail,
-            purpose: newCodeForm.purpose,
-            createdAt: now,
-            expiresAt: new Date(newCodeForm.expiresAt + "T23:59:59Z").toISOString(),
-            usageLimit: newCodeForm.usageLimit,
-            usageCount: 0,
-            maxUsageCount: newCodeForm.usageLimit === "unlimited" ? null : parseInt(newCodeForm.maxUsageCount) || 5,
-            status: "active",
-            lastUsedAt: null,
-            lastUsedBy: null,
-            lastUsedIp: null,
-            createdBy: "John Anderson", // Would come from auth context in production
-        };
-
-        setAccessCodes(prev => [newCode, ...prev]);
-        setIsCreateModalOpen(false);
-        setNewCodeForm({
-            agency: "",
-            agencyName: "",
-            contactName: "",
-            contactEmail: "",
-            purpose: "",
-            expiresAt: "",
-            usageLimit: "multi",
-            maxUsageCount: "5",
-        });
-        showNotification("success", `Access code ${code} generated successfully.`);
-    }
-
-    function handleRevokeCode(codeId: string) {
-        setAccessCodes(prev => prev.map(c =>
-            c.id === codeId ? { ...c, status: "revoked" as const } : c
-        ));
-        showNotification("success", "Access code has been revoked.");
-    }
-
-    function handleViewCode(code: AccessCode) {
-        setSelectedCode(code);
-        setIsViewModalOpen(true);
-    }
-
-    function copyToClipboard(text: string) {
-        navigator.clipboard.writeText(text);
-        showNotification("success", "Code copied to clipboard.");
-    }
-
-    const filteredCodes = accessCodes.filter(code => {
-        if (filterStatus === "all") return true;
-        return code.status === filterStatus;
-    });
-
-    const statusColors: Record<AccessCode["status"], string> = {
-        active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-        expired: "bg-slate-50 text-slate-600 border-slate-200",
-        revoked: "bg-rose-50 text-rose-700 border-rose-200",
-        exhausted: "bg-amber-50 text-amber-700 border-amber-200",
-    };
+    const accessCodes: AccessCode[] = [];
 
     return (
         <section className="lg:col-span-12 rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
@@ -1087,8 +687,8 @@ function AccessCodeManagementSection() {
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => setIsUsageLogModalOpen(true)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                        disabled
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-400"
                     >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -1097,8 +697,8 @@ function AccessCodeManagementSection() {
                     </button>
                     <button
                         type="button"
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
+                        disabled
+                        className="inline-flex items-center gap-2 rounded-xl bg-slate-200 px-3 py-2 text-sm font-medium text-slate-500"
                     >
                         <span aria-hidden="true">+</span>
                         Generate Code
@@ -1106,35 +706,10 @@ function AccessCodeManagementSection() {
                 </div>
             </div>
 
-            {/* Notification */}
-            {notification && (
-                <div className={`mt-4 rounded-lg border px-4 py-3 text-sm ${notification.type === "success"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-rose-200 bg-rose-50 text-rose-700"
-                    }`}>
-                    {notification.message}
-                </div>
-            )}
-
-            {/* Filter */}
-            <div className="mt-4 flex items-center gap-2">
-                <span className="text-xs text-slate-500">Filter:</span>
-                {["all", "active", "expired", "revoked", "exhausted"].map((status) => (
-                    <button
-                        key={status}
-                        type="button"
-                        onClick={() => setFilterStatus(status)}
-                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${filterStatus === status
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                            }`}
-                    >
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </button>
-                ))}
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Access code management is available once the compliance service is configured.
             </div>
 
-            {/* Codes Table */}
             <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
@@ -1150,435 +725,21 @@ function AccessCodeManagementSection() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
-                            {filteredCodes.length === 0 ? (
+                            {accessCodes.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                                        No access codes found.
+                                        No access codes available.
                                     </td>
                                 </tr>
-                            ) : (
-                                filteredCodes.map((code) => (
-                                    <tr key={code.id} className="hover:bg-slate-50/50">
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-700">
-                                                    {code.code}
-                                                </code>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => copyToClipboard(code.code)}
-                                                    className="text-slate-400 hover:text-slate-600"
-                                                    title="Copy code"
-                                                >
-                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="text-sm font-medium text-slate-900">{code.agency}</div>
-                                            <div className="text-xs text-slate-500 truncate max-w-[150px]" title={code.agencyName}>
-                                                {code.agencyName}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="text-sm text-slate-900">{code.contactName}</div>
-                                            <div className="text-xs text-slate-500">{code.contactEmail}</div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="text-sm text-slate-700">
-                                                {code.usageLimit === "unlimited"
-                                                    ? `${code.usageCount} uses`
-                                                    : `${code.usageCount} / ${code.maxUsageCount}`
-                                                }
-                                            </div>
-                                            <div className="text-xs text-slate-500">
-                                                {code.usageLimit === "single" ? "Single use" :
-                                                    code.usageLimit === "multi" ? "Multi-use" : "Unlimited"}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-slate-700">
-                                            {new Date(code.expiresAt).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusColors[code.status]}`}>
-                                                {code.status.charAt(0).toUpperCase() + code.status.slice(1)}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleViewCode(code)}
-                                                    className="text-sm font-medium text-slate-700 hover:text-slate-900"
-                                                >
-                                                    View
-                                                </button>
-                                                {code.status === "active" && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRevokeCode(code.id)}
-                                                        className="text-sm font-medium text-rose-600 hover:text-rose-700"
-                                                    >
-                                                        Revoke
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                            ) : null}
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <p className="mt-3 text-xs text-slate-500">
-                Share generated codes securely with regulatory agency contacts. Codes are validated server-side before granting access.
+                Codes are issued by the compliance service and validated server-side before granting access.
             </p>
-
-            {/* Create Code Modal */}
-            {isCreateModalOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4"
-                    role="dialog"
-                    aria-modal="true"
-                    onMouseDown={(e) => e.target === e.currentTarget && setIsCreateModalOpen(false)}
-                >
-                    <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
-                            <div>
-                                <div className="text-sm font-semibold text-slate-900">Generate Access Code</div>
-                                <div className="mt-1 text-sm text-slate-600">Create a new code for regulatory agency access</div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsCreateModalOpen(false)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                            >
-                                ×
-                            </button>
-                        </div>
-
-                        <div className="space-y-4 p-5">
-                            <div>
-                                <label className="text-xs font-semibold text-slate-700">
-                                    Regulatory Agency <span className="text-rose-600">*</span>
-                                </label>
-                                <select
-                                    value={newCodeForm.agency}
-                                    onChange={(e) => setNewCodeForm(f => ({ ...f, agency: e.target.value as RegulatoryAgency }))}
-                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                >
-                                    <option value="">Select agency...</option>
-                                    {agencyOptions.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {newCodeForm.agency === "Other" && (
-                                <div>
-                                    <label className="text-xs font-semibold text-slate-700">Agency Name</label>
-                                    <input
-                                        type="text"
-                                        value={newCodeForm.agencyName}
-                                        onChange={(e) => setNewCodeForm(f => ({ ...f, agencyName: e.target.value }))}
-                                        placeholder="Enter agency name"
-                                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                    />
-                                </div>
-                            )}
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label className="text-xs font-semibold text-slate-700">
-                                        Contact Name <span className="text-rose-600">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={newCodeForm.contactName}
-                                        onChange={(e) => setNewCodeForm(f => ({ ...f, contactName: e.target.value }))}
-                                        placeholder="Full name"
-                                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-semibold text-slate-700">
-                                        Contact Email <span className="text-rose-600">*</span>
-                                    </label>
-                                    <input
-                                        type="email"
-                                        value={newCodeForm.contactEmail}
-                                        onChange={(e) => setNewCodeForm(f => ({ ...f, contactEmail: e.target.value }))}
-                                        placeholder="email@agency.gov"
-                                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-semibold text-slate-700">
-                                    Purpose <span className="text-rose-600">*</span>
-                                </label>
-                                <textarea
-                                    value={newCodeForm.purpose}
-                                    onChange={(e) => setNewCodeForm(f => ({ ...f, purpose: e.target.value }))}
-                                    placeholder="e.g., Annual compliance audit, Incident investigation..."
-                                    rows={2}
-                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                />
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label className="text-xs font-semibold text-slate-700">
-                                        Expiration Date <span className="text-rose-600">*</span>
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={newCodeForm.expiresAt}
-                                        onChange={(e) => setNewCodeForm(f => ({ ...f, expiresAt: e.target.value }))}
-                                        min={new Date().toISOString().split("T")[0]}
-                                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-semibold text-slate-700">Usage Limit</label>
-                                    <select
-                                        value={newCodeForm.usageLimit}
-                                        onChange={(e) => setNewCodeForm(f => ({ ...f, usageLimit: e.target.value as "single" | "multi" | "unlimited" }))}
-                                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                    >
-                                        <option value="single">Single Use</option>
-                                        <option value="multi">Multi-Use (Limited)</option>
-                                        <option value="unlimited">Unlimited</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {newCodeForm.usageLimit === "multi" && (
-                                <div>
-                                    <label className="text-xs font-semibold text-slate-700">Maximum Uses</label>
-                                    <input
-                                        type="number"
-                                        value={newCodeForm.maxUsageCount}
-                                        onChange={(e) => setNewCodeForm(f => ({ ...f, maxUsageCount: e.target.value }))}
-                                        min="1"
-                                        max="100"
-                                        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                    />
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex items-center justify-end gap-3 border-t border-slate-200 p-5">
-                            <button
-                                type="button"
-                                onClick={() => setIsCreateModalOpen(false)}
-                                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleCreateCode}
-                                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-                            >
-                                Generate Code
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* View Code Details Modal */}
-            {isViewModalOpen && selectedCode && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4"
-                    role="dialog"
-                    aria-modal="true"
-                    onMouseDown={(e) => e.target === e.currentTarget && setIsViewModalOpen(false)}
-                >
-                    <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
-                            <div>
-                                <div className="text-sm font-semibold text-slate-900">Access Code Details</div>
-                                <div className="mt-1 flex items-center gap-2">
-                                    <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-700">
-                                        {selectedCode.code}
-                                    </code>
-                                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusColors[selectedCode.status]}`}>
-                                        {selectedCode.status.charAt(0).toUpperCase() + selectedCode.status.slice(1)}
-                                    </span>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsViewModalOpen(false)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                            >
-                                ×
-                            </button>
-                        </div>
-
-                        <div className="p-5 space-y-4">
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <div className="text-xs font-semibold text-slate-500 uppercase">Agency</div>
-                                    <div className="mt-1 text-sm text-slate-900">{selectedCode.agency}</div>
-                                    <div className="text-xs text-slate-500">{selectedCode.agencyName}</div>
-                                </div>
-                                <div>
-                                    <div className="text-xs font-semibold text-slate-500 uppercase">Contact</div>
-                                    <div className="mt-1 text-sm text-slate-900">{selectedCode.contactName}</div>
-                                    <div className="text-xs text-slate-500">{selectedCode.contactEmail}</div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div className="text-xs font-semibold text-slate-500 uppercase">Purpose</div>
-                                <div className="mt-1 text-sm text-slate-900">{selectedCode.purpose}</div>
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-3">
-                                <div>
-                                    <div className="text-xs font-semibold text-slate-500 uppercase">Created</div>
-                                    <div className="mt-1 text-sm text-slate-900">
-                                        {new Date(selectedCode.createdAt).toLocaleDateString()}
-                                    </div>
-                                    <div className="text-xs text-slate-500">by {selectedCode.createdBy}</div>
-                                </div>
-                                <div>
-                                    <div className="text-xs font-semibold text-slate-500 uppercase">Expires</div>
-                                    <div className="mt-1 text-sm text-slate-900">
-                                        {new Date(selectedCode.expiresAt).toLocaleDateString()}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-xs font-semibold text-slate-500 uppercase">Usage</div>
-                                    <div className="mt-1 text-sm text-slate-900">
-                                        {selectedCode.usageLimit === "unlimited"
-                                            ? `${selectedCode.usageCount} uses`
-                                            : `${selectedCode.usageCount} / ${selectedCode.maxUsageCount}`
-                                        }
-                                    </div>
-                                    <div className="text-xs text-slate-500">
-                                        {selectedCode.usageLimit === "single" ? "Single use" :
-                                            selectedCode.usageLimit === "multi" ? "Multi-use" : "Unlimited"}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {selectedCode.lastUsedAt && (
-                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                    <div className="text-xs font-semibold text-slate-500 uppercase mb-2">Last Used</div>
-                                    <div className="text-sm text-slate-900">
-                                        {new Date(selectedCode.lastUsedAt).toLocaleString()}
-                                    </div>
-                                    <div className="text-xs text-slate-500">
-                                        by {selectedCode.lastUsedBy} from {selectedCode.lastUsedIp}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex items-center justify-end gap-3 border-t border-slate-200 p-5">
-                            <button
-                                type="button"
-                                onClick={() => copyToClipboard(selectedCode.code)}
-                                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                            >
-                                Copy Code
-                            </button>
-                            {selectedCode.status === "active" && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        handleRevokeCode(selectedCode.id);
-                                        setIsViewModalOpen(false);
-                                    }}
-                                    className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700"
-                                >
-                                    Revoke Code
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Usage Log Modal */}
-            {isUsageLogModalOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4"
-                    role="dialog"
-                    aria-modal="true"
-                    onMouseDown={(e) => e.target === e.currentTarget && setIsUsageLogModalOpen(false)}
-                >
-                    <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-xl max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
-                            <div>
-                                <div className="text-sm font-semibold text-slate-900">Code Usage Log</div>
-                                <div className="mt-1 text-sm text-slate-600">Track who accessed audit logs and when</div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsUsageLogModalOpen(false)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                            >
-                                ×
-                            </button>
-                        </div>
-
-                        <div className="p-5">
-                            <div className="overflow-hidden rounded-xl border border-slate-200">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                        <tr>
-                                            <th className="px-4 py-3">Timestamp</th>
-                                            <th className="px-4 py-3">Code</th>
-                                            <th className="px-4 py-3">Agency</th>
-                                            <th className="px-4 py-3">User</th>
-                                            <th className="px-4 py-3">Action</th>
-                                            <th className="px-4 py-3">IP Address</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-200 bg-white">
-                                        {usageLogs.map((log) => (
-                                            <tr key={log.id} className="hover:bg-slate-50/50">
-                                                <td className="px-4 py-3 text-xs text-slate-700">
-                                                    {new Date(log.usedAt).toLocaleString()}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <code className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-700">
-                                                        {log.code}
-                                                    </code>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-slate-700">{log.agency}</td>
-                                                <td className="px-4 py-3 text-sm text-slate-700">{log.usedBy}</td>
-                                                <td className="px-4 py-3 text-xs text-slate-600">{log.action}</td>
-                                                <td className="px-4 py-3 font-mono text-xs text-slate-500">{log.ipAddress}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-end border-t border-slate-200 p-5">
-                            <button
-                                type="button"
-                                onClick={() => setIsUsageLogModalOpen(false)}
-                                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </section>
     );
 }
@@ -1604,23 +765,17 @@ export default function AdminPanelPage() {
     });
     const canAccessAdminPanel = isAdminRole(resolvedRole);
 
-    const mode = useMemo(() => normalizeMode(getPublicEnv("NEXT_PUBLIC_DATA_MODE", "live")), []);
-    const allowMockFallback = useMemo(
-        () => getPublicEnv("NEXT_PUBLIC_ALLOW_MOCK_FALLBACK", "false") === "true",
-        []
-    );
     const baseUrl = useMemo(() => getPublicEnv("NEXT_PUBLIC_API_BASE_URL", ""), []);
-
-    const [source, setSource] = useState<"mock" | "live">(allowMockFallback ? "mock" : "live");
-    const [payload, setPayload] = useState<AdminPanelPayload>(() => (allowMockFallback ? mockPayload() : {
+    const source = "live";
+    const [payload, setPayload] = useState<AdminPanelPayload>(() => ({
         kpis: { totalAircraft: 0, activeUsers: 0, maintenanceRecords: 0, complianceRatePct: 0 },
         users: [],
         system: { licenseStatus: "Unknown", licenseExpires: "", storageUsedGb: 0, storageTotalGb: 0 },
     }));
-    const [loading, setLoading] = useState<boolean>(mode !== "mock" || !allowMockFallback);
+    const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>("");
 
-    const [userList, setUserList] = useState<AdminUser[]>(() => mockPayload().users);
+    const [userList, setUserList] = useState<AdminUser[]>([]);
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
     const [userFormError, setUserFormError] = useState<string>("");
     const [editingUserIndex, setEditingUserIndex] = useState<number | null>(null);
@@ -1684,50 +839,14 @@ export default function AdminPanelPage() {
 
         async function run() {
             setError("");
-
-            if (mode === "mock") {
-                if (allowMockFallback) {
-                    setPayload(mockPayload());
-                    setSource("mock");
-                } else {
-                    setError("Mock mode is disabled. Configure integrations for live data.");
-                }
-                setLoading(false);
-                return;
-            }
-
             setLoading(true);
 
-            if (mode === "live") {
-                try {
-                    const live = await fetchLive("");
-                    if (cancelled) return;
-                    setPayload(live);
-                    setSource("live");
-                } catch (e) {
-                    if (cancelled) return;
-                    if (allowMockFallback) {
-                        setPayload(mockPayload());
-                        setSource("mock");
-                    }
-                    setError(e instanceof Error ? e.message : "Failed to load live data");
-                } finally {
-                    if (!cancelled) setLoading(false);
-                }
-                return;
-            }
-
             try {
-                const live = await fetchLive("");
+                const live = await fetchLive();
                 if (cancelled) return;
                 setPayload(live);
-                setSource("live");
             } catch (e) {
                 if (cancelled) return;
-                if (allowMockFallback) {
-                    setPayload(mockPayload());
-                    setSource("mock");
-                }
                 setError(e instanceof Error ? e.message : "Failed to load live data");
             } finally {
                 if (!cancelled) setLoading(false);
@@ -1738,7 +857,7 @@ export default function AdminPanelPage() {
         return () => {
             cancelled = true;
         };
-    }, [mode, allowMockFallback]);
+    }, []);
 
     useEffect(() => {
         setUserList(payload.users);
@@ -1849,42 +968,16 @@ export default function AdminPanelPage() {
             return;
         }
 
+        if (!baseUrl) {
+            setSubmitError("Admin connector base URL is not configured.");
+            return;
+        }
+
         try {
             setSubmitting(true);
-
-            if (mode === "mock") {
-                if (allowMockFallback) {
-                    setIsRegisterOpen(false);
-                    resetForm();
-                    return;
-                }
-                setSubmitError("Mock mode is disabled. Configure live admin connector.");
-                return;
-            }
-
-            if (!baseUrl) {
-                setSubmitError("Admin connector base URL is not configured.");
-                return;
-            }
-
-            if (mode === "live") {
-                await registerAircraftLive(baseUrl, form);
-                setIsRegisterOpen(false);
-                resetForm();
-                return;
-            }
-
-            try {
-                await registerAircraftLive(baseUrl, form);
-                setIsRegisterOpen(false);
-                resetForm();
-            } catch (e) {
-                if (allowMockFallback) {
-                    setIsRegisterOpen(false);
-                    resetForm();
-                }
-                setError(e instanceof Error ? e.message : "Register aircraft failed (hybrid fallback).");
-            }
+            await registerAircraftLive(baseUrl, form);
+            setIsRegisterOpen(false);
+            resetForm();
         } catch (e) {
             setSubmitError(e instanceof Error ? e.message : "Failed to register aircraft.");
         } finally {
@@ -1914,7 +1007,7 @@ export default function AdminPanelPage() {
                         <div className="mt-1 text-sm text-slate-600">Overview &amp; Management</div>
                         <div className="mt-2 text-xs text-slate-500">
                             Data: {source}
-                            {loading ? " • loading…" : ""}
+                            {loading ? " - loading..." : ""}
                         </div>
                         {error ? (
                             <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -2153,7 +1246,7 @@ export default function AdminPanelPage() {
                                 aria-label="Close"
                                 onClick={() => setIsUserModalOpen(false)}
                             >
-                                ×
+                                x
                             </button>
                         </div>
 
@@ -2276,7 +1369,7 @@ export default function AdminPanelPage() {
                                     resetForm();
                                 }}
                             >
-                                ×
+                                x
                             </button>
                         </div>
 
@@ -2370,7 +1463,7 @@ export default function AdminPanelPage() {
                                                     className="mt-2 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
                                                 >
                                                     <span>{form.manufacturer || "Select Manufacturer"}</span>
-                                                    <span className="text-slate-400">›</span>
+                                                    <span className="text-slate-400">></span>
                                                 </button>
                                             </div>
 
@@ -2480,7 +1573,7 @@ export default function AdminPanelPage() {
                                 onClick={onRegisterAircraft}
                                 disabled={submitting}
                             >
-                                {submitting ? "Registering…" : "Register Aircraft"}
+                                {submitting ? "Registering..." : "Register Aircraft"}
                             </button>
                         </div>
                     </div>
