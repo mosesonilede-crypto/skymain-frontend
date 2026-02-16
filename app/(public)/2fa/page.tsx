@@ -53,7 +53,7 @@ export default function TwoFactorPage() {
     const { user, login } = useAuth();
 
     const [method, setMethod] = React.useState<"email" | "authenticator">("email");
-    const [email] = React.useState(user?.email || "manager@skywings.com");
+    const [email] = React.useState(user?.email || "");
     const [mockOTP, setMockOTP] = React.useState<string | null>(null);
     const [sendError, setSendError] = React.useState<string | null>(null);
     const [sendStatus, setSendStatus] = React.useState<string | null>(null);

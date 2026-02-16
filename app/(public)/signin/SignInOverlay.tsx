@@ -18,18 +18,6 @@ const imgIcon27 = "https://www.figma.com/api/mcp/asset/f443bf24-f6dc-4527-ae10-a
 const imgIcon28 = "https://www.figma.com/api/mcp/asset/ff69b9aa-edca-4462-aeb4-d16534a42f50";
 const imgIcon29 = "https://www.figma.com/api/mcp/asset/3a85baf1-9147-4b25-9ed7-ab17831e6589";
 
-const DEMO_FLEET = {
-    email: "manager@skywings.com",
-    org: "SkyWings Airlines",
-    password: "TestLogin!234",
-};
-
-const DEMO_ENGINEER = {
-    email: "engineer@skywings.com",
-    org: "SkyWings Airlines",
-    password: "TestLogin!234",
-};
-
 type DataMode = "mock" | "live" | "hybrid";
 
 function getDataMode(): DataMode {
@@ -272,43 +260,6 @@ export default function SignInOverlay() {
                     <div className="mt-[16px] text-center text-[14px] text-[#155dfc]">
                         <Link href="/get-started">Don&apos;t have an account? Sign up</Link>
                     </div>
-
-                    {/* Demo accounts - only shown in mock/development mode */}
-                    {mode === "mock" && (
-                        <div className="mt-[16px] rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] px-[16.8px] py-[16.8px]">
-                            <div className="text-[12px] font-['Arial:Bold',sans-serif] text-[#364153]">
-                                Try Demo Accounts:
-                            </div>
-                            <div className="mt-[12px] flex flex-col gap-[8px]">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setEmail(DEMO_FLEET.email);
-                                        setOrgName(DEMO_FLEET.org);
-                                        setLicenseCode("DEMO-LICENSE");
-                                        setPassword(DEMO_FLEET.password);
-                                    }}
-                                    className="flex h-[32px] items-center gap-[8px] rounded-[8px] border border-black/10 bg-white px-[10px] text-[12px] text-[#0a0a0a]"
-                                >
-                                    <img src={imgIcon28} alt="" className="h-[12px] w-[12px]" />
-                                    Fleet Manager - SkyWings Airlines
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setEmail(DEMO_ENGINEER.email);
-                                        setOrgName(DEMO_ENGINEER.org);
-                                        setLicenseCode("DEMO-LICENSE");
-                                        setPassword(DEMO_ENGINEER.password);
-                                    }}
-                                    className="flex h-[32px] items-center gap-[8px] rounded-[8px] border border-black/10 bg-white px-[10px] text-[12px] text-[#0a0a0a]"
-                                >
-                                    <img src={imgIcon29} alt="" className="h-[12px] w-[12px]" />
-                                    Maintenance Engineer - SkyWings
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

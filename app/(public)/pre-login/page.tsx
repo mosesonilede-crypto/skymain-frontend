@@ -72,18 +72,6 @@ export default function PreLoginPage() {
         event.preventDefault();
     };
 
-    const handleDemoAccount = (type: "fleet" | "maintenance") => {
-        if (type === "fleet") {
-            setEmail("fleet.manager@skywings.com");
-            setOrganization("SkyWings Airlines");
-            setPassword("demo-fleet");
-        } else {
-            setEmail("maintenance.engineer@skywings.com");
-            setOrganization("SkyWings Airlines");
-            setPassword("demo-maintenance");
-        }
-    };
-
     return (
         <div className="bg-white relative w-full min-h-screen" data-name="SkyMaintain Login Page" data-node-id="1:566">
             {showLogin && (
@@ -216,32 +204,6 @@ export default function PreLoginPage() {
                                 >
                                     Don&apos;t have an account? Sign up
                                 </Link>
-
-                                <div
-                                    className="absolute left-6 top-[487.98px] w-[383.2px] bg-[#f9fafb] border border-[#e5e7eb] rounded-[10px] px-[16.8px] pt-[16.8px] pb-[0.8px] flex flex-col gap-3"
-                                    data-name="Container"
-                                    data-node-id="1:1194"
-                                >
-                                    <p className="text-[#364153] text-[12px] font-bold">Try Demo Accounts:</p>
-                                    <div className="flex flex-col gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleDemoAccount("fleet")}
-                                            className="w-full h-8 bg-white border border-black/10 rounded-[8px] flex items-center gap-3 px-3 text-[12px] text-[#0a0a0a]"
-                                        >
-                                            <Image alt="" width={12} height={12} unoptimized className="size-3" src={imgLoginDemoA} />
-                                            Fleet Manager - SkyWings Airlines
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleDemoAccount("maintenance")}
-                                            className="w-full h-8 bg-white border border-black/10 rounded-[8px] flex items-center gap-3 px-3 text-[12px] text-[#0a0a0a]"
-                                        >
-                                            <Image alt="" width={12} height={12} unoptimized className="size-3" src={imgLoginDemoB} />
-                                            Maintenance Engineer - SkyWings
-                                        </button>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>

@@ -22,19 +22,6 @@ export default function SignInPage() {
     const [submitting, setSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
 
-    function applyDemo(role: "fleet_manager" | "maintenance_engineer") {
-        setError(null);
-        setOrgName("SkyWings Airlines");
-        setLicenseCode("DEMO-LICENSE");
-        if (role === "fleet_manager") {
-            setEmail("manager@skywings.com");
-            setPassword("TestLogin!234");
-            return;
-        }
-        setEmail("engineer@skywings.com");
-        setPassword("TestLogin!234");
-    }
-
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
@@ -164,7 +151,7 @@ export default function SignInPage() {
                                     type="email"
                                     autoComplete="email"
                                     className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
-                                    placeholder="e.g., manager@skywings.com"
+                                    placeholder="e.g., user@company.com"
                                 />
                             </div>
 
@@ -176,7 +163,7 @@ export default function SignInPage() {
                                     type="text"
                                     autoComplete="organization"
                                     className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
-                                    placeholder="e.g., SkyWings Airlines"
+                                    placeholder="e.g., My Company"
                                 />
                             </div>
 

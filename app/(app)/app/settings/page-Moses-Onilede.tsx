@@ -129,7 +129,7 @@ export default function SettingsPage() {
     }, [active]);
 
     const [fullName, setFullName] = useState("John Mitchell");
-    const [email, setEmail] = useState("manager@skywings.com");
+    const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("+1 (555) 123-4567");
     const [role] = useState("Fleet Manager");
     const [readOnly] = useState(true);
