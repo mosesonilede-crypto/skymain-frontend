@@ -43,6 +43,43 @@ type GeneratedAccessCode = {
     status: "active" | "expired" | "revoked" | "exhausted";
     createdBy: string;
 };
+
+type PartnerCard = {
+    name: string;
+    quote: string;
+    bullets: string[];
+    ctaLabel: string;
+    ctaHref: string;
+    imageUrl: string;
+};
+
+type PartnerContent = {
+    featured: PartnerCard;
+    industry: PartnerCard;
+};
+
+const PARTNER_STORAGE_KEY = "skymaintain.partnerContent";
+
+const defaultPartnerContent: PartnerContent = {
+    featured: {
+        name: "GlobalAero Airlines",
+        quote:
+            "Partnering with the world's leading carriers. Experience excellence in aviation with our premium fleet services and 24/7 maintenance support.",
+        bullets: ["500+ Aircraft Fleet", "Global Coverage", "ISO Certified"],
+        ctaLabel: "Learn More",
+        ctaHref: "/contact",
+        imageUrl: "https://www.figma.com/api/mcp/asset/d3926b89-b96a-4544-93f0-14aa7cf8b92f",
+    },
+    industry: {
+        name: "AeroTech Parts & Supply",
+        quote:
+            "Your trusted source for certified aircraft parts and components. Fast delivery, competitive pricing, and unmatched quality assurance.",
+        bullets: ["FAA/EASA Certified", "24-Hour Shipping", "50,000+ Parts"],
+        ctaLabel: "Shop Parts Catalog",
+        ctaHref: "/contact",
+        imageUrl: "https://www.figma.com/api/mcp/asset/a5d2100f-d154-4213-995c-1b073c1f394c",
+    },
+};
 type AdminSummaryResponse = {
     users?: Array<{ name?: string; email?: string; role?: string; status?: string }>;
 };
@@ -94,7 +131,7 @@ export default function SuperAdminPage() {
     // Data states
     const [users, setUsers] = useState<PlatformUser[]>([]);
     const [accessCodes, setAccessCodes] = useState<GeneratedAccessCode[]>([]);
-    const [activeTab, setActiveTab] = useState<"users" | "codes" | "analytics">("users");
+    const [activeTab, setActiveTab] = useState<"users" | "codes" | "analytics" | "partners">("users");
 
     // User filters
     const [userSearch, setUserSearch] = useState("");
@@ -107,6 +144,7 @@ export default function SuperAdminPage() {
 
     // Notification
     const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+    const [partnerDraft, setPartnerDraft] = useState<PartnerContent>(defaultPartnerContent);
 
     useEffect(() => {
         if (!isAuthenticated || !isSuperAdmin) return;
@@ -162,6 +200,24 @@ export default function SuperAdminPage() {
         };
     }, [isAuthenticated, isSuperAdmin]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const stored = window.localStorage.getItem(PARTNER_STORAGE_KEY);
+        if (!stored) return;
+        try {
+            const parsed = JSON.parse(stored) as PartnerContent;
+            if (parsed?.featured && parsed?.industry) {
+                const merged: PartnerContent = {
+                    featured: { ...defaultPartnerContent.featured, ...parsed.featured },
+                    industry: { ...defaultPartnerContent.industry, ...parsed.industry },
+                };
+                setPartnerDraft(merged);
+            }
+        } catch {
+            // Ignore malformed storage content
+        }
+    }, []);
+
     function handleLogout() {
         logout();
         router.push("/app/dashboard");
@@ -180,6 +236,45 @@ export default function SuperAdminPage() {
     function copyToClipboard(text: string) {
         navigator.clipboard.writeText(text);
         showNotification("success", "Copied to clipboard.");
+    }
+
+    function updatePartnerField(section: "featured" | "industry", field: keyof PartnerCard, value: string) {
+        setPartnerDraft((prev) => ({
+            ...prev,
+            [section]: {
+                ...prev[section],
+                [field]: value,
+            },
+        }));
+    }
+
+    function updatePartnerBullets(section: "featured" | "industry", value: string) {
+        const bullets = value
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean);
+        setPartnerDraft((prev) => ({
+            ...prev,
+            [section]: {
+                ...prev[section],
+                bullets,
+            },
+        }));
+    }
+
+    function savePartnerContent() {
+        if (typeof window !== "undefined") {
+            window.localStorage.setItem(PARTNER_STORAGE_KEY, JSON.stringify(partnerDraft));
+        }
+        showNotification("success", "Partner content updated.");
+    }
+
+    function resetPartnerContent() {
+        setPartnerDraft(defaultPartnerContent);
+        if (typeof window !== "undefined") {
+            window.localStorage.removeItem(PARTNER_STORAGE_KEY);
+        }
+        showNotification("success", "Partner content reset to default.");
     }
 
     // Filter users
@@ -594,6 +689,168 @@ export default function SuperAdminPage() {
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "partners" && (
+                    <div className="space-y-6">
+                        <div className="rounded-xl border border-slate-200 bg-white p-6">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-900">Partner Content</h2>
+                                    <p className="text-sm text-slate-600">
+                                        Update sponsored partner content shown on the Partnerships page.
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={resetPartnerContent}
+                                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                    >
+                                        Reset to default
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={savePartnerContent}
+                                        className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                                    >
+                                        Save changes
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-6 lg:grid-cols-2">
+                            <div className="rounded-xl border border-slate-200 bg-white p-6">
+                                <div className="text-sm font-semibold text-slate-900">Featured Partner</div>
+                                <div className="mt-4 space-y-4">
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">Name</label>
+                                        <input
+                                            type="text"
+                                            value={partnerDraft.featured.name}
+                                            onChange={(e) => updatePartnerField("featured", "name", e.target.value)}
+                                            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">Quote</label>
+                                        <textarea
+                                            value={partnerDraft.featured.quote}
+                                            onChange={(e) => updatePartnerField("featured", "quote", e.target.value)}
+                                            rows={4}
+                                            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">Bullets (one per line)</label>
+                                        <textarea
+                                            value={partnerDraft.featured.bullets.join("\n")}
+                                            onChange={(e) => updatePartnerBullets("featured", e.target.value)}
+                                            rows={3}
+                                            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <label className="text-xs font-semibold text-slate-600 uppercase">CTA Label</label>
+                                            <input
+                                                type="text"
+                                                value={partnerDraft.featured.ctaLabel}
+                                                onChange={(e) => updatePartnerField("featured", "ctaLabel", e.target.value)}
+                                                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-semibold text-slate-600 uppercase">CTA Link</label>
+                                            <input
+                                                type="text"
+                                                value={partnerDraft.featured.ctaHref}
+                                                onChange={(e) => updatePartnerField("featured", "ctaHref", e.target.value)}
+                                                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">Image URL</label>
+                                        <input
+                                            type="text"
+                                            value={partnerDraft.featured.imageUrl}
+                                            onChange={(e) => updatePartnerField("featured", "imageUrl", e.target.value)}
+                                            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border border-slate-200 bg-white p-6">
+                                <div className="text-sm font-semibold text-slate-900">Industry Partner</div>
+                                <div className="mt-4 space-y-4">
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">Name</label>
+                                        <input
+                                            type="text"
+                                            value={partnerDraft.industry.name}
+                                            onChange={(e) => updatePartnerField("industry", "name", e.target.value)}
+                                            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">Quote</label>
+                                        <textarea
+                                            value={partnerDraft.industry.quote}
+                                            onChange={(e) => updatePartnerField("industry", "quote", e.target.value)}
+                                            rows={4}
+                                            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">Bullets (one per line)</label>
+                                        <textarea
+                                            value={partnerDraft.industry.bullets.join("\n")}
+                                            onChange={(e) => updatePartnerBullets("industry", e.target.value)}
+                                            rows={3}
+                                            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <label className="text-xs font-semibold text-slate-600 uppercase">CTA Label</label>
+                                            <input
+                                                type="text"
+                                                value={partnerDraft.industry.ctaLabel}
+                                                onChange={(e) => updatePartnerField("industry", "ctaLabel", e.target.value)}
+                                                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-semibold text-slate-600 uppercase">CTA Link</label>
+                                            <input
+                                                type="text"
+                                                value={partnerDraft.industry.ctaHref}
+                                                onChange={(e) => updatePartnerField("industry", "ctaHref", e.target.value)}
+                                                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">Image URL</label>
+                                        <input
+                                            type="text"
+                                            value={partnerDraft.industry.imageUrl}
+                                            onChange={(e) => updatePartnerField("industry", "imageUrl", e.target.value)}
+                                            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
+                            These updates are stored locally in your browser and will appear on the Partnerships page for
+                            this device. To publish globally, connect this form to a live admin service.
                         </div>
                     </div>
                 )}

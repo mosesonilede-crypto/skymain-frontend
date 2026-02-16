@@ -85,6 +85,43 @@ type FAQ = {
     expanded?: boolean;
 };
 
+type PartnerCard = {
+    name: string;
+    quote: string;
+    bullets: string[];
+    ctaLabel: string;
+    ctaHref: string;
+    imageUrl: string;
+};
+
+type PartnerContent = {
+    featured: PartnerCard;
+    industry: PartnerCard;
+};
+
+const PARTNER_STORAGE_KEY = "skymaintain.partnerContent";
+
+const defaultPartnerContent: PartnerContent = {
+    featured: {
+        name: "GlobalAero Airlines",
+        quote:
+            "Partnering with the world's leading carriers. Experience excellence in aviation with our premium fleet services and 24/7 maintenance support.",
+        bullets: ["500+ Aircraft Fleet", "Global Coverage", "ISO Certified"],
+        ctaLabel: "Learn More",
+        ctaHref: "/contact",
+        imageUrl: imgGlobalAeroFleet,
+    },
+    industry: {
+        name: "AeroTech Parts & Supply",
+        quote:
+            "Your trusted source for certified aircraft parts and components. Fast delivery, competitive pricing, and unmatched quality assurance.",
+        bullets: ["FAA/EASA Certified", "24-Hour Shipping", "50,000+ Parts"],
+        ctaLabel: "Shop Parts Catalog",
+        ctaHref: "/contact",
+        imageUrl: imgAviationParts,
+    },
+};
+
 // Data
 const stats: Stat[] = [
     { value: "35%", label: "Reduction in Downtime", icon: <TrendingDown className="h-6 w-6 text-white" /> },
@@ -191,8 +228,9 @@ const faqs: FAQ[] = [
 export default function GetStartedPage() {
     const [expandedFaqs, setExpandedFaqs] = useState<number[]>([0, 1, 2]);
     const { isAuthenticated, isLoading } = useAuth();
-    const [globalAeroSrc, setGlobalAeroSrc] = useState(imgGlobalAeroFleet);
-    const [aeroTechSrc, setAeroTechSrc] = useState(imgAviationParts);
+    const [partnerContent, setPartnerContent] = useState<PartnerContent>(defaultPartnerContent);
+    const [globalAeroSrc, setGlobalAeroSrc] = useState(defaultPartnerContent.featured.imageUrl);
+    const [aeroTechSrc, setAeroTechSrc] = useState(defaultPartnerContent.industry.imageUrl);
 
     const toggleFaq = (index: number) => {
         setExpandedFaqs(prev =>
@@ -201,6 +239,36 @@ export default function GetStartedPage() {
                 : [...prev, index]
         );
     };
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const loadPartnerContent = () => {
+            try {
+                const stored = window.localStorage.getItem(PARTNER_STORAGE_KEY);
+                if (!stored) return;
+                const parsed = JSON.parse(stored) as Partial<PartnerContent>;
+                if (!parsed?.featured || !parsed?.industry) return;
+                setPartnerContent({
+                    featured: { ...defaultPartnerContent.featured, ...parsed.featured },
+                    industry: { ...defaultPartnerContent.industry, ...parsed.industry },
+                });
+                setGlobalAeroSrc(parsed.featured?.imageUrl || defaultPartnerContent.featured.imageUrl);
+                setAeroTechSrc(parsed.industry?.imageUrl || defaultPartnerContent.industry.imageUrl);
+            } catch {
+                // Ignore malformed storage content
+            }
+        };
+
+        loadPartnerContent();
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === PARTNER_STORAGE_KEY) {
+                loadPartnerContent();
+            }
+        };
+        window.addEventListener("storage", handleStorage);
+        return () => window.removeEventListener("storage", handleStorage);
+    }, []);
 
     return (
         <div className="min-h-screen bg-white">
@@ -301,23 +369,22 @@ export default function GetStartedPage() {
                                 <div className="mb-6 flex h-12 w-16 items-center justify-center rounded-lg bg-white/20">
                                     <Plane className="h-8 w-8 text-white" />
                                 </div>
-                                <h3 className="text-3xl font-bold text-white md:text-4xl">GlobalAero Airlines</h3>
+                                <h3 className="text-3xl font-bold text-white md:text-4xl">{partnerContent.featured.name}</h3>
                                 <p className="mt-4 text-lg leading-relaxed text-[#dbeafe]">
-                                    &quot;Partnering with the world&apos;s leading carriers. Experience excellence in aviation with our premium fleet services and 24/7 maintenance support.&quot;
+                                    &quot;{partnerContent.featured.quote}&quot;
                                 </p>
                                 <div className="mt-6 flex flex-wrap gap-4 text-sm text-white">
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> 500+ Aircraft Fleet
-                                    </span>
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> Global Coverage
-                                    </span>
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> ISO Certified
-                                    </span>
+                                    {partnerContent.featured.bullets.map((bullet) => (
+                                        <span key={bullet} className="flex items-center gap-2">
+                                            <Check className="h-4 w-4" /> {bullet}
+                                        </span>
+                                    ))}
                                 </div>
-                                <Link href="/contact" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#1c398e] hover:bg-gray-50 transition-colors">
-                                    Learn More
+                                <Link
+                                    href={partnerContent.featured.ctaHref}
+                                    className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#1c398e] hover:bg-gray-50 transition-colors"
+                                >
+                                    {partnerContent.featured.ctaLabel}
                                     <ExternalLink className="h-4 w-4" />
                                 </Link>
                             </div>
@@ -326,7 +393,7 @@ export default function GetStartedPage() {
                             <div className="relative h-64 md:h-auto">
                                 <Image
                                     src={globalAeroSrc}
-                                    alt="GlobalAero Airlines Fleet"
+                                    alt={`${partnerContent.featured.name} Fleet`}
                                     fill
                                     sizes="(min-width: 768px) 50vw, 100vw"
                                     unoptimized
@@ -458,7 +525,7 @@ export default function GetStartedPage() {
                             <div className="relative h-64 md:h-auto">
                                 <Image
                                     src={aeroTechSrc}
-                                    alt="Aviation Parts and Components"
+                                    alt={`${partnerContent.industry.name} Partner Image`}
                                     fill
                                     sizes="(min-width: 768px) 50vw, 100vw"
                                     unoptimized
@@ -476,20 +543,16 @@ export default function GetStartedPage() {
                                 <div className="mb-6 flex h-12 w-16 items-center justify-center rounded-lg bg-white/20">
                                     <Shield className="h-8 w-8 text-white" />
                                 </div>
-                                <h3 className="text-3xl font-bold text-white md:text-4xl">AeroTech Parts &amp; Supply</h3>
+                                <h3 className="text-3xl font-bold text-white md:text-4xl">{partnerContent.industry.name}</h3>
                                 <p className="mt-4 text-lg leading-relaxed text-[#ffedd4]">
-                                    &quot;Your trusted source for certified aircraft parts and components. Fast delivery, competitive pricing, and unmatched quality assurance.&quot;
+                                    &quot;{partnerContent.industry.quote}&quot;
                                 </p>
                                 <div className="mt-6 flex flex-wrap gap-4 text-sm text-white">
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> FAA/EASA Certified
-                                    </span>
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> 24-Hour Shipping
-                                    </span>
-                                    <span className="flex items-center gap-2">
-                                        <Check className="h-4 w-4" /> 50,000+ Parts
-                                    </span>
+                                    {partnerContent.industry.bullets.map((bullet) => (
+                                        <span key={bullet} className="flex items-center gap-2">
+                                            <Check className="h-4 w-4" /> {bullet}
+                                        </span>
+                                    ))}
                                 </div>
 
                                 {/* Special Offer */}
@@ -501,10 +564,13 @@ export default function GetStartedPage() {
                                     </div>
                                 </div>
 
-                                <button className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#f54900] hover:bg-gray-50 transition-colors">
-                                    Shop Parts Catalog
+                                <Link
+                                    href={partnerContent.industry.ctaHref}
+                                    className="mt-6 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-[#f54900] hover:bg-gray-50 transition-colors"
+                                >
+                                    {partnerContent.industry.ctaLabel}
                                     <ExternalLink className="h-4 w-4" />
-                                </button>
+                                </Link>
                             </div>
                         </div>
                     </div>
