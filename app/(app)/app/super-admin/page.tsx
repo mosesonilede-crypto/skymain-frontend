@@ -527,7 +527,7 @@ export default function SuperAdminPage() {
                                     <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                                         <tr>
                                             <th className="px-4 py-3">User</th>
-                                            <th className="px-4 py-3">Contact</th>
+                                            <th className="px-4 py-3">Login Identifier</th>
                                             <th className="px-4 py-3">Organization</th>
                                             <th className="px-4 py-3">Role</th>
                                             <th className="px-4 py-3">Subscription</th>
@@ -912,7 +912,7 @@ export default function SuperAdminPage() {
                         <div className="p-5 space-y-4">
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
-                                    <div className="text-xs font-semibold text-slate-500 uppercase">Email</div>
+                                    <div className="text-xs font-semibold text-slate-500 uppercase">Login Identifier</div>
                                     <div className="mt-1 text-sm text-slate-900">{selectedUser.email}</div>
                                 </div>
                                 <div>
