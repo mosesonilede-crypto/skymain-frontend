@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { User } from "@supabase/supabase-js";
 import { allowMockFallback } from "@/lib/runtimeFlags";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { verifyPayload } from "@/lib/twoFactor";
@@ -67,6 +68,28 @@ function resolvePlanFromPrice(priceId?: string | null): string | undefined {
         }
     }
     return undefined;
+}
+
+async function listAllUsers() {
+    if (!supabaseServer) return [];
+    const allUsers: User[] = [];
+    const perPage = 200;
+    const maxPages = 50;
+
+    for (let page = 1; page <= maxPages; page += 1) {
+        const { data, error } = await supabaseServer.auth.admin.listUsers({
+            page,
+            perPage,
+        });
+        if (error) throw error;
+
+        const users = data?.users || [];
+        allUsers.push(...users);
+
+        if (users.length < perPage) break;
+    }
+
+    return allUsers;
 }
 
 async function fetchStripeSummary(customerId?: string | null) {
@@ -217,11 +240,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Supabase admin client is not configured" }, { status: 503 });
         }
 
-        const { data, error } = await supabaseServer.auth.admin.listUsers({
-            page: 1,
-            perPage: 200,
-        });
-        if (error) throw error;
+        const allUsers = await listAllUsers();
 
         const { data: profiles, error: profilesError } = await supabaseServer
             .from("user_profiles")
@@ -236,73 +255,75 @@ export async function GET(req: NextRequest) {
         );
 
         const users = await Promise.all(
-            (data?.users || []).map(async (user) => {
-                const metadata = (user.user_metadata || {}) as Record<string, unknown>;
-                const appMetadata = (user.app_metadata || {}) as Record<string, unknown>;
-                const profile = profileById.get(user.id)
-                    || (user.email ? profileByEmail.get(user.email.toLowerCase()) : undefined);
-                const stripeCustomerId =
-                    profile?.stripe_customer_id
-                    || (metadata.stripe_customer_id as string | undefined)
-                    || (metadata.stripeCustomerId as string | undefined)
-                    || (appMetadata.stripe_customer_id as string | undefined)
-                    || (appMetadata.stripeCustomerId as string | undefined);
+            allUsers
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .map(async (user) => {
+                    const metadata = (user.user_metadata || {}) as Record<string, unknown>;
+                    const appMetadata = (user.app_metadata || {}) as Record<string, unknown>;
+                    const profile = profileById.get(user.id)
+                        || (user.email ? profileByEmail.get(user.email.toLowerCase()) : undefined);
+                    const stripeCustomerId =
+                        profile?.stripe_customer_id
+                        || (metadata.stripe_customer_id as string | undefined)
+                        || (metadata.stripeCustomerId as string | undefined)
+                        || (appMetadata.stripe_customer_id as string | undefined)
+                        || (appMetadata.stripeCustomerId as string | undefined);
 
-                const stripeSummary = profile?.payment_details
-                    ? null
-                    : await fetchStripeSummary(stripeCustomerId);
+                    const stripeSummary = profile?.payment_details
+                        ? null
+                        : await fetchStripeSummary(stripeCustomerId);
 
-                return {
-                    id: user.id,
-                    name:
-                        (profile?.full_name as string | undefined)
-                        || (metadata.full_name as string | undefined)
-                        || (metadata.name as string | undefined)
-                        || (metadata.displayName as string | undefined)
-                        || (appMetadata.full_name as string | undefined)
-                        || (appMetadata.name as string | undefined)
-                        || user.email?.split("@")[0]
-                        || "Unknown User",
-                    email: user.email || "Not available",
-                    role:
-                        (profile?.role as string | undefined)
-                        || (metadata.role as string | undefined)
-                        || (appMetadata.role as string | undefined)
-                        || "Viewer",
-                    status: (metadata.status as string | undefined) || "Active",
-                    subscriptionStatus:
-                        (profile?.subscription_status as string | undefined)
-                        || (metadata.subscription_status as string | undefined)
-                        || (appMetadata.subscription_status as string | undefined)
-                        || stripeSummary?.subscriptionStatus
-                        || "pending",
-                    subscriptionPlan:
-                        (profile?.subscription_plan as string | undefined)
-                        || (metadata.subscription_plan as string | undefined)
-                        || (appMetadata.subscription_plan as string | undefined)
-                        || stripeSummary?.subscriptionPlan
-                        || "Not available",
-                    paymentDetails:
-                        (profile?.payment_details as string | undefined)
-                        || (metadata.payment_details as string | undefined)
-                        || stripeSummary?.paymentDetails
-                        || "Not available",
-                    createdAt: user.created_at,
-                    lastLoginAt: user.last_sign_in_at,
-                    phone: (profile?.phone as string | undefined) || (metadata.phone as string | undefined) || "Not available",
-                    organization:
-                        (profile?.org_name as string | undefined)
-                        || (metadata.orgName as string | undefined)
-                        || (metadata.organization as string | undefined)
-                        || (appMetadata.orgName as string | undefined)
-                        || "Not available",
-                    country:
-                        (profile?.country as string | undefined)
-                        || (metadata.country as string | undefined)
-                        || (appMetadata.country as string | undefined)
-                        || "Not available",
-                } satisfies AdminUser;
-            })
+                    return {
+                        id: user.id,
+                        name:
+                            (profile?.full_name as string | undefined)
+                            || (metadata.full_name as string | undefined)
+                            || (metadata.name as string | undefined)
+                            || (metadata.displayName as string | undefined)
+                            || (appMetadata.full_name as string | undefined)
+                            || (appMetadata.name as string | undefined)
+                            || user.email?.split("@")[0]
+                            || "Unknown User",
+                        email: user.email || "Not available",
+                        role:
+                            (profile?.role as string | undefined)
+                            || (metadata.role as string | undefined)
+                            || (appMetadata.role as string | undefined)
+                            || "Viewer",
+                        status: (metadata.status as string | undefined) || "Active",
+                        subscriptionStatus:
+                            (profile?.subscription_status as string | undefined)
+                            || (metadata.subscription_status as string | undefined)
+                            || (appMetadata.subscription_status as string | undefined)
+                            || stripeSummary?.subscriptionStatus
+                            || "pending",
+                        subscriptionPlan:
+                            (profile?.subscription_plan as string | undefined)
+                            || (metadata.subscription_plan as string | undefined)
+                            || (appMetadata.subscription_plan as string | undefined)
+                            || stripeSummary?.subscriptionPlan
+                            || "Not available",
+                        paymentDetails:
+                            (profile?.payment_details as string | undefined)
+                            || (metadata.payment_details as string | undefined)
+                            || stripeSummary?.paymentDetails
+                            || "Not available",
+                        createdAt: user.created_at,
+                        lastLoginAt: user.last_sign_in_at,
+                        phone: (profile?.phone as string | undefined) || (metadata.phone as string | undefined) || "Not available",
+                        organization:
+                            (profile?.org_name as string | undefined)
+                            || (metadata.orgName as string | undefined)
+                            || (metadata.organization as string | undefined)
+                            || (appMetadata.orgName as string | undefined)
+                            || "Not available",
+                        country:
+                            (profile?.country as string | undefined)
+                            || (metadata.country as string | undefined)
+                            || (appMetadata.country as string | undefined)
+                            || "Not available",
+                    } satisfies AdminUser;
+                })
         );
 
         return NextResponse.json(
