@@ -108,13 +108,15 @@ export default function TwoFactorPage() {
         }
     }
 
-    async function sendOtp() {
+    async function sendOtp({ showError }: { showError?: boolean } = {}) {
         setSendError(null);
         setSendStatus(null);
         const destination = email.trim();
 
         if (!destination && method !== "authenticator") {
-            setSendError("Missing destination for verification.");
+            if (showError) {
+                setSendError("Missing destination for verification.");
+            }
             return;
         }
 
@@ -148,9 +150,10 @@ export default function TwoFactorPage() {
 
     React.useEffect(() => {
         if (method === "authenticator") return;
+        if (!email.trim()) return;
         sendOtp();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [method]);
+    }, [method, email]);
 
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -321,7 +324,7 @@ export default function TwoFactorPage() {
                             {method !== "authenticator" ? (
                                 <button
                                     type="button"
-                                    onClick={sendOtp}
+                                    onClick={() => sendOtp({ showError: true })}
                                     disabled={sending}
                                     className="rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
