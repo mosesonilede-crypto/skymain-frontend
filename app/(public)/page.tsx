@@ -495,6 +495,8 @@ export default function MainLandingPage() {
                                 <li><Link href="/privacy" className="text-[#d1d5dc] hover:text-white">Privacy Policy</Link></li>
                                 <li><Link href="/terms" className="text-[#d1d5dc] hover:text-white">Terms of Service</Link></li>
                                 <li><Link href="/compliance" className="text-[#d1d5dc] hover:text-white">Compliance</Link></li>
+                                <li><Link href="/regulatory-compliance-automation" className="text-[#d1d5dc] hover:text-white">Regulatory Compliance</Link></li>
+                                <li><Link href="/regulatory-governance-accountability" className="text-[#d1d5dc] hover:text-white">Regulatory Governance</Link></li>
                             </ul>
                         </div>
                     </div>
