@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -12,6 +13,47 @@ function getSupabaseAdmin() {
     return createClient(supabaseUrl, supabaseServiceKey, {
         auth: { persistSession: false, autoRefreshToken: false },
     });
+}
+
+// Fallback: Fetch all users from Supabase Auth admin API
+async function listAllAuthUsers(): Promise<Array<{ email: string; full_name?: string; subscription_status?: string; trial_expires_at?: string }>> {
+    const supabase = getSupabaseAdmin();
+    if (!supabase) return [];
+
+    const allUsers: User[] = [];
+    const perPage = 200;
+    const maxPages = 50;
+
+    try {
+        for (let page = 1; page <= maxPages; page += 1) {
+            const { data, error } = await supabase.auth.admin.listUsers({
+                page,
+                perPage,
+            });
+            if (error) throw error;
+
+            const users = data?.users || [];
+            allUsers.push(...users);
+
+            if (users.length < perPage) break;
+        }
+
+        // Map auth users to the expected format
+        return allUsers
+            .filter((u) => u.email)
+            .map((u) => {
+                const metadata = (u.user_metadata || {}) as Record<string, unknown>;
+                return {
+                    email: u.email!,
+                    full_name: (metadata.full_name as string) || (metadata.name as string) || undefined,
+                    subscription_status: (metadata.subscription_status as string) || undefined,
+                    trial_expires_at: (metadata.trial_expires_at as string) || undefined,
+                };
+            });
+    } catch (error) {
+        console.error("Error listing auth users:", error);
+        return [];
+    }
 }
 
 export type AnnouncementType = "announcement" | "update" | "maintenance" | "security" | "newsletter";
@@ -161,36 +203,74 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Fetch users based on target audience
-        let query = supabase
-            .from("user_profiles")
-            .select("id, email, full_name, subscription_status, trial_expires_at")
-            .not("email", "is", null);
+        // Try to fetch users from user_profiles table first, fallback to Auth users
+        let users: Array<{ email: string; full_name?: string | null; subscription_status?: string | null; trial_expires_at?: string | null }> = [];
 
-        if (targetAudience === "active") {
-            // Active users - either on trial (not expired) or with active subscription
-            const now = new Date().toISOString();
-            query = query.or(`subscription_status.eq.active,trial_expires_at.gt.${now}`);
-        } else if (targetAudience === "trial") {
-            // Trial users only
-            const now = new Date().toISOString();
-            query = query
-                .is("subscription_status", null)
-                .gt("trial_expires_at", now);
-        } else if (targetAudience === "paid") {
-            // Paid subscribers only
-            query = query.eq("subscription_status", "active");
-        }
-        // "all" - no additional filters
+        try {
+            // First try user_profiles table
+            let query = supabase
+                .from("user_profiles")
+                .select("id, email, full_name, subscription_status, trial_expires_at")
+                .not("email", "is", null);
 
-        const { data: users, error: fetchError } = await query;
+            if (targetAudience === "active") {
+                const now = new Date().toISOString();
+                query = query.or(`subscription_status.eq.active,trial_expires_at.gt.${now}`);
+            } else if (targetAudience === "trial") {
+                const now = new Date().toISOString();
+                query = query
+                    .is("subscription_status", null)
+                    .gt("trial_expires_at", now);
+            } else if (targetAudience === "paid") {
+                query = query.eq("subscription_status", "active");
+            }
 
-        if (fetchError) {
-            console.error("Error fetching users:", fetchError);
-            return NextResponse.json(
-                { error: "Failed to fetch users" },
-                { status: 500 }
-            );
+            const { data: profileUsers, error: fetchError } = await query;
+
+            if (!fetchError && profileUsers && profileUsers.length > 0) {
+                users = profileUsers.filter((u) => u.email).map((u) => ({
+                    email: u.email!,
+                    full_name: u.full_name,
+                    subscription_status: u.subscription_status,
+                    trial_expires_at: u.trial_expires_at,
+                }));
+            } else {
+                // Fallback to Auth users
+                console.log("Falling back to Auth users for mass email");
+                const authUsers = await listAllAuthUsers();
+
+                // Filter by audience if needed
+                if (targetAudience === "all") {
+                    users = authUsers;
+                } else if (targetAudience === "active") {
+                    const now = new Date();
+                    users = authUsers.filter((u) =>
+                        u.subscription_status === "active" ||
+                        (u.trial_expires_at && new Date(u.trial_expires_at) > now)
+                    );
+                } else if (targetAudience === "trial") {
+                    const now = new Date();
+                    users = authUsers.filter((u) =>
+                        !u.subscription_status &&
+                        u.trial_expires_at &&
+                        new Date(u.trial_expires_at) > now
+                    );
+                } else if (targetAudience === "paid") {
+                    users = authUsers.filter((u) => u.subscription_status === "active");
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            // Try auth fallback as last resort
+            const authUsers = await listAllAuthUsers();
+            if (authUsers.length > 0) {
+                users = authUsers;
+            } else {
+                return NextResponse.json(
+                    { error: "Failed to fetch users from database" },
+                    { status: 500 }
+                );
+            }
         }
 
         if (!users || users.length === 0) {
@@ -290,33 +370,65 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        let query = supabase
-            .from("user_profiles")
-            .select("id", { count: "exact", head: true })
-            .not("email", "is", null);
+        let count = 0;
 
-        if (targetAudience === "active") {
-            const now = new Date().toISOString();
-            query = query.or(`subscription_status.eq.active,trial_expires_at.gt.${now}`);
-        } else if (targetAudience === "trial") {
-            const now = new Date().toISOString();
-            query = query
-                .is("subscription_status", null)
-                .gt("trial_expires_at", now);
-        } else if (targetAudience === "paid") {
-            query = query.eq("subscription_status", "active");
-        }
+        try {
+            // Try user_profiles table first
+            let query = supabase
+                .from("user_profiles")
+                .select("id", { count: "exact", head: true })
+                .not("email", "is", null);
 
-        const { count, error } = await query;
+            if (targetAudience === "active") {
+                const now = new Date().toISOString();
+                query = query.or(`subscription_status.eq.active,trial_expires_at.gt.${now}`);
+            } else if (targetAudience === "trial") {
+                const now = new Date().toISOString();
+                query = query
+                    .is("subscription_status", null)
+                    .gt("trial_expires_at", now);
+            } else if (targetAudience === "paid") {
+                query = query.eq("subscription_status", "active");
+            }
 
-        if (error) {
-            console.error("Error counting users:", error);
-            return NextResponse.json({ error: "Failed to count users" }, { status: 500 });
+            const { count: profileCount, error } = await query;
+
+            if (!error && profileCount !== null) {
+                count = profileCount;
+            } else {
+                // Fallback to Auth users
+                console.log("Falling back to Auth users for count");
+                const authUsers = await listAllAuthUsers();
+
+                if (targetAudience === "all") {
+                    count = authUsers.length;
+                } else if (targetAudience === "active") {
+                    const now = new Date();
+                    count = authUsers.filter((u) =>
+                        u.subscription_status === "active" ||
+                        (u.trial_expires_at && new Date(u.trial_expires_at) > now)
+                    ).length;
+                } else if (targetAudience === "trial") {
+                    const now = new Date();
+                    count = authUsers.filter((u) =>
+                        !u.subscription_status &&
+                        u.trial_expires_at &&
+                        new Date(u.trial_expires_at) > now
+                    ).length;
+                } else if (targetAudience === "paid") {
+                    count = authUsers.filter((u) => u.subscription_status === "active").length;
+                }
+            }
+        } catch (error) {
+            console.error("Error counting users from profiles:", error);
+            // Try auth fallback
+            const authUsers = await listAllAuthUsers();
+            count = authUsers.length;
         }
 
         return NextResponse.json({
             audience: targetAudience,
-            count: count || 0,
+            count,
         });
     } catch (error) {
         console.error("Count users error:", error);

@@ -189,7 +189,8 @@ export default function SuperAdminPage() {
             try {
                 const response = await fetch("/api/admin", { credentials: "include" });
                 if (!response.ok) {
-                    throw new Error("Live admin data is not available.");
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || "Failed to load admin data");
                 }
 
                 const data = (await response.json()) as AdminSummaryResponse;
