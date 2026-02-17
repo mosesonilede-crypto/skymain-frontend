@@ -125,6 +125,7 @@ export default function TwoFactorPage() {
             const res = await fetch("/api/2fa/send", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ method: "email", destination }),
             });
             const data = await res.json().catch(() => ({}));
@@ -170,6 +171,7 @@ export default function TwoFactorPage() {
             const res = await fetch("/api/2fa/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({
                     method: method === "authenticator" ? "auth" : "email",
                     code: normalized,

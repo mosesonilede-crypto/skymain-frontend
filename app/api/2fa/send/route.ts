@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { generateOtp, getOtpExpiry, signPayload } from "@/lib/twoFactor";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/rateLimit";
 
@@ -88,7 +88,7 @@ async function sendSms(code: string, destination: string) {
     }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     // Rate limit by IP or destination
     const forwarded = req.headers.get("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim() || "unknown";
