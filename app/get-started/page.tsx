@@ -7,13 +7,13 @@ import { ChevronDown, ChevronUp, ArrowRight, Check, Plane, Shield, TrendingDown,
 import { startTrialIfMissing } from "@/lib/trial";
 import { useAuth } from "@/lib/AuthContext";
 
-// Image assets from Figma
-const imgGlobalAeroFleet = "https://www.figma.com/api/mcp/asset/d3926b89-b96a-4544-93f0-14aa7cf8b92f";
-const imgAIPredictive = "https://www.figma.com/api/mcp/asset/c16c67db-c090-4e03-94e3-afbe9675c31f";
-const imgCompliance = "https://www.figma.com/api/mcp/asset/d5555a73-d1cd-44fc-8c01-5039f4ca20e8";
-const imgIoTMonitoring = "https://www.figma.com/api/mcp/asset/c82488e3-6f72-447b-94ac-c118957c7ad5";
-const imgSmartWorkflows = "https://www.figma.com/api/mcp/asset/afc7be7f-955f-45e8-ba64-eb332330262d";
-const imgAviationParts = "https://www.figma.com/api/mcp/asset/a5d2100f-d154-4213-995c-1b073c1f394c";
+// Image assets from Figma (updated to match original design)
+const imgGlobalAeroFleet = "https://www.figma.com/api/mcp/asset/a3b53e9c-48fc-4c8b-9286-631c6b3c618c";
+const imgAIPredictive = "https://www.figma.com/api/mcp/asset/f97ff652-9f30-4953-8d4b-3e3ede7c8320";
+const imgCompliance = "https://www.figma.com/api/mcp/asset/8c7c63a3-d9a2-43ad-b121-c040748cdba9";
+const imgIoTMonitoring = "https://www.figma.com/api/mcp/asset/41ca828a-ad8e-48a4-bd3e-665cff1ee107";
+const imgSmartWorkflows = "https://www.figma.com/api/mcp/asset/51c78c25-9de3-4e03-8762-5e0e372b1eeb";
+const imgAviationParts = "https://www.figma.com/api/mcp/asset/87a59d7e-ee4a-4616-88c1-ca5d1574a51e";
 
 const imgGlobalAeroFallback = `data:image/svg+xml;utf8,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="GlobalAero Airlines">

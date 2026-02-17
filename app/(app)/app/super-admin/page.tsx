@@ -71,7 +71,7 @@ const defaultPartnerContent: PartnerContent = {
         bullets: ["500+ Aircraft Fleet", "Global Coverage", "ISO Certified"],
         ctaLabel: "Learn More",
         ctaHref: "/contact",
-        imageUrl: "https://www.figma.com/api/mcp/asset/d3926b89-b96a-4544-93f0-14aa7cf8b92f",
+        imageUrl: "https://www.figma.com/api/mcp/asset/a3b53e9c-48fc-4c8b-9286-631c6b3c618c",
     },
     industry: {
         name: "AeroTech Parts & Supply",
@@ -80,7 +80,7 @@ const defaultPartnerContent: PartnerContent = {
         bullets: ["FAA/EASA Certified", "24-Hour Shipping", "50,000+ Parts"],
         ctaLabel: "Shop Parts Catalog",
         ctaHref: "/contact",
-        imageUrl: "https://www.figma.com/api/mcp/asset/a5d2100f-d154-4213-995c-1b073c1f394c",
+        imageUrl: "https://www.figma.com/api/mcp/asset/87a59d7e-ee4a-4616-88c1-ca5d1574a51e",
     },
 };
 type AdminSummaryResponse = {
@@ -570,17 +570,18 @@ export default function SuperAdminPage() {
 
             {/* Tabs */}
             <div className="border-b border-slate-200 bg-white px-6">
-                <div className="flex gap-6">
+                <div className="flex gap-6 overflow-x-auto">
                     {[
                         { id: "users", label: "Platform Users", count: users.length },
                         { id: "codes", label: "Access Codes", count: accessCodes.length },
+                        { id: "partners", label: "Partners", count: null },
                         { id: "announcements", label: "Announcements", count: null },
                         { id: "settings", label: "Settings", count: null },
                     ].map((tab) => (
                         <button
                             key={tab.id}
                             type="button"
-                            onClick={() => setActiveTab(tab.id as "users" | "codes" | "announcements" | "settings")}
+                            onClick={() => setActiveTab(tab.id as "users" | "codes" | "partners" | "announcements" | "settings")}
                             className={`border-b-2 pb-3 pt-4 text-sm font-medium transition-colors ${activeTab === tab.id
                                 ? "border-slate-900 text-slate-900"
                                 : "border-transparent text-slate-500 hover:text-slate-700"
