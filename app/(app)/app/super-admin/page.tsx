@@ -174,6 +174,22 @@ export default function SuperAdminPage() {
     const [selectedUser, setSelectedUser] = useState<PlatformUser | null>(null);
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
+    // Access code management
+    const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+    const [codeFormData, setCodeFormData] = useState({
+        type: "partner" as AccessCodeType,
+        recipientName: "",
+        recipientEmail: "",
+        recipientOrg: "",
+        purpose: "",
+        expiresInDays: 30,
+        usageLimit: "single" as "single" | "multi" | "unlimited",
+        maxUsageCount: 1,
+    });
+    const [creatingCode, setCreatingCode] = useState(false);
+    const [accessCodesLoading, setAccessCodesLoading] = useState(false);
+    const [accessCodesError, setAccessCodesError] = useState<string | null>(null);
+
     // Notification
     const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
     const [partnerDraft, setPartnerDraft] = useState<PartnerContent>(defaultPartnerContent);
@@ -252,6 +268,63 @@ export default function SuperAdminPage() {
         }
     }, []);
 
+    // Load access codes
+    useEffect(() => {
+        if (!isAuthenticated || !isSuperAdmin) return;
+
+        async function loadAccessCodes() {
+            setAccessCodesLoading(true);
+            setAccessCodesError(null);
+            try {
+                const response = await fetch("/api/admin/access-codes", { credentials: "include" });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || "Failed to load access codes");
+                }
+                const data = await response.json();
+                const mappedCodes: GeneratedAccessCode[] = (data.codes || []).map((code: {
+                    id: string;
+                    code: string;
+                    type: AccessCodeType;
+                    recipient_name: string;
+                    recipient_email: string;
+                    recipient_org: string;
+                    purpose: string;
+                    created_at: string;
+                    expires_at: string;
+                    usage_limit: "single" | "multi" | "unlimited";
+                    usage_count: number;
+                    max_usage_count: number | null;
+                    status: "active" | "expired" | "revoked" | "exhausted";
+                    created_by: string;
+                }) => ({
+                    id: code.id,
+                    code: code.code,
+                    type: code.type,
+                    recipientName: code.recipient_name,
+                    recipientEmail: code.recipient_email,
+                    recipientOrg: code.recipient_org,
+                    purpose: code.purpose,
+                    createdAt: code.created_at,
+                    expiresAt: code.expires_at,
+                    usageLimit: code.usage_limit,
+                    usageCount: code.usage_count,
+                    maxUsageCount: code.max_usage_count,
+                    status: code.status,
+                    createdBy: code.created_by,
+                }));
+                setAccessCodes(mappedCodes);
+            } catch (error) {
+                console.error("Error loading access codes:", error);
+                setAccessCodesError(error instanceof Error ? error.message : "Failed to load access codes");
+            } finally {
+                setAccessCodesLoading(false);
+            }
+        }
+
+        loadAccessCodes();
+    }, [isAuthenticated, isSuperAdmin]);
+
     function handleLogout() {
         logout();
         router.push("/app/dashboard");
@@ -262,9 +335,84 @@ export default function SuperAdminPage() {
         setTimeout(() => setNotification(null), 4000);
     }
 
-    function handleRevokeCode(codeId: string) {
-        setAccessCodes(prev => prev.map(c => c.id === codeId ? { ...c, status: "revoked" as const } : c));
-        showNotification("success", "Access code revoked.");
+    async function handleRevokeCode(codeId: string) {
+        try {
+            const response = await fetch("/api/admin/access-codes", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ id: codeId, action: "revoke" }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to revoke access code");
+            }
+
+            setAccessCodes(prev => prev.map(c => c.id === codeId ? { ...c, status: "revoked" as const } : c));
+            showNotification("success", "Access code revoked.");
+        } catch (error) {
+            showNotification("error", error instanceof Error ? error.message : "Failed to revoke access code");
+        }
+    }
+
+    async function handleCreateAccessCode() {
+        if (!codeFormData.recipientName.trim() || !codeFormData.recipientEmail.trim()) {
+            showNotification("error", "Recipient name and email are required.");
+            return;
+        }
+
+        setCreatingCode(true);
+        try {
+            const response = await fetch("/api/admin/access-codes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(codeFormData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to create access code");
+            }
+
+            // Map the returned code to the UI format
+            const newCode: GeneratedAccessCode = {
+                id: data.code.id,
+                code: data.code.code,
+                type: data.code.type,
+                recipientName: data.code.recipient_name,
+                recipientEmail: data.code.recipient_email,
+                recipientOrg: data.code.recipient_org,
+                purpose: data.code.purpose,
+                createdAt: data.code.created_at,
+                expiresAt: data.code.expires_at,
+                usageLimit: data.code.usage_limit,
+                usageCount: data.code.usage_count,
+                maxUsageCount: data.code.max_usage_count,
+                status: data.code.status,
+                createdBy: data.code.created_by,
+            };
+
+            setAccessCodes(prev => [newCode, ...prev]);
+            setIsCodeModalOpen(false);
+            setCodeFormData({
+                type: "partner",
+                recipientName: "",
+                recipientEmail: "",
+                recipientOrg: "",
+                purpose: "",
+                expiresInDays: 30,
+                usageLimit: "single",
+                maxUsageCount: 1,
+            });
+            showNotification("success", `Access code ${newCode.code} created successfully.`);
+        } catch (error) {
+            showNotification("error", error instanceof Error ? error.message : "Failed to create access code");
+        } finally {
+            setCreatingCode(false);
+        }
     }
 
     function copyToClipboard(text: string) {
@@ -734,16 +882,25 @@ export default function SuperAdminPage() {
                             </div>
                             <button
                                 type="button"
-                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900/50 px-4 py-2 text-sm font-medium text-white"
-                                disabled
+                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                                onClick={() => setIsCodeModalOpen(true)}
                             >
                                 <span>+</span>
                                 Generate Access Code
                             </button>
                         </div>
-                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-                            Access code management requires a live super-admin service and is not configured.
-                        </div>
+
+                        {accessCodesError && (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                                {accessCodesError}
+                            </div>
+                        )}
+
+                        {accessCodesLoading && (
+                            <div className="flex items-center justify-center py-8">
+                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900" />
+                            </div>
+                        )}
 
                         {/* Codes Table */}
                         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -762,10 +919,10 @@ export default function SuperAdminPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200">
-                                        {accessCodes.length === 0 ? (
+                                        {accessCodes.length === 0 && !accessCodesLoading ? (
                                             <tr>
                                                 <td colSpan={8} className="px-4 py-8 text-center text-sm text-slate-500">
-                                                    No live access codes are available.
+                                                    No access codes generated yet. Click &quot;Generate Access Code&quot; to create one.
                                                 </td>
                                             </tr>
                                         ) : (
@@ -1228,6 +1385,157 @@ export default function SuperAdminPage() {
                     </div>
                 )}
             </div>
+
+            {/* Access Code Modal */}
+            {isCodeModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4"
+                    onClick={(e) => e.target === e.currentTarget && setIsCodeModalOpen(false)}
+                >
+                    <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl">
+                        <div className="flex items-center justify-between border-b border-slate-200 p-5">
+                            <h2 className="text-lg font-semibold text-slate-900">Generate Access Code</h2>
+                            <button
+                                type="button"
+                                onClick={() => setIsCodeModalOpen(false)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                            >
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 mb-1">Code Type</label>
+                                    <select
+                                        value={codeFormData.type}
+                                        onChange={(e) => setCodeFormData(prev => ({ ...prev, type: e.target.value as AccessCodeType }))}
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    >
+                                        <option value="partner">Partner</option>
+                                        <option value="regulator">Regulator</option>
+                                        <option value="demo">Demo</option>
+                                        <option value="trial">Trial</option>
+                                        <option value="special">Special</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 mb-1">Expires In</label>
+                                    <select
+                                        value={codeFormData.expiresInDays}
+                                        onChange={(e) => setCodeFormData(prev => ({ ...prev, expiresInDays: parseInt(e.target.value, 10) }))}
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    >
+                                        <option value={7}>7 days</option>
+                                        <option value={14}>14 days</option>
+                                        <option value={30}>30 days</option>
+                                        <option value={60}>60 days</option>
+                                        <option value={90}>90 days</option>
+                                        <option value={365}>1 year</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Recipient Name *</label>
+                                <input
+                                    type="text"
+                                    value={codeFormData.recipientName}
+                                    onChange={(e) => setCodeFormData(prev => ({ ...prev, recipientName: e.target.value }))}
+                                    placeholder="John Smith"
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Recipient Email *</label>
+                                <input
+                                    type="email"
+                                    value={codeFormData.recipientEmail}
+                                    onChange={(e) => setCodeFormData(prev => ({ ...prev, recipientEmail: e.target.value }))}
+                                    placeholder="john@example.com"
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Organization</label>
+                                <input
+                                    type="text"
+                                    value={codeFormData.recipientOrg}
+                                    onChange={(e) => setCodeFormData(prev => ({ ...prev, recipientOrg: e.target.value }))}
+                                    placeholder="ACME Aviation Inc."
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-slate-600 mb-1">Purpose</label>
+                                <input
+                                    type="text"
+                                    value={codeFormData.purpose}
+                                    onChange={(e) => setCodeFormData(prev => ({ ...prev, purpose: e.target.value }))}
+                                    placeholder="Partner demo access for evaluation"
+                                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-600 mb-1">Usage Limit</label>
+                                    <select
+                                        value={codeFormData.usageLimit}
+                                        onChange={(e) => setCodeFormData(prev => ({
+                                            ...prev,
+                                            usageLimit: e.target.value as "single" | "multi" | "unlimited",
+                                            maxUsageCount: e.target.value === "single" ? 1 : (e.target.value === "multi" ? 10 : 0),
+                                        }))}
+                                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                    >
+                                        <option value="single">Single Use</option>
+                                        <option value="multi">Multi Use</option>
+                                        <option value="unlimited">Unlimited</option>
+                                    </select>
+                                </div>
+                                {codeFormData.usageLimit === "multi" && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-slate-600 mb-1">Max Uses</label>
+                                        <input
+                                            type="number"
+                                            value={codeFormData.maxUsageCount}
+                                            onChange={(e) => setCodeFormData(prev => ({ ...prev, maxUsageCount: parseInt(e.target.value, 10) || 1 }))}
+                                            min={1}
+                                            max={1000}
+                                            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 border-t border-slate-200 p-5">
+                            <button
+                                type="button"
+                                onClick={() => setIsCodeModalOpen(false)}
+                                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleCreateAccessCode}
+                                disabled={creatingCode}
+                                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+                            >
+                                {creatingCode ? "Creating..." : "Generate Code"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* View User Modal */}
             {isUserModalOpen && selectedUser && (
