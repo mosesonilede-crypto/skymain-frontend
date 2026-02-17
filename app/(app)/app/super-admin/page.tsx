@@ -60,6 +60,8 @@ type PartnerContent = {
 };
 
 const PARTNER_STORAGE_KEY = "skymaintain.partnerContent";
+const DEMO_VIDEO_STORAGE_KEY = "skymaintain.demoVideoId";
+const DEFAULT_DEMO_VIDEO_ID = "oMcy-bTjvJ0";
 
 const defaultPartnerContent: PartnerContent = {
     featured: {
@@ -147,7 +149,12 @@ export default function SuperAdminPage() {
     // Data states
     const [users, setUsers] = useState<PlatformUser[]>([]);
     const [accessCodes, setAccessCodes] = useState<GeneratedAccessCode[]>([]);
-    const [activeTab, setActiveTab] = useState<"users" | "codes" | "analytics" | "partners" | "announcements">("users");
+    const [activeTab, setActiveTab] = useState<"users" | "codes" | "analytics" | "partners" | "announcements" | "settings">("users");
+
+    // Demo Video Settings
+    const [demoVideoId, setDemoVideoId] = useState("oMcy-bTjvJ0");
+    const [demoVideoIdDraft, setDemoVideoIdDraft] = useState("oMcy-bTjvJ0");
+    const [savingDemoVideo, setSavingDemoVideo] = useState(false);
 
     // Announcements/Mass Email
     const [announcementSubject, setAnnouncementSubject] = useState("");
@@ -301,6 +308,49 @@ export default function SuperAdminPage() {
             window.localStorage.removeItem(PARTNER_STORAGE_KEY);
         }
         showNotification("success", "Partner content reset to default.");
+    }
+
+    // Load demo video ID from localStorage
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        try {
+            const stored = window.localStorage.getItem(DEMO_VIDEO_STORAGE_KEY);
+            if (stored) {
+                setDemoVideoId(stored);
+                setDemoVideoIdDraft(stored);
+            }
+        } catch {
+            // Ignore
+        }
+    }, []);
+
+    // Save demo video ID
+    function saveDemoVideoId() {
+        if (!demoVideoIdDraft.trim()) {
+            showNotification("error", "Please enter a YouTube video ID.");
+            return;
+        }
+        setSavingDemoVideo(true);
+        try {
+            if (typeof window !== "undefined") {
+                window.localStorage.setItem(DEMO_VIDEO_STORAGE_KEY, demoVideoIdDraft.trim());
+            }
+            setDemoVideoId(demoVideoIdDraft.trim());
+            showNotification("success", "Demo video updated successfully.");
+        } catch {
+            showNotification("error", "Failed to save demo video.");
+        } finally {
+            setSavingDemoVideo(false);
+        }
+    }
+
+    function resetDemoVideoId() {
+        setDemoVideoIdDraft(DEFAULT_DEMO_VIDEO_ID);
+        setDemoVideoId(DEFAULT_DEMO_VIDEO_ID);
+        if (typeof window !== "undefined") {
+            window.localStorage.removeItem(DEMO_VIDEO_STORAGE_KEY);
+        }
+        showNotification("success", "Demo video reset to default.");
     }
 
     // Fetch recipient count for announcements
@@ -525,11 +575,12 @@ export default function SuperAdminPage() {
                         { id: "users", label: "Platform Users", count: users.length },
                         { id: "codes", label: "Access Codes", count: accessCodes.length },
                         { id: "announcements", label: "Announcements", count: null },
+                        { id: "settings", label: "Settings", count: null },
                     ].map((tab) => (
                         <button
                             key={tab.id}
                             type="button"
-                            onClick={() => setActiveTab(tab.id as "users" | "codes" | "announcements")}
+                            onClick={() => setActiveTab(tab.id as "users" | "codes" | "announcements" | "settings")}
                             className={`border-b-2 pb-3 pt-4 text-sm font-medium transition-colors ${activeTab === tab.id
                                 ? "border-slate-900 text-slate-900"
                                 : "border-transparent text-slate-500 hover:text-slate-700"
@@ -1072,6 +1123,105 @@ export default function SuperAdminPage() {
                         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800">
                             <strong>Note:</strong> Emails will be sent in batches to avoid overwhelming the mail server.
                             Large recipient lists may take a few minutes to complete.
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "settings" && (
+                    <div className="space-y-6">
+                        {/* Demo Video Settings */}
+                        <div className="rounded-xl border border-slate-200 bg-white p-6">
+                            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-900">Demo Video</h2>
+                                    <p className="text-sm text-slate-600">
+                                        Configure the YouTube video displayed on the Watch Demo page.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Current Video Preview */}
+                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <label className="text-xs font-semibold text-slate-600 uppercase">
+                                        Current Demo Video
+                                    </label>
+                                    <div className="mt-3 aspect-video w-full max-w-md overflow-hidden rounded-lg border border-slate-200 bg-black">
+                                        <iframe
+                                            src={`https://www.youtube.com/embed/${demoVideoId}?rel=0&modestbranding=1`}
+                                            title="Current Demo Video"
+                                            className="h-full w-full"
+                                            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                        />
+                                    </div>
+                                    <p className="mt-2 text-xs text-slate-500">
+                                        Video ID: <code className="rounded bg-slate-200 px-1.5 py-0.5">{demoVideoId}</code>
+                                    </p>
+                                </div>
+
+                                {/* Video ID Input */}
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-600 uppercase">
+                                        YouTube Video ID
+                                    </label>
+                                    <div className="mt-2 flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={demoVideoIdDraft}
+                                            onChange={(e) => setDemoVideoIdDraft(e.target.value)}
+                                            placeholder="Enter YouTube video ID (e.g., oMcy-bTjvJ0)"
+                                            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={saveDemoVideoId}
+                                            disabled={savingDemoVideo || demoVideoIdDraft === demoVideoId}
+                                            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {savingDemoVideo ? "Saving..." : "Save"}
+                                        </button>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        The video ID is the part after &quot;v=&quot; in a YouTube URL. For example, in
+                                        &quot;youtube.com/watch?v=<strong>oMcy-bTjvJ0</strong>&quot;, the ID is &quot;oMcy-bTjvJ0&quot;.
+                                    </p>
+                                </div>
+
+                                {/* Preview New Video */}
+                                {demoVideoIdDraft && demoVideoIdDraft !== demoVideoId && (
+                                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                                        <label className="text-xs font-semibold text-blue-600 uppercase">
+                                            Preview (Unsaved)
+                                        </label>
+                                        <div className="mt-3 aspect-video w-full max-w-md overflow-hidden rounded-lg border border-blue-200 bg-black">
+                                            <iframe
+                                                src={`https://www.youtube.com/embed/${demoVideoIdDraft}?rel=0&modestbranding=1`}
+                                                title="Preview Demo Video"
+                                                className="h-full w-full"
+                                                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Reset Button */}
+                                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={resetDemoVideoId}
+                                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                    >
+                                        Reset to Default
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
+                            Demo video settings are stored locally in your browser. To persist these settings
+                            across all users and devices, connect this to a database-backed configuration service.
                         </div>
                     </div>
                 )}

@@ -2,14 +2,38 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const YOUTUBE_VIDEO_ID = "oMcy-bTjvJ0";
-const YOUTUBE_EMBED_URL = `https://www.youtube.com/embed/${YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1`;
-const YOUTUBE_WATCH_URL = `https://www.youtube.com/watch?v=${YOUTUBE_VIDEO_ID}`;
+const DEFAULT_YOUTUBE_VIDEO_ID = "oMcy-bTjvJ0";
+const DEMO_VIDEO_STORAGE_KEY = "skymaintain.demoVideoId";
 
 export default function DemoPage() {
     const [isPlaying, setIsPlaying] = useState(false);
+    const [videoId, setVideoId] = useState(DEFAULT_YOUTUBE_VIDEO_ID);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        try {
+            const stored = window.localStorage.getItem(DEMO_VIDEO_STORAGE_KEY);
+            if (stored) {
+                setVideoId(stored);
+            }
+        } catch {
+            // Ignore
+        }
+
+        // Listen for storage changes (when super admin updates the video)
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === DEMO_VIDEO_STORAGE_KEY && event.newValue) {
+                setVideoId(event.newValue);
+            }
+        };
+        window.addEventListener("storage", handleStorage);
+        return () => window.removeEventListener("storage", handleStorage);
+    }, []);
+
+    const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -48,7 +72,7 @@ export default function DemoPage() {
                             >
                                 {/* YouTube Thumbnail */}
                                 <Image
-                                    src={`https://img.youtube.com/vi/${YOUTUBE_VIDEO_ID}/maxresdefault.jpg`}
+                                    src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
                                     alt="SkyMaintain Demo Video"
                                     fill
                                     unoptimized
@@ -56,7 +80,7 @@ export default function DemoPage() {
                                     className="object-cover"
                                     onError={(event) => {
                                         const target = event.currentTarget as HTMLImageElement;
-                                        target.src = `https://img.youtube.com/vi/${YOUTUBE_VIDEO_ID}/hqdefault.jpg`;
+                                        target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
                                     }}
                                 />
                                 {/* Overlay */}
@@ -77,7 +101,7 @@ export default function DemoPage() {
                         ) : (
                             /* YouTube Embed */
                             <iframe
-                                src={`${YOUTUBE_EMBED_URL}&autoplay=1`}
+                                src={`${embedUrl}&autoplay=1`}
                                 title="SkyMaintain Demo Video"
                                 className="absolute inset-0 h-full w-full"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -90,7 +114,7 @@ export default function DemoPage() {
                 {/* Video Actions */}
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
                     <a
-                        href={YOUTUBE_WATCH_URL}
+                        href={watchUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
@@ -102,7 +126,7 @@ export default function DemoPage() {
                     </a>
                     <button
                         onClick={() => {
-                            navigator.clipboard.writeText(YOUTUBE_WATCH_URL);
+                            navigator.clipboard.writeText(watchUrl);
                             alert("Link copied to clipboard!");
                         }}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
