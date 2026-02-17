@@ -147,7 +147,16 @@ export default function SuperAdminPage() {
     // Data states
     const [users, setUsers] = useState<PlatformUser[]>([]);
     const [accessCodes, setAccessCodes] = useState<GeneratedAccessCode[]>([]);
-    const [activeTab, setActiveTab] = useState<"users" | "codes" | "analytics" | "partners">("users");
+    const [activeTab, setActiveTab] = useState<"users" | "codes" | "analytics" | "partners" | "announcements">("users");
+
+    // Announcements/Mass Email
+    const [announcementSubject, setAnnouncementSubject] = useState("");
+    const [announcementBody, setAnnouncementBody] = useState("");
+    const [announcementType, setAnnouncementType] = useState<"announcement" | "update" | "maintenance" | "security" | "newsletter">("announcement");
+    const [targetAudience, setTargetAudience] = useState<"all" | "active" | "trial" | "paid">("all");
+    const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
+    const [recipientCount, setRecipientCount] = useState<number | null>(null);
+    const [loadingRecipientCount, setLoadingRecipientCount] = useState(false);
 
     // User filters
     const [userSearch, setUserSearch] = useState("");
@@ -292,6 +301,59 @@ export default function SuperAdminPage() {
             window.localStorage.removeItem(PARTNER_STORAGE_KEY);
         }
         showNotification("success", "Partner content reset to default.");
+    }
+
+    // Fetch recipient count for announcements
+    async function fetchRecipientCount() {
+        setLoadingRecipientCount(true);
+        try {
+            const response = await fetch(`/api/admin/mass-email?audience=${targetAudience}`);
+            if (response.ok) {
+                const data = await response.json();
+                setRecipientCount(data.count);
+            }
+        } catch {
+            setRecipientCount(null);
+        } finally {
+            setLoadingRecipientCount(false);
+        }
+    }
+
+    // Send announcement
+    async function handleSendAnnouncement() {
+        if (!announcementSubject.trim() || !announcementBody.trim()) {
+            showNotification("error", "Please fill in both subject and message body.");
+            return;
+        }
+
+        setSendingAnnouncement(true);
+        try {
+            const response = await fetch("/api/admin/mass-email", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    subject: announcementSubject,
+                    body: announcementBody,
+                    type: announcementType,
+                    targetAudience,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showNotification("success", `Announcement sent to ${data.sentCount} user(s).`);
+                setAnnouncementSubject("");
+                setAnnouncementBody("");
+                setRecipientCount(null);
+            } else {
+                showNotification("error", data.error || "Failed to send announcement.");
+            }
+        } catch {
+            showNotification("error", "Network error. Please try again.");
+        } finally {
+            setSendingAnnouncement(false);
+        }
     }
 
     // Filter users
@@ -462,18 +524,21 @@ export default function SuperAdminPage() {
                     {[
                         { id: "users", label: "Platform Users", count: users.length },
                         { id: "codes", label: "Access Codes", count: accessCodes.length },
+                        { id: "announcements", label: "Announcements", count: null },
                     ].map((tab) => (
                         <button
                             key={tab.id}
                             type="button"
-                            onClick={() => setActiveTab(tab.id as "users" | "codes")}
+                            onClick={() => setActiveTab(tab.id as "users" | "codes" | "announcements")}
                             className={`border-b-2 pb-3 pt-4 text-sm font-medium transition-colors ${activeTab === tab.id
                                 ? "border-slate-900 text-slate-900"
                                 : "border-transparent text-slate-500 hover:text-slate-700"
                                 }`}
                         >
                             {tab.label}
-                            <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs">{tab.count}</span>
+                            {tab.count !== null && (
+                                <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs">{tab.count}</span>
+                            )}
                         </button>
                     ))}
                 </div>
@@ -878,6 +943,135 @@ export default function SuperAdminPage() {
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
                             These updates are stored locally in your browser and will appear on the Partnerships page for
                             this device. To publish globally, connect this form to a live admin service.
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "announcements" && (
+                    <div className="space-y-6">
+                        <div className="rounded-xl border border-slate-200 bg-white p-6">
+                            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-900">Send Announcement</h2>
+                                    <p className="text-sm text-slate-600">
+                                        Compose and send mass emails to platform users.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Type and Audience */}
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">
+                                            Announcement Type
+                                        </label>
+                                        <select
+                                            value={announcementType}
+                                            onChange={(e) => setAnnouncementType(e.target.value as typeof announcementType)}
+                                            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                        >
+                                            <option value="announcement">General Announcement</option>
+                                            <option value="update">Platform Update</option>
+                                            <option value="maintenance">Maintenance Notice</option>
+                                            <option value="security">Security Alert</option>
+                                            <option value="newsletter">Newsletter</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-slate-600 uppercase">
+                                            Target Audience
+                                        </label>
+                                        <div className="flex gap-2 mt-2">
+                                            <select
+                                                value={targetAudience}
+                                                onChange={(e) => {
+                                                    setTargetAudience(e.target.value as typeof targetAudience);
+                                                    setRecipientCount(null);
+                                                }}
+                                                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                            >
+                                                <option value="all">All Users</option>
+                                                <option value="active">Active Subscribers</option>
+                                                <option value="trial">Trial Users</option>
+                                                <option value="paid">Paid Users</option>
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={fetchRecipientCount}
+                                                disabled={loadingRecipientCount}
+                                                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                                            >
+                                                {loadingRecipientCount ? "..." : "Count"}
+                                            </button>
+                                        </div>
+                                        {recipientCount !== null && (
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                {recipientCount} recipient{recipientCount !== 1 ? "s" : ""} will receive this email
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Subject */}
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-600 uppercase">
+                                        Subject
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={announcementSubject}
+                                        onChange={(e) => setAnnouncementSubject(e.target.value)}
+                                        placeholder="Enter email subject..."
+                                        className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                </div>
+
+                                {/* Body */}
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-600 uppercase">
+                                        Message Body
+                                    </label>
+                                    <textarea
+                                        value={announcementBody}
+                                        onChange={(e) => setAnnouncementBody(e.target.value)}
+                                        placeholder="Enter your announcement message..."
+                                        rows={8}
+                                        className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 resize-none"
+                                    />
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        Use plain text. Line breaks will be preserved.
+                                    </p>
+                                </div>
+
+                                {/* Send Button */}
+                                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setAnnouncementSubject("");
+                                            setAnnouncementBody("");
+                                            setRecipientCount(null);
+                                        }}
+                                        className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleSendAnnouncement}
+                                        disabled={sendingAnnouncement || !announcementSubject.trim() || !announcementBody.trim()}
+                                        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {sendingAnnouncement ? "Sending..." : "Send Announcement"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800">
+                            <strong>Note:</strong> Emails will be sent in batches to avoid overwhelming the mail server.
+                            Large recipient lists may take a few minutes to complete.
                         </div>
                     </div>
                 )}

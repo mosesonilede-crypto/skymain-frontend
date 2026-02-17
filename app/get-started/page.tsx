@@ -304,7 +304,7 @@ export default function GetStartedPage() {
                         </p>
                         <Link
                             href="/#signup"
-                            onClick={() => startTrialIfMissing()}
+                            onClick={() => { startTrialIfMissing(); }}
                             className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-lg font-bold text-[#8200db] shadow-xl hover:bg-gray-50 transition-colors"
                         >
                             Start Free Trial

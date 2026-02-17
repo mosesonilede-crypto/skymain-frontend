@@ -42,6 +42,52 @@ type AdminPanelPayload = {
     system: SystemConfig;
 };
 
+const TRIAL_LENGTH_DAYS = 14;
+
+function computeSubscriptionStatus(
+    profileStatus: string | null | undefined,
+    trialStartedAt: string | null | undefined,
+    trialExpiresAt: string | null | undefined,
+    stripeStatus: string | null | undefined,
+    userCreatedAt: string
+): string {
+    // If user has active Stripe subscription, they're active
+    if (stripeStatus === "active" || stripeStatus === "trialing") {
+        return stripeStatus === "trialing" ? "trial" : "active";
+    }
+
+    // If profile explicitly says active, trust it
+    if (profileStatus === "active") {
+        return "active";
+    }
+
+    // If cancelled or expired, return that
+    if (profileStatus === "cancelled" || profileStatus === "expired") {
+        return profileStatus;
+    }
+
+    // Check trial dates
+    const now = new Date();
+    let expiresAt: Date | null = null;
+
+    if (trialExpiresAt) {
+        expiresAt = new Date(trialExpiresAt);
+    } else if (trialStartedAt) {
+        const startDate = new Date(trialStartedAt);
+        expiresAt = new Date(startDate.getTime() + TRIAL_LENGTH_DAYS * 24 * 60 * 60 * 1000);
+    } else {
+        // No trial dates - use user created_at as trial start
+        const startDate = new Date(userCreatedAt);
+        expiresAt = new Date(startDate.getTime() + TRIAL_LENGTH_DAYS * 24 * 60 * 60 * 1000);
+    }
+
+    if (now >= expiresAt) {
+        return "expired";
+    }
+
+    return "trial";
+}
+
 type SessionPayload = {
     email: string;
     orgName: string;
@@ -256,11 +302,13 @@ export async function GET(req: NextRequest) {
             payment_details?: string | null;
             created_at?: string | null;
             updated_at?: string | null;
+            trial_started_at?: string | null;
+            trial_expires_at?: string | null;
         }> = [];
         try {
             const { data: profilesData, error: profilesError } = await supabaseServer
                 .from("user_profiles")
-                .select("user_id,email,full_name,org_name,role,phone,country,subscription_status,subscription_plan,stripe_customer_id,payment_details,created_at,updated_at");
+                .select("user_id,email,full_name,org_name,role,phone,country,subscription_status,subscription_plan,stripe_customer_id,payment_details,created_at,updated_at,trial_started_at,trial_expires_at");
             if (profilesError) {
                 console.warn("Admin directory profiles unavailable:", profilesError);
             } else {
@@ -314,12 +362,15 @@ export async function GET(req: NextRequest) {
                             || (appMetadata.role as string | undefined)
                             || "Viewer",
                         status: (metadata.status as string | undefined) || "Active",
-                        subscriptionStatus:
+                        subscriptionStatus: computeSubscriptionStatus(
                             (profile?.subscription_status as string | undefined)
                             || (metadata.subscription_status as string | undefined)
-                            || (appMetadata.subscription_status as string | undefined)
-                            || stripeSummary?.subscriptionStatus
-                            || "pending",
+                            || (appMetadata.subscription_status as string | undefined),
+                            profile?.trial_started_at,
+                            profile?.trial_expires_at,
+                            stripeSummary?.subscriptionStatus,
+                            user.created_at
+                        ),
                         subscriptionPlan:
                             (profile?.subscription_plan as string | undefined)
                             || (metadata.subscription_plan as string | undefined)

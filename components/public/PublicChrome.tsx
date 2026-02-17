@@ -8,7 +8,7 @@ import PublicHeader from "@/components/public/PublicHeader";
 
 export default function PublicChrome({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const hideChrome = pathname === "/get-started" || pathname === "/partnerships";
+    const hideChrome = pathname === "/get-started";
 
     return (
         <div className="min-h-dvh bg-white text-slate-900">

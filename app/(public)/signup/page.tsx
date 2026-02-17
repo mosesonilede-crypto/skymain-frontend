@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { getPublicSiteUrl } from "@/lib/siteUrl";
+import { PasswordStrengthIndicator } from "@/components/ui/PasswordStrengthIndicator";
 
 export default function SignUpPage() {
     const router = useRouter();
@@ -226,6 +227,7 @@ export default function SignUpPage() {
                                             {showPassword ? "Hide" : "Show"}
                                         </button>
                                     </div>
+                                    <PasswordStrengthIndicator password={password} />
                                 </div>
 
                                 <div>

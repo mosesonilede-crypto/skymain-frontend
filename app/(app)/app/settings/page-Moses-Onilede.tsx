@@ -4,6 +4,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAircraft, type Aircraft } from "@/lib/AircraftContext";
+import { PasswordStrengthIndicator } from "@/components/ui/PasswordStrengthIndicator";
 
 /* ----------------------------- Icon Fallbacks ----------------------------- */
 const makeLetterIcon = (label: string, bg = "#e2e8f0", fg = "#0f172a") => {
@@ -4852,6 +4853,7 @@ export default function SettingsPage() {
                                                 {showNewPassword ? "Hide" : "Show"}
                                             </button>
                                         </div>
+                                        <PasswordStrengthIndicator password={newPassword} />
                                     </label>
                                     <label className="flex flex-col gap-1 text-sm text-slate-700">
                                         Confirm New Password

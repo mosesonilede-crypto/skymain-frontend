@@ -26,7 +26,7 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (user: User) => void;
+    login: (user: User) => Promise<boolean>;
     logout: () => void;
 }
 
@@ -70,21 +70,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         checkSession();
     }, []);
 
-    const login = async (userData: User) => {
-        setUser(userData);
+    const login = async (userData: User): Promise<boolean> => {
         // Store in localStorage for immediate access
         localStorage.setItem("SKYMAINTAIN_USER", JSON.stringify(userData));
 
-        // Also create HTTP-only session cookie for security
+        // Create HTTP-only session cookie for security
         try {
-            await fetch("/api/auth/session", {
+            const res = await fetch("/api/auth/session", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify(userData),
             });
+
+            if (!res.ok) {
+                console.error("Session creation failed:", res.status);
+                return false;
+            }
+
+            // Only set user state after session is confirmed
+            setUser(userData);
+            return true;
         } catch (e) {
             console.error("Failed to create session", e);
+            return false;
         }
     };
 

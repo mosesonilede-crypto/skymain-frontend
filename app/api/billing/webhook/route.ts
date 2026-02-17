@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe, STRIPE_PRICES } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { sendWelcomeEmail } from "@/lib/email";
 import Stripe from "stripe";
 
 export const runtime = "nodejs";
@@ -207,6 +208,21 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
             subscriptionPlan: planFromStripe || null,
             paymentDetails,
         });
+
+        // Send welcome email for paid subscription
+        try {
+            const subscriptionType = (planFromStripe?.toLowerCase() || "starter") as "starter" | "professional" | "enterprise";
+            await sendWelcomeEmail({
+                email,
+                name: session.customer_details?.name || undefined,
+                orgName: session.metadata?.orgName || undefined,
+                subscriptionType,
+            });
+            console.log("✅ Welcome email sent to:", email);
+        } catch (emailError) {
+            console.warn("Failed to send welcome email:", emailError);
+            // Don't fail the webhook if email fails
+        }
     }
 }
 

@@ -127,7 +127,12 @@ export default function SignInOverlay() {
             }
         }
 
-        await login({ email: trimmedEmail, orgName: trimmedOrg, role: resolvedRole });
+        // Pre-load session data - actual session created after 2FA
+        const loginSuccess = await login({ email: trimmedEmail, orgName: trimmedOrg, role: resolvedRole });
+        if (!loginSuccess) {
+            setError("Failed to initialize session. Please try again.");
+            return;
+        }
 
         router.push("/2fa");
     }
@@ -238,7 +243,7 @@ export default function SignInOverlay() {
                                 />
                                 Remember me
                             </label>
-                            <Link href={CONTACT_SUPPORT} className="text-[#155dfc]">
+                            <Link href="/forgot-password" className="text-[#155dfc]">
                                 Forgot password?
                             </Link>
                         </div>

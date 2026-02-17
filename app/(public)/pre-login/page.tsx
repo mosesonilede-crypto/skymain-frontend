@@ -180,7 +180,7 @@ export default function PreLoginPage() {
                                             />
                                             Remember me
                                         </label>
-                                        <Link href="/signin" className="text-[#155dfc] text-[14px]">
+                                        <Link href="/forgot-password" className="text-[#155dfc] text-[14px]">
                                             Forgot password?
                                         </Link>
                                     </div>

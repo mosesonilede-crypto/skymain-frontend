@@ -37,7 +37,7 @@ export default function SignInPage() {
         const lTrim = licenseCode.trim();
 
         if (!trial && !lTrim) {
-            startTrialIfMissing();
+            await startTrialIfMissing();
         }
 
         const activeTrial = getTrialStatus();
@@ -82,8 +82,12 @@ export default function SignInPage() {
         }
 
         // Persist authentication state
-        login({ email: eTrim, orgName: orgNameMeta, role });
-        startTrialIfMissing();
+        const loginSuccess = await login({ email: eTrim, orgName: orgNameMeta, role });
+        if (!loginSuccess) {
+            setError("Failed to initialize session. Please try again.");
+            return;
+        }
+        await startTrialIfMissing();
 
         router.push("/2fa");
     }
@@ -216,7 +220,7 @@ export default function SignInPage() {
                                 </label>
 
                                 <Link
-                                    href="/contact?intent=support&topic=access"
+                                    href="/forgot-password"
                                     className="text-sm font-semibold text-slate-900 hover:underline"
                                 >
                                     Forgot password?

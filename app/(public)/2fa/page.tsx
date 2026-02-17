@@ -239,16 +239,20 @@ export default function TwoFactorPage() {
                 return;
             }
 
-            await login(authUser);
+            const loginSuccess = await login(authUser);
+            if (!loginSuccess) {
+                setError("Failed to create session. Please try again.");
+                return;
+            }
+
+            // Chronology: 2FA -> welcome (post-login landing)
+            router.push("/app/welcome");
         } catch (verifyError) {
             setError(verifyError instanceof Error ? verifyError.message : "Verification failed.");
             return;
         } finally {
             setSubmitting(false);
         }
-
-        // Chronology: 2FA -> welcome (post-login landing)
-        router.push("/app/welcome");
     }
 
     return (

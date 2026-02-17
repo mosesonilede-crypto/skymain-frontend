@@ -8,6 +8,7 @@ import { resolveSessionRole } from "@/lib/auth/roles";
 import { getTrialStatus, startTrialIfMissing } from "@/lib/trial";
 import { supabase } from "@/lib/supabaseClient";
 import { getPublicSiteUrl } from "@/lib/siteUrl";
+import { PasswordStrengthIndicator } from "@/components/ui/PasswordStrengthIndicator";
 
 export default function LandingSignupForm() {
     const router = useRouter();
@@ -40,7 +41,7 @@ export default function LandingSignupForm() {
             const lTrim = licenseCode.trim();
 
             if (!trial && !lTrim) {
-                startTrialIfMissing();
+                await startTrialIfMissing();
             }
 
             const activeTrial = getTrialStatus();
@@ -84,8 +85,12 @@ export default function LandingSignupForm() {
                 window.localStorage.setItem("skymaintain.orgName", orgNameMeta);
             }
 
-            login({ email: eTrim, orgName: orgNameMeta, role });
-            startTrialIfMissing();
+            const loginSuccess = await login({ email: eTrim, orgName: orgNameMeta, role });
+            if (!loginSuccess) {
+                setError("Failed to initialize session. Please try again.");
+                return;
+            }
+            await startTrialIfMissing();
             router.push("/2fa");
             return;
         }
@@ -230,6 +235,7 @@ export default function LandingSignupForm() {
                             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
                             placeholder={mode === "signup" ? "Create a password" : "Enter your password"}
                         />
+                        {mode === "signup" && <PasswordStrengthIndicator password={password} />}
                     </div>
 
                     {mode === "signup" ? (
