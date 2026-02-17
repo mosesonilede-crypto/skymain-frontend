@@ -63,7 +63,7 @@ export default function MainLandingPage() {
                         <ArrowRight className="h-4 w-4" />
                     </Link>
                     <Link
-                        href="/partnerships"
+                        href="/get-started"
                         className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-8 py-5 text-lg font-medium text-slate-900 transition-colors hover:bg-slate-50"
                     >
                         Partner with Us
@@ -103,7 +103,7 @@ export default function MainLandingPage() {
                             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                                 <div className="text-sm font-semibold text-slate-900">For Partners</div>
                                 <p className="mt-2 text-xs text-slate-600">Visit the partnerships page for integration or reseller paths.</p>
-                                <Link href="/partnerships" className="mt-3 inline-flex text-xs font-semibold text-slate-900 underline">
+                                <Link href="/get-started" className="mt-3 inline-flex text-xs font-semibold text-slate-900 underline">
                                     Partnership details
                                 </Link>
                             </div>

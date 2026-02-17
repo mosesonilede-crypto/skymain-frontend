@@ -137,7 +137,7 @@ export default function SignInPage() {
                             <Link href="/#signup" className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 hover:bg-slate-50">
                                 Start free trial
                             </Link>
-                            <Link href="/partnerships" className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 hover:bg-slate-50">
+                            <Link href="/get-started" className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-700 hover:bg-slate-50">
                                 Partnership info
                             </Link>
                         </div>

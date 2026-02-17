@@ -35,7 +35,7 @@ export default function PublicHeader() {
                     <Link href="/security" className="text-base text-slate-600 hover:text-slate-900">
                         Security
                     </Link>
-                    <Link href="/partnerships" className="text-base text-slate-600 hover:text-slate-900">
+                    <Link href="/get-started" className="text-base text-slate-600 hover:text-slate-900">
                         Partnerships
                     </Link>
                     <Link href="/contact" className="text-base text-slate-600 hover:text-slate-900">
