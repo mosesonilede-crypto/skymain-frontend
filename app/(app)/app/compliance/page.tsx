@@ -192,23 +192,23 @@ export default function RegulatoryCompliancePage() {
         setIntegrationMessage(null);
         try {
             const response = await fetch(`/api/compliance/${aircraftReg}`);
-            if (response.status === 503) {
-                const data = await response.json().catch(() => ({}));
-                setIntegrationMessage(
-                    data?.error || "Compliance data is unavailable until the manuals integration is configured."
-                );
-                setAirworthiness(createEmptyAirworthiness(aircraftReg));
-                setAds([]);
-                setSbs([]);
-                setCertificates([]);
-                setAnnualInspection(EMPTY_ANNUAL_INSPECTION);
-                setApplicableUpdates([]);
-                setComplianceScore(EMPTY_SCORE);
-                setLastChecked("Unavailable");
-                return;
-            }
             if (!response.ok) {
-                throw new Error("Unable to load compliance data from the live service.");
+                const data = await response.json().catch(() => ({}));
+                if (response.status === 503 || response.status >= 500) {
+                    setIntegrationMessage(
+                        data?.error || "Compliance data is unavailable until the manuals integration is configured."
+                    );
+                    setAirworthiness(createEmptyAirworthiness(aircraftReg));
+                    setAds([]);
+                    setSbs([]);
+                    setCertificates([]);
+                    setAnnualInspection(EMPTY_ANNUAL_INSPECTION);
+                    setApplicableUpdates([]);
+                    setComplianceScore(EMPTY_SCORE);
+                    setLastChecked("Unavailable");
+                    return;
+                }
+                throw new Error(data?.error || "Unable to load compliance data from the live service.");
             }
 
             const data = await response.json();

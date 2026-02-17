@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchCompliance } from "@/lib/integrations/manuals";
-import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { IntegrationNotConfiguredError, IntegrationRequestError } from "@/lib/integrations/errors";
 import { allowMockFallback } from "@/lib/runtimeFlags";
 
 export async function GET(
@@ -29,6 +29,14 @@ export async function GET(
             }, {
                 headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200" },
             });
+        }
+
+        if (error instanceof IntegrationRequestError) {
+            console.error("Manuals integration request failed:", error);
+            return NextResponse.json(
+                { error: "Manuals connector is unavailable", detail: error.message },
+                { status: 503 }
+            );
         }
 
         console.error("Error fetching compliance data:", error);
