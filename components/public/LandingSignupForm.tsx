@@ -123,7 +123,7 @@ export default function LandingSignupForm() {
         const emailRedirectTo = siteUrl ? `${siteUrl}/signin?verified=1` : undefined;
 
         setSubmitting(true);
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { error: signUpError, data } = await supabase.auth.signUp({
             email: eTrim,
             password,
             options: {
@@ -136,6 +136,25 @@ export default function LandingSignupForm() {
         if (signUpError) {
             setError(signUpError.message);
             return;
+        }
+
+        // Notify Super Admin about new signup
+        try {
+            await fetch("/api/admin/signup-notifications", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: eTrim,
+                    full_name: nTrim,
+                    org_name: oTrim,
+                    user_id: data?.user?.id || null,
+                    resolved_role: "trial_user",
+                    metadata: { signup_source: "landing_page" },
+                }),
+            });
+        } catch {
+            // Non-blocking - don't fail signup if notification fails
+            console.warn("Failed to send signup notification to admin");
         }
 
         setVerificationSent(true);

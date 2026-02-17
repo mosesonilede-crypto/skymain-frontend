@@ -59,6 +59,22 @@ type PartnerContent = {
     industry: PartnerCard;
 };
 
+type SignupNotification = {
+    id: string;
+    user_id: string | null;
+    email: string;
+    full_name: string | null;
+    org_name: string | null;
+    signup_at: string;
+    read_at: string | null;
+    dismissed_at: string | null;
+    is_read: boolean;
+    license_code_used: string | null;
+    resolved_role: string | null;
+    ip_address: string | null;
+    metadata: Record<string, unknown>;
+};
+
 const PARTNER_STORAGE_KEY = "skymaintain.partnerContent";
 const DEMO_VIDEO_STORAGE_KEY = "skymaintain.demoVideoId";
 const DEFAULT_DEMO_VIDEO_ID = "oMcy-bTjvJ0";
@@ -149,7 +165,10 @@ export default function SuperAdminPage() {
     // Data states
     const [users, setUsers] = useState<PlatformUser[]>([]);
     const [accessCodes, setAccessCodes] = useState<GeneratedAccessCode[]>([]);
-    const [activeTab, setActiveTab] = useState<"users" | "codes" | "analytics" | "partners" | "announcements" | "settings">("users");
+    const [signupNotifications, setSignupNotifications] = useState<SignupNotification[]>([]);
+    const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+    const [notificationsLoading, setNotificationsLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<"users" | "codes" | "notifications" | "partners" | "announcements" | "settings">("users");
 
     // Demo Video Settings
     const [demoVideoId, setDemoVideoId] = useState("oMcy-bTjvJ0");
@@ -190,7 +209,7 @@ export default function SuperAdminPage() {
     const [accessCodesLoading, setAccessCodesLoading] = useState(false);
     const [accessCodesError, setAccessCodesError] = useState<string | null>(null);
 
-    // Notification
+    // UI Notification (toast)
     const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
     const [partnerDraft, setPartnerDraft] = useState<PartnerContent>(defaultPartnerContent);
 
@@ -325,6 +344,36 @@ export default function SuperAdminPage() {
         loadAccessCodes();
     }, [isAuthenticated, isSuperAdmin]);
 
+    // Load signup notifications
+    useEffect(() => {
+        if (!isAuthenticated || !isSuperAdmin) return;
+
+        async function loadSignupNotifications() {
+            setNotificationsLoading(true);
+            try {
+                const response = await fetch("/api/admin/signup-notifications", { credentials: "include" });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error("Failed to load signup notifications:", errorData);
+                    return;
+                }
+                const data = await response.json();
+                // Filter out dismissed notifications
+                const active = (data.notifications || []).filter(
+                    (n: SignupNotification) => !n.dismissed_at
+                );
+                setSignupNotifications(active);
+                setUnreadNotificationCount(data.unread_count || 0);
+            } catch (error) {
+                console.error("Error loading signup notifications:", error);
+            } finally {
+                setNotificationsLoading(false);
+            }
+        }
+
+        loadSignupNotifications();
+    }, [isAuthenticated, isSuperAdmin]);
+
     function handleLogout() {
         logout();
         router.push("/app/dashboard");
@@ -333,6 +382,55 @@ export default function SuperAdminPage() {
     function showNotification(type: "success" | "error", message: string) {
         setNotification({ type, message });
         setTimeout(() => setNotification(null), 4000);
+    }
+
+    async function handleMarkNotificationsRead(notificationIds?: string[]) {
+        try {
+            const response = await fetch("/api/admin/signup-notifications", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(notificationIds ? { notification_ids: notificationIds } : { mark_all_read: true }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to mark notifications as read");
+            }
+
+            if (notificationIds) {
+                setSignupNotifications(prev => prev.map(n =>
+                    notificationIds.includes(n.id) ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
+                ));
+                setUnreadNotificationCount(prev => Math.max(0, prev - notificationIds.length));
+            } else {
+                setSignupNotifications(prev => prev.map(n => ({ ...n, is_read: true, read_at: new Date().toISOString() })));
+                setUnreadNotificationCount(0);
+            }
+        } catch (error) {
+            showNotification("error", error instanceof Error ? error.message : "Failed to mark as read");
+        }
+    }
+
+    async function handleDismissNotification(notificationId: string) {
+        try {
+            const response = await fetch(`/api/admin/signup-notifications?id=${notificationId}`, {
+                method: "DELETE",
+                credentials: "include",
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to dismiss notification");
+            }
+
+            setSignupNotifications(prev => prev.filter(n => n.id !== notificationId));
+            // Update unread count if dismissed notification was unread
+            const dismissed = signupNotifications.find(n => n.id === notificationId);
+            if (dismissed && !dismissed.is_read) {
+                setUnreadNotificationCount(prev => Math.max(0, prev - 1));
+            }
+        } catch (error) {
+            showNotification("error", error instanceof Error ? error.message : "Failed to dismiss");
+        }
     }
 
     async function handleRevokeCode(codeId: string) {
@@ -721,17 +819,18 @@ export default function SuperAdminPage() {
             <div className="border-b border-slate-200 bg-white px-6">
                 <div className="flex gap-6 overflow-x-auto">
                     {[
-                        { id: "users", label: "Platform Users", count: users.length },
-                        { id: "codes", label: "Access Codes", count: accessCodes.length },
-                        { id: "partners", label: "Partners", count: null },
-                        { id: "announcements", label: "Announcements", count: null },
-                        { id: "settings", label: "Settings", count: null },
+                        { id: "users", label: "Platform Users", count: users.length, badge: null },
+                        { id: "codes", label: "Access Codes", count: accessCodes.length, badge: null },
+                        { id: "notifications", label: "Signups", count: signupNotifications.length, badge: unreadNotificationCount > 0 ? unreadNotificationCount : null },
+                        { id: "partners", label: "Partners", count: null, badge: null },
+                        { id: "announcements", label: "Announcements", count: null, badge: null },
+                        { id: "settings", label: "Settings", count: null, badge: null },
                     ].map((tab) => (
                         <button
                             key={tab.id}
                             type="button"
-                            onClick={() => setActiveTab(tab.id as "users" | "codes" | "partners" | "announcements" | "settings")}
-                            className={`border-b-2 pb-3 pt-4 text-sm font-medium transition-colors ${activeTab === tab.id
+                            onClick={() => setActiveTab(tab.id as "users" | "codes" | "notifications" | "partners" | "announcements" | "settings")}
+                            className={`relative border-b-2 pb-3 pt-4 text-sm font-medium transition-colors ${activeTab === tab.id
                                 ? "border-slate-900 text-slate-900"
                                 : "border-transparent text-slate-500 hover:text-slate-700"
                                 }`}
@@ -739,6 +838,11 @@ export default function SuperAdminPage() {
                             {tab.label}
                             {tab.count !== null && (
                                 <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs">{tab.count}</span>
+                            )}
+                            {tab.badge !== null && (
+                                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                                    {tab.badge > 9 ? "9+" : tab.badge}
+                                </span>
                             )}
                         </button>
                     ))}
@@ -990,6 +1094,147 @@ export default function SuperAdminPage() {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "notifications" && (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="text-sm text-slate-600">
+                                New user signups are displayed here. Review and track your platform growth.
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {unreadNotificationCount > 0 && (
+                                    <button
+                                        type="button"
+                                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                        onClick={() => handleMarkNotificationsRead()}
+                                    >
+                                        Mark all read
+                                    </button>
+                                )}
+                                <span className="text-sm text-slate-500">
+                                    {unreadNotificationCount} unread
+                                </span>
+                            </div>
+                        </div>
+
+                        {notificationsLoading && (
+                            <div className="flex items-center justify-center py-8">
+                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900" />
+                            </div>
+                        )}
+
+                        {/* Notifications List */}
+                        <div className="space-y-3">
+                            {signupNotifications.length === 0 && !notificationsLoading ? (
+                                <div className="rounded-xl border border-slate-200 bg-white px-6 py-12 text-center">
+                                    <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                                        <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                                        </svg>
+                                    </div>
+                                    <div className="text-sm font-medium text-slate-900">No signup notifications</div>
+                                    <div className="mt-1 text-sm text-slate-500">
+                                        New user signups will appear here for your review.
+                                    </div>
+                                </div>
+                            ) : (
+                                signupNotifications.map((notif) => (
+                                    <div
+                                        key={notif.id}
+                                        className={`rounded-xl border bg-white p-4 transition-all ${notif.is_read
+                                                ? "border-slate-200"
+                                                : "border-emerald-200 bg-emerald-50/50"
+                                            }`}
+                                    >
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex items-start gap-3">
+                                                <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full ${notif.is_read ? "bg-slate-100" : "bg-emerald-100"
+                                                    }`}>
+                                                    <svg className={`h-4 w-4 ${notif.is_read ? "text-slate-500" : "text-emerald-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium text-slate-900">
+                                                            {notif.full_name || "Unknown User"}
+                                                        </span>
+                                                        {!notif.is_read && (
+                                                            <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
+                                                                New
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="mt-0.5 text-sm text-slate-600">
+                                                        {notif.email}
+                                                    </div>
+                                                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                                        <span>{notif.org_name || "No organization"}</span>
+                                                        <span>•</span>
+                                                        <span>{new Date(notif.signup_at).toLocaleString()}</span>
+                                                        {notif.resolved_role && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <Pill
+                                                                    label={notif.resolved_role.replace(/_/g, " ")}
+                                                                    tone={notif.resolved_role === "super_admin" ? "purple" : "blue"}
+                                                                />
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {!notif.is_read && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleMarkNotificationsRead([notif.id])}
+                                                        className="rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                                                    >
+                                                        Mark read
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDismissNotification(notif.id)}
+                                                    className="rounded-lg px-2 py-1 text-xs font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                                    title="Dismiss notification"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Super Admin License Info */}
+                        <div className="mt-8 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                                    <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div className="font-medium text-blue-900">Super Admin Access Control</div>
+                                    <div className="mt-1 text-sm text-blue-800">
+                                        Only users with a valid Super Admin license code can access this console.
+                                        License codes are validated during sign-in. Contact the system administrator
+                                        if you need to update authorized license codes or emails.
+                                    </div>
+                                    <div className="mt-2 text-xs text-blue-700">
+                                        Authorized codes are configured via <code className="rounded bg-blue-100 px-1">NEXT_PUBLIC_SUPER_ADMIN_LICENSE_CODES</code> and
+                                        <code className="ml-1 rounded bg-blue-100 px-1">NEXT_PUBLIC_SUPER_ADMIN_EMAILS</code> environment variables.
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

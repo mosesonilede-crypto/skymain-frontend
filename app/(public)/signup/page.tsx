@@ -85,7 +85,7 @@ export default function SignUpPage() {
         const emailRedirectTo = siteUrl ? `${siteUrl}/signin?verified=1` : undefined;
 
         setSubmitting(true);
-        const { error } = await supabase.auth.signUp({
+        const { error, data } = await supabase.auth.signUp({
             email: eTrim,
             password,
             options: {
@@ -98,6 +98,25 @@ export default function SignUpPage() {
         if (error) {
             setError(error.message);
             return;
+        }
+
+        // Notify Super Admin about new signup
+        try {
+            await fetch("/api/admin/signup-notifications", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: eTrim,
+                    full_name: nTrim,
+                    org_name: oTrim,
+                    user_id: data?.user?.id || null,
+                    resolved_role: "trial_user",
+                    metadata: { signup_source: "signup_page" },
+                }),
+            });
+        } catch {
+            // Non-blocking - don't fail signup if notification fails
+            console.warn("Failed to send signup notification to admin");
         }
 
         setVerificationSent(true);
