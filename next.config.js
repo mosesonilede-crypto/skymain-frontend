@@ -49,10 +49,8 @@ const nextConfig = {
     return [
       { source: "/support", destination: "/contact?intent=support", permanent: true },
       { source: "/help", destination: "/contact?intent=support", permanent: true },
-      { source: "/partners", destination: "/contact?intent=partnerships", permanent: true },
-      { source: "/partnerships", destination: "/contact?intent=partnerships", permanent: true },
-      { source: "/request-demo", destination: "/contact?intent=demo", permanent: true },
-      { source: "/demo", destination: "/contact?intent=demo", permanent: true },
+      { source: "/partners", destination: "/get-started", permanent: true },
+      { source: "/request-demo", destination: "/demo", permanent: true },
       { source: "/pricing-contact", destination: "/contact?intent=pricing", permanent: true },
       { source: "/request-pricing", destination: "/contact?intent=pricing", permanent: true },
     ];
