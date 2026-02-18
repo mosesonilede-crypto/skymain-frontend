@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Demo page - Watch SkyMaintain product demo video
+ * Updated: 2026-02-17 - Fixed redirect issue
+ */
+
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
