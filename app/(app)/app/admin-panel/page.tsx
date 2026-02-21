@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
@@ -35,8 +35,6 @@ type AdminPanelPayload = {
 
 type AircraftStatus = "Available" | "In Maintenance" | "Grounded" | "Active";
 
-type RegisterSubpanel = "form" | "manufacturer";
-
 type RegisterAircraftForm = {
     registrationNumber: string;
     tailNumber: string;
@@ -53,11 +51,6 @@ type RegisterAircraftForm = {
 };
 
 const MANUFACTURERS = ["Airbus", "Boeing", "Bombardier", "Cessna", "Embraer", "Gulfstream", "Other"];
-
-function getPublicEnv(name: string, fallback: string) {
-    const v = process.env[name];
-    return (v ?? fallback).trim();
-}
 
 async function fetchLive(): Promise<AdminPanelPayload> {
     // Use local API endpoint
@@ -88,9 +81,8 @@ async function fetchLive(): Promise<AdminPanelPayload> {
     return data as AdminPanelPayload;
 }
 
-async function registerAircraftLive(baseUrl: string, form: RegisterAircraftForm): Promise<void> {
-    const url = `${baseUrl.replace(/\/+$/, "")}/v1/admin/aircraft`;
-    const res = await fetch(url, {
+async function registerAircraftLive(form: RegisterAircraftForm): Promise<void> {
+    const res = await fetch("/api/aircraft", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -98,8 +90,8 @@ async function registerAircraftLive(baseUrl: string, form: RegisterAircraftForm)
     });
 
     if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`POST /v1/admin/aircraft failed: ${res.status}${text ? ` - ${text}` : ""}`);
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Failed to register aircraft: ${res.status}`);
     }
 }
 
@@ -757,7 +749,6 @@ export default function AdminPanelPage() {
     });
     const canAccessAdminPanel = isAdminRole(resolvedRole);
 
-    const baseUrl = useMemo(() => getPublicEnv("NEXT_PUBLIC_API_BASE_URL", ""), []);
     const source = "live";
     const [payload, setPayload] = useState<AdminPanelPayload>(() => ({
         kpis: { totalAircraft: 0, activeUsers: 0, maintenanceRecords: 0, complianceRatePct: 0 },
@@ -789,7 +780,6 @@ export default function AdminPanelPage() {
 
     const [isRegisterOpen, setIsRegisterOpen] = useState<boolean>(true);
     const [registerTab, setRegisterTab] = useState<"basic" | "maintenance" | "compliance">("basic");
-    const [registerPanel, setRegisterPanel] = useState<RegisterSubpanel>("form");
 
     const [form, setForm] = useState<RegisterAircraftForm>(() => ({
         registrationNumber: "",
@@ -901,7 +891,6 @@ export default function AdminPanelPage() {
         setSelectedAircraftType("Commercial");
         setSelectedCategory("Narrow-body");
         setRegisterTab("basic");
-        setRegisterPanel("form");
         setForm({
             registrationNumber: "",
             tailNumber: "",
@@ -960,14 +949,9 @@ export default function AdminPanelPage() {
             return;
         }
 
-        if (!baseUrl) {
-            setSubmitError("Admin connector base URL is not configured.");
-            return;
-        }
-
         try {
             setSubmitting(true);
-            await registerAircraftLive(baseUrl, form);
+            await registerAircraftLive(form);
             setIsRegisterOpen(false);
             resetForm();
         } catch (e) {
@@ -1297,42 +1281,6 @@ export default function AdminPanelPage() {
                 </div>
             ) : null}
 
-            {isRegisterOpen && registerPanel === "manufacturer" ? (
-                <div className="fixed inset-0 z-50 bg-white">
-                    <div className="mx-auto max-w-3xl px-5 py-6">
-                        <div className="mb-6 flex items-center justify-between">
-                            <div className="text-sm font-semibold text-slate-900">Select Manufacturer</div>
-                            <button
-                                onClick={() => setRegisterPanel("form")}
-                                className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50"
-                            >
-                                Back
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            {MANUFACTURERS.map((m) => (
-                                <button
-                                    key={m}
-                                    onClick={() => {
-                                        setForm((f) => ({ ...f, manufacturer: m }));
-                                        setRegisterPanel("form");
-                                    }}
-                                    className={[
-                                        "rounded-xl border px-4 py-3 text-sm font-medium transition-colors",
-                                        form.manufacturer === m
-                                            ? "border-slate-900 bg-slate-900 text-white"
-                                            : "border-slate-200 bg-white hover:bg-slate-50",
-                                    ].join(" ")}
-                                >
-                                    {m}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            ) : null}
-
             {isRegisterOpen ? (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4"
@@ -1449,14 +1397,12 @@ export default function AdminPanelPage() {
                                         <div className="mt-4 grid gap-4 md:grid-cols-2">
                                             <div>
                                                 <FieldLabel required>Manufacturer</FieldLabel>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setRegisterPanel("manufacturer")}
-                                                    className="mt-2 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
-                                                >
-                                                    <span>{form.manufacturer || "Select Manufacturer"}</span>
-                                                    <span className="text-slate-400">&gt;</span>
-                                                </button>
+                                                <Select
+                                                    value={form.manufacturer}
+                                                    onChange={(v) => setForm((f) => ({ ...f, manufacturer: v }))}
+                                                    options={MANUFACTURERS}
+                                                    placeholder="Select Manufacturer"
+                                                />
                                             </div>
 
                                             <div>

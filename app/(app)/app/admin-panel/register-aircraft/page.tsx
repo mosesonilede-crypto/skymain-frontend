@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     Bot,
@@ -81,20 +81,13 @@ const CATEGORIES = ["Narrow-body", "Wide-body", "Regional", "Business Jet", "Tur
 const STATUS_OPTIONS: AircraftStatus[] = ["Active", "Available", "In Maintenance", "Grounded"];
 const USER_ROLES = ["Admin", "Fleet Manager", "Maintenance Engineer", "Viewer"];
 
-function getPublicEnv(name: string, fallback: string) {
-    const v = process.env[name];
-    return (v ?? fallback).trim();
-}
-
-async function fetchLive(baseUrl: string): Promise<AdminPanelPayload> {
-    const url = `${baseUrl.replace(/\/+$/, "")}/v1/admin/panel/overview`;
-    const res = await fetch(url, {
+async function fetchLive(): Promise<AdminPanelPayload> {
+    const res = await fetch("/api/admin", {
         method: "GET",
-        credentials: "include",
         headers: { Accept: "application/json" },
     });
 
-    if (!res.ok) throw new Error(`GET /v1/admin/panel/overview failed: ${res.status}`);
+    if (!res.ok) throw new Error(`Failed to load admin data: ${res.status}`);
 
     const data = (await res.json()) as Partial<AdminPanelPayload>;
     if (
@@ -115,9 +108,8 @@ async function fetchLive(baseUrl: string): Promise<AdminPanelPayload> {
     return data as AdminPanelPayload;
 }
 
-async function registerAircraftLive(baseUrl: string, form: RegisterAircraftForm): Promise<void> {
-    const url = `${baseUrl.replace(/\/+$/, "")}/v1/admin/aircraft`;
-    const res = await fetch(url, {
+async function registerAircraftLive(form: RegisterAircraftForm): Promise<void> {
+    const res = await fetch("/api/aircraft", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -125,39 +117,23 @@ async function registerAircraftLive(baseUrl: string, form: RegisterAircraftForm)
     });
 
     if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`POST /v1/admin/aircraft failed: ${res.status}${text ? ` • ${text}` : ""}`);
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Failed to register aircraft: ${res.status}`);
     }
 }
 
-async function addUserLive(baseUrl: string, form: { name: string; email: string; role: string; status: string }): Promise<void> {
-    const url = `${baseUrl.replace(/\/+$/, "")}/v1/admin/users`;
-    const res = await fetch(url, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(form),
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`POST /v1/admin/users failed: ${res.status}${text ? ` • ${text}` : ""}`);
-    }
+async function addUserLive(form: { name: string; email: string; role: string; status: string }): Promise<void> {
+    // User management API not yet implemented - this is a placeholder
+    // In production, this would call /api/admin/users
+    console.log("Add user:", form);
+    throw new Error("User management is not yet available. Please contact your administrator.");
 }
 
-async function updateUserLive(baseUrl: string, userId: string, updates: Partial<AdminUser>): Promise<void> {
-    const url = `${baseUrl.replace(/\/+$/, "")}/v1/admin/users/${userId}`;
-    const res = await fetch(url, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(updates),
-    });
-
-    if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`PATCH /v1/admin/users/${userId} failed: ${res.status}${text ? ` • ${text}` : ""}`);
-    }
+async function updateUserLive(userId: string, updates: Partial<AdminUser>): Promise<void> {
+    // User management API not yet implemented - this is a placeholder
+    // In production, this would call /api/admin/users/:id
+    console.log("Update user:", userId, updates);
+    throw new Error("User management is not yet available. Please contact your administrator.");
 }
 
 function RoleBadge({ role }: { role: string }) {
@@ -212,7 +188,6 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function RegisterAircraftPage() {
     const router = useRouter();
-    const baseUrl = useMemo(() => getPublicEnv("NEXT_PUBLIC_API_BASE_URL", ""), []);
 
     const [activeTab, setActiveTab] = useState<"overview" | "billing">("overview");
     const [payload, setPayload] = useState<AdminPanelPayload>({
@@ -273,17 +248,10 @@ export default function RegisterAircraftPage() {
 
         async function run() {
             setError("");
-
-            if (!baseUrl) {
-                setError("Admin connector base URL is not configured.");
-                setLoading(false);
-                return;
-            }
-
             setLoading(true);
 
             try {
-                const live = await fetchLive(baseUrl);
+                const live = await fetchLive();
                 if (cancelled) return;
                 setPayload(live);
             } catch (e) {
@@ -293,7 +261,7 @@ export default function RegisterAircraftPage() {
                     users: [],
                     system: { licenseStatus: "Unknown", licenseExpires: "", storageUsedGb: 0, storageTotalGb: 0 },
                 });
-                setError(e instanceof Error ? e.message : "Failed to load live data");
+                setError(e instanceof Error ? e.message : "Failed to load data");
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -303,7 +271,7 @@ export default function RegisterAircraftPage() {
         return () => {
             cancelled = true;
         };
-    }, [baseUrl]);
+    }, []);
 
     const used = payload.system.storageUsedGb;
     const total = payload.system.storageTotalGb;
@@ -376,14 +344,9 @@ export default function RegisterAircraftPage() {
             return;
         }
 
-        if (!baseUrl) {
-            setSubmitError("Admin connector base URL is not configured.");
-            return;
-        }
-
         try {
             setSubmitting(true);
-            await registerAircraftLive(baseUrl, registerForm);
+            await registerAircraftLive(registerForm);
             router.push("/app/admin-panel");
         } catch (e) {
             setSubmitError(e instanceof Error ? e.message : "Failed to register aircraft.");
@@ -409,17 +372,12 @@ export default function RegisterAircraftPage() {
             return;
         }
 
-        if (!baseUrl) {
-            setAddUserError("Admin connector base URL is not configured.");
-            return;
-        }
-
         try {
             setAddingUser(true);
-            await addUserLive(baseUrl, addUserForm);
+            await addUserLive(addUserForm);
             setIsAddUserOpen(false);
             setAddUserForm({ name: "", email: "", role: "Viewer", status: "Active" });
-            const live = await fetchLive(baseUrl);
+            const live = await fetchLive();
             setPayload(live);
         } catch (e) {
             setAddUserError(e instanceof Error ? e.message : "Failed to add user.");
@@ -432,17 +390,12 @@ export default function RegisterAircraftPage() {
         if (!editingUser) return;
         setEditUserError("");
 
-        if (!baseUrl) {
-            setEditUserError("Admin connector base URL is not configured.");
-            return;
-        }
-
         try {
             setSavingUser(true);
-            await updateUserLive(baseUrl, editingUser.id || editingUser.email, editUserForm);
+            await updateUserLive(editingUser.id || editingUser.email, editUserForm);
             setEditingUser(null);
             setEditUserForm({});
-            const live = await fetchLive(baseUrl);
+            const live = await fetchLive();
             setPayload(live);
         } catch (e) {
             setEditUserError(e instanceof Error ? e.message : "Failed to update user.");
