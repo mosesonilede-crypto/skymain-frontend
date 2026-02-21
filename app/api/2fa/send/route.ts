@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Resend } from "resend";
 import { generateOtp, getOtpExpiry, signPayload } from "@/lib/twoFactor";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/rateLimit";
 
@@ -12,23 +13,103 @@ type SendBody = {
     destination: string;
 };
 
-function isConfigured(method: "email" | "sms") {
-    if (method === "email") {
-        return Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_FROM);
-    }
-    return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
+/* ── Resend (primary) ─────────────────────────────────────── */
+
+function getResend(): Resend | null {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) return null;
+    return new Resend(key);
 }
 
-async function sendEmail(code: string, destination: string) {
+const SENDER_ADDRESS =
+    process.env.RESEND_FROM || "SkyMaintain <noreply@skymaintain.ai>";
+
+function buildOtpEmail(code: string) {
+    const text = [
+        `Your SkyMaintain verification code is: ${code}`,
+        "",
+        "This code expires in 5 minutes. If you did not request this code, you can safely ignore this email.",
+        "",
+        "— The SkyMaintain Team",
+        "https://www.skymaintain.ai",
+    ].join("\n");
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;padding:40px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
+        <!-- Header -->
+        <tr><td style="background-color:#0f172a;padding:24px 32px;">
+          <span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">SkyMaintain</span>
+        </td></tr>
+        <!-- Body -->
+        <tr><td style="padding:32px;">
+          <h1 style="margin:0 0 8px;font-size:22px;font-weight:600;color:#0f172a;">Verification code</h1>
+          <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.5;">
+            Enter this code to complete your sign-in. It expires in <strong>5 minutes</strong>.
+          </p>
+          <div style="text-align:center;padding:20px 0;">
+            <span style="display:inline-block;font-size:36px;font-weight:700;letter-spacing:0.35em;color:#0f172a;background-color:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:14px 28px;">${code}</span>
+          </div>
+          <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;line-height:1.5;">
+            If you did not request this code, you can safely ignore this email. Never share this code with anyone.
+          </p>
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="padding:20px 32px;border-top:1px solid #e2e8f0;background-color:#f8fafc;">
+          <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
+            &copy; ${new Date().getFullYear()} SkyMaintain &middot;
+            <a href="https://www.skymaintain.ai" style="color:#64748b;text-decoration:none;">skymaintain.ai</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
+
+    return { text, html };
+}
+
+async function sendViaResend(code: string, destination: string) {
+    const resend = getResend();
+    if (!resend) return null;
+
+    const { text, html } = buildOtpEmail(code);
+
+    const { data, error } = await resend.emails.send({
+        from: SENDER_ADDRESS,
+        to: [destination],
+        subject: "Your SkyMaintain verification code",
+        text,
+        html,
+        headers: {
+            "X-Entity-Ref-ID": `sm-2fa-${Date.now()}`,
+        },
+    });
+
+    if (error) throw new Error(error.message || "Resend delivery failed");
+    return { messageId: data?.id ?? undefined };
+}
+
+/* ── SMTP fallback ────────────────────────────────────────── */
+
+function isSmtpConfigured() {
+    return Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_FROM);
+}
+
+async function sendViaSmtp(code: string, destination: string) {
     const host = process.env.SMTP_HOST;
     const port = Number(process.env.SMTP_PORT || 587);
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
     const from = process.env.SMTP_FROM;
 
-    if (!host || !from) {
-        throw new Error("Email provider not configured. Missing SMTP_HOST or SMTP_FROM.");
-    }
+    if (!host || !from) throw new Error("SMTP not configured.");
 
     const { createTransport } = await import("nodemailer");
     const transport = createTransport({
@@ -38,26 +119,19 @@ async function sendEmail(code: string, destination: string) {
         auth: user && pass ? { user, pass } : undefined,
     });
 
-    await transport.verify();
+    const { text, html } = buildOtpEmail(code);
 
-    const formattedFrom = from.includes("<") ? from : `SkyMaintain <${from}>`;
-    const replyTo = process.env.SMTP_REPLY_TO;
-
-    const result = await transport.sendMail({
-        from: formattedFrom,
-        replyTo: replyTo || undefined,
+    await transport.sendMail({
+        from: from.includes("<") ? from : `SkyMaintain <${from}>`,
+        replyTo: process.env.SMTP_REPLY_TO || undefined,
         to: destination,
         subject: "Your SkyMaintain verification code",
-        text: `Your SkyMaintain verification code is ${code}. It expires in 5 minutes.`,
-        html: `<p>Your SkyMaintain verification code is <strong>${code}</strong>.</p><p>This code expires in 5 minutes.</p>`,
+        text,
+        html,
     });
-
-    return {
-        messageId: result?.messageId,
-        accepted: result?.accepted ?? [],
-        rejected: result?.rejected ?? [],
-    };
 }
+
+/* ── SMS ──────────────────────────────────────────────────── */
 
 async function sendSms(code: string, destination: string) {
     const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -88,8 +162,9 @@ async function sendSms(code: string, destination: string) {
     }
 }
 
+/* ── POST handler ─────────────────────────────────────────── */
+
 export async function POST(req: NextRequest) {
-    // Rate limit by IP or destination
     const forwarded = req.headers.get("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim() || "unknown";
     const rateCheck = checkRateLimit(`2fa:${ip}`, RATE_LIMITS.twoFa);
@@ -111,68 +186,53 @@ export async function POST(req: NextRequest) {
     const expires = getOtpExpiry();
     const token = signPayload({ method: body.method, destination: body.destination, code, expires });
 
-    const mode = (process.env.NEXT_PUBLIC_DATA_MODE ?? "live").toLowerCase();
-    const allowMockEnv = (process.env.ALLOW_MOCK_FALLBACK || "").toLowerCase().trim() === "true";
-    const allowMockFallback = process.env.NODE_ENV !== "production" && allowMockEnv && (mode === "mock" || mode === "hybrid");
-    const allowMockEmail = process.env.NODE_ENV !== "production" && allowMockEnv && mode === "mock";
-    let usedMock = false;
+    let provider = "resend";
+    let sendError: string | null = null;
 
-    if (!isConfigured(body.method)) {
-        if (body.method === "email" ? !allowMockEmail : !allowMockFallback) {
-            return NextResponse.json({ ok: false, error: "2FA provider not configured." }, { status: 500 });
-        }
-        usedMock = true;
-    }
-
-    let emailResult: { messageId?: string; accepted: unknown[]; rejected: unknown[] } | null = null;
-
-    if (!usedMock) {
+    if (body.method === "email") {
+        // 1. Try Resend (best deliverability)
         try {
-            if (body.method === "email") {
-                emailResult = await sendEmail(code, body.destination);
-                console.info("2FA email send result", {
-                    destination: body.destination,
-                    messageId: emailResult?.messageId,
-                    accepted: emailResult?.accepted,
-                    rejected: emailResult?.rejected,
-                });
+            const result = await sendViaResend(code, body.destination);
+            if (result) {
+                console.info("2FA email sent via Resend", { destination: body.destination, id: result.messageId });
             } else {
-                await sendSms(code, body.destination);
+                throw new Error("RESEND_API_KEY not configured");
             }
-        } catch (error) {
-            if (body.method === "email" ? allowMockEmail : allowMockFallback) {
-                usedMock = true;
+        } catch (resendErr) {
+            console.warn("Resend failed, trying SMTP:", resendErr instanceof Error ? resendErr.message : resendErr);
+            provider = "smtp";
+
+            // 2. Try SMTP fallback
+            if (isSmtpConfigured()) {
+                try {
+                    await sendViaSmtp(code, body.destination);
+                    console.info("2FA email sent via SMTP", { destination: body.destination });
+                } catch (smtpErr) {
+                    sendError = smtpErr instanceof Error ? smtpErr.message : "SMTP delivery failed";
+                    console.error("SMTP also failed:", sendError);
+                }
             } else {
-                return NextResponse.json(
-                    { ok: false, error: error instanceof Error ? error.message : "Unable to send code." },
-                    { status: 500 }
-                );
+                sendError = "Email delivery service not configured. Please contact support.";
             }
+        }
+    } else {
+        // SMS
+        provider = "sms";
+        try {
+            await sendSms(code, body.destination);
+        } catch (smsErr) {
+            sendError = smsErr instanceof Error ? smsErr.message : "SMS delivery failed";
         }
     }
 
-    if (
-        body.method === "email"
-        && emailResult
-        && Array.isArray(emailResult.accepted)
-        && emailResult.accepted.length === 0
-    ) {
-        return NextResponse.json(
-            {
-                ok: false,
-                error: "Email was not accepted by the provider. Check SMTP sender verification and logs.",
-                email: emailResult,
-            },
-            { status: 502 }
-        );
+    if (sendError) {
+        return NextResponse.json({ ok: false, error: sendError }, { status: 500 });
     }
 
     const response = NextResponse.json({
         ok: true,
-        mockCode: usedMock ? code : undefined,
-        sent: !usedMock,
-        provider: body.method,
-        email: body.method === "email" ? emailResult : undefined,
+        sent: true,
+        provider,
     });
     response.cookies.set({
         name: COOKIE_NAME,
