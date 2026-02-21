@@ -122,6 +122,21 @@ export default function TwoFactorPage() {
 
         setSending(true);
         try {
+            // Primary: Use Supabase Auth OTP (reliable delivery via Supabase's email service)
+            if (supabase) {
+                const { error: otpError } = await supabase.auth.signInWithOtp({
+                    email: destination,
+                    options: { shouldCreateUser: false },
+                });
+
+                if (!otpError) {
+                    setSendStatus("Verification code sent. Check your inbox or spam folder.");
+                    return;
+                }
+                console.warn("Supabase OTP failed, falling back to SMTP:", otpError.message);
+            }
+
+            // Fallback: Use custom SMTP via API route
             const res = await fetch("/api/2fa/send", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -137,11 +152,7 @@ export default function TwoFactorPage() {
                 setSendError("Email delivery is not configured. Contact support to enable 2FA delivery.");
                 return;
             }
-            if (data?.email?.accepted?.length) {
-                setSendStatus("Email accepted by provider. Check your inbox or spam folder.");
-            } else {
-                setSendStatus("Request sent. If it doesn’t arrive, check your spam folder or provider logs.");
-            }
+            setSendStatus("Verification code sent. Check your inbox or spam folder.");
         } catch (sendErrorCaught) {
             setSendError(sendErrorCaught instanceof Error ? sendErrorCaught.message : "Failed to send code.");
         } finally {
@@ -168,20 +179,40 @@ export default function TwoFactorPage() {
 
         setSubmitting(true);
         try {
-            const res = await fetch("/api/2fa/verify", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    method: method === "authenticator" ? "auth" : "email",
-                    code: normalized,
-                    destination: email.trim(),
-                }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || !data?.ok) {
-                setError(data?.error || "Verification failed.");
-                return;
+            let verified = false;
+
+            // Primary: Verify via Supabase OTP (matches the Supabase-sent code)
+            if (supabase && method !== "authenticator") {
+                const { error: verifyError } = await supabase.auth.verifyOtp({
+                    email: email.trim(),
+                    token: normalized,
+                    type: "email",
+                });
+                if (!verifyError) {
+                    verified = true;
+                } else {
+                    console.warn("Supabase OTP verify failed, trying API route:", verifyError.message);
+                }
+            }
+
+            // Fallback: Verify via custom API route (for SMTP-sent codes or authenticator)
+            if (!verified) {
+                const res = await fetch("/api/2fa/verify", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        method: method === "authenticator" ? "auth" : "email",
+                        code: normalized,
+                        destination: email.trim(),
+                    }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data?.ok) {
+                    setError(data?.error || "Verification failed.");
+                    return;
+                }
+                verified = true;
             }
 
             let authUser = user;
