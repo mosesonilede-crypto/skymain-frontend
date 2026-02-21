@@ -61,8 +61,22 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const [aiInitialQuery, setAiInitialQuery] = useState<string | undefined>(undefined);
     const [aiContext, setAiContext] = useState<string | undefined>(undefined);
     const [profileOpen, setProfileOpen] = useState(false);
-    const [profileDisplayName, setProfileDisplayName] = useState<string>("");
-    const [profileAvatar, setProfileAvatar] = useState<string>("");
+    const [profileDisplayName, setProfileDisplayName] = useState<string>(() => {
+        if (typeof window === "undefined") return "";
+        try {
+            const cached = localStorage.getItem("skymaintain.profile");
+            if (cached) return JSON.parse(cached).full_name || "";
+        } catch { /* ignore */ }
+        return "";
+    });
+    const [profileAvatar, setProfileAvatar] = useState<string>(() => {
+        if (typeof window === "undefined") return "";
+        try {
+            const cached = localStorage.getItem("skymaintain.profile");
+            if (cached) return JSON.parse(cached).avatar_url || "";
+        } catch { /* ignore */ }
+        return "";
+    });
     const roleHints = useMemo(() => {
         if (typeof window === "undefined") {
             return {} as { role?: string; licenseCode?: string; email?: string };
