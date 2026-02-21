@@ -82,6 +82,24 @@ Your repository is configured to automatically deploy to Vercel on pushes to `ma
   - Used by frontend to make API calls
   - Example: `https://api.yourdomain.com` or `https://your-ip:8000`
 
+### Stripe Billing Environment Variables
+
+Set these in **Vercel → Settings → Environment Variables** for billing to work:
+
+| Variable | Description |
+|----------|-------------|
+| `STRIPE_SECRET_KEY` | Stripe Dashboard → API Keys → Secret key (`sk_live_...` or `sk_test_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe Dashboard → Webhooks → Signing secret (optional, for frontend webhook) |
+| `STRIPE_PRICE_STARTER_MONTHLY` | Price ID for Starter monthly plan |
+| `STRIPE_PRICE_STARTER_YEARLY` | Price ID for Starter yearly plan |
+| `STRIPE_PRICE_PROFESSIONAL_MONTHLY` | Price ID for Professional monthly plan |
+| `STRIPE_PRICE_PROFESSIONAL_YEARLY` | Price ID for Professional yearly plan |
+| `STRIPE_PRICE_ENTERPRISE_MONTHLY` | Price ID for Enterprise monthly plan |
+| `STRIPE_PRICE_ENTERPRISE_YEARLY` | Price ID for Enterprise yearly plan |
+| `NEXT_PUBLIC_SITE_URL` | Frontend base URL for Stripe checkout redirects (e.g., `https://app.skymaintain.ai`) |
+
+> **Note**: See `.env.example` for a template with all required variables.
+
 ### API Routes
 
 The frontend has these API routes (in `/app/api/`):

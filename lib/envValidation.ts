@@ -40,6 +40,15 @@ const ENV_REQUIREMENTS: EnvRequirement[] = [
 
     // API base URL (for live mode)
     { name: "NEXT_PUBLIC_API_BASE_URL", required: false },
+
+    // Stripe billing (required in live/hybrid mode; checked below)
+    { name: "STRIPE_SECRET_KEY", required: false, validate: (v) => v.startsWith("sk_") },
+    { name: "STRIPE_PRICE_STARTER_MONTHLY", required: false, validate: (v) => v.startsWith("price_") },
+    { name: "STRIPE_PRICE_STARTER_YEARLY", required: false, validate: (v) => v.startsWith("price_") },
+    { name: "STRIPE_PRICE_PROFESSIONAL_MONTHLY", required: false, validate: (v) => v.startsWith("price_") },
+    { name: "STRIPE_PRICE_PROFESSIONAL_YEARLY", required: false, validate: (v) => v.startsWith("price_") },
+    { name: "STRIPE_PRICE_ENTERPRISE_MONTHLY", required: false, validate: (v) => v.startsWith("price_") },
+    { name: "STRIPE_PRICE_ENTERPRISE_YEARLY", required: false, validate: (v) => v.startsWith("price_") },
 ];
 
 export function validateEnvironment(): { valid: boolean; errors: string[]; warnings: string[] } {
@@ -68,6 +77,19 @@ export function validateEnvironment(): { valid: boolean; errors: string[]; warni
         }
         if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
             errors.push("NEXT_PUBLIC_API_BASE_URL is required for live mode");
+        }
+        // Stripe billing checks for live/hybrid modes
+        if (!process.env.STRIPE_SECRET_KEY) {
+            warnings.push("STRIPE_SECRET_KEY missing — billing features will return mock data");
+        }
+        const priceVars = [
+            "STRIPE_PRICE_STARTER_MONTHLY", "STRIPE_PRICE_STARTER_YEARLY",
+            "STRIPE_PRICE_PROFESSIONAL_MONTHLY", "STRIPE_PRICE_PROFESSIONAL_YEARLY",
+            "STRIPE_PRICE_ENTERPRISE_MONTHLY", "STRIPE_PRICE_ENTERPRISE_YEARLY",
+        ];
+        const missingPrices = priceVars.filter((v) => !process.env[v]);
+        if (missingPrices.length > 0) {
+            warnings.push(`Missing Stripe price IDs: ${missingPrices.join(", ")}`);
         }
     }
 
