@@ -72,10 +72,29 @@ export default function LandingSignupForm() {
 
             const user = result.data.user;
             const orgNameMeta = (user?.user_metadata?.org_name as string | undefined) || oTrim;
+
+            // Check if this user is the first from their org → auto-admin
+            let dbRole = "fleet_manager";
+            try {
+                const orgRoleRes = await fetch("/api/auth/org-role", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: user?.id, orgName: orgNameMeta, email: eTrim }),
+                });
+                if (orgRoleRes.ok) {
+                    const orgRoleData = await orgRoleRes.json();
+                    dbRole = orgRoleData.role || "fleet_manager";
+                }
+            } catch {
+                // Non-blocking — fall back to metadata role
+            }
+
             const rawRole =
-                (user?.app_metadata?.role as string | undefined) ||
-                (user?.user_metadata?.role as string | undefined) ||
-                "fleet_manager";
+                dbRole !== "fleet_manager"
+                    ? dbRole
+                    : (user?.app_metadata?.role as string | undefined) ||
+                    (user?.user_metadata?.role as string | undefined) ||
+                    "fleet_manager";
             const role = resolveSessionRole({ rawRole, licenseCode: lTrim, email: eTrim }) as UserRole;
 
             if (typeof window !== "undefined") {
@@ -138,6 +157,22 @@ export default function LandingSignupForm() {
             return;
         }
 
+        // Auto-assign admin role if first user in their organization
+        let resolvedSignupRole = "trial_user";
+        try {
+            const orgRoleRes = await fetch("/api/auth/org-role", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: data?.user?.id, orgName: oTrim, email: eTrim }),
+            });
+            if (orgRoleRes.ok) {
+                const orgRoleData = await orgRoleRes.json();
+                resolvedSignupRole = orgRoleData.role || "trial_user";
+            }
+        } catch {
+            // Non-blocking
+        }
+
         // Notify Super Admin about new signup
         try {
             await fetch("/api/admin/signup-notifications", {
@@ -148,8 +183,11 @@ export default function LandingSignupForm() {
                     full_name: nTrim,
                     org_name: oTrim,
                     user_id: data?.user?.id || null,
-                    resolved_role: "trial_user",
-                    metadata: { signup_source: "landing_page" },
+                    resolved_role: resolvedSignupRole,
+                    metadata: {
+                        signup_source: "landing_page",
+                        is_first_org_user: resolvedSignupRole === "admin",
+                    },
                 }),
             });
         } catch {

@@ -32,7 +32,29 @@ for each row execute procedure public.set_user_profiles_updated_at();
 
 create or replace function public.handle_new_user()
 returns trigger as $$
+declare
+    org text;
+    org_count integer;
+    assigned_role text;
 begin
+    org := coalesce(new.raw_user_meta_data->>'org_name', new.raw_user_meta_data->>'orgName');
+
+    -- Count existing users from the same organization
+    if org is not null and org <> '' then
+        select count(*) into org_count
+        from public.user_profiles
+        where lower(trim(org_name)) = lower(trim(org));
+    else
+        org_count := 1; -- no org → default role
+    end if;
+
+    -- First user in the org gets admin, subsequent users get default
+    if org_count = 0 then
+        assigned_role := 'admin';
+    else
+        assigned_role := coalesce(new.raw_user_meta_data->>'role', 'user');
+    end if;
+
     insert into public.user_profiles (
         user_id,
         email,
@@ -43,8 +65,8 @@ begin
         new.id,
         new.email,
         coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', new.raw_user_meta_data->>'displayName'),
-        coalesce(new.raw_user_meta_data->>'org_name', new.raw_user_meta_data->>'orgName'),
-        coalesce(new.raw_user_meta_data->>'role', 'user')
+        org,
+        assigned_role
     )
     on conflict (user_id) do nothing;
     return new;
