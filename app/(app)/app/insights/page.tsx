@@ -3,6 +3,21 @@
 import React, { useMemo, useState, useEffect } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { useAircraft } from "@/lib/AircraftContext";
+import {
+    ResponsiveContainer,
+    LineChart,
+    Line,
+    BarChart,
+    Bar,
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    Cell,
+} from "recharts";
 
 type PredictiveAlert = {
     severity: "Critical" | "Warning" | "Info";
@@ -14,6 +29,21 @@ type PredictiveAlert = {
     recommendedAction: string;
 };
 
+type AnalyticsData = {
+    modelStats: {
+        accuracy: number;
+        predictionsMade: number;
+        estimatedCostSavings: number;
+        avgLeadTimeDays: number;
+        falsePositiveRate: number;
+    };
+    featureImportance: { feature: string; importance: number }[];
+    healthTrend: { month: string; health: number }[];
+    failureDistribution: { category: string; count: number }[];
+    componentRisk: { component: string; risk: number; trend: string }[];
+    costSavings: { month: string; monthlySavings: number; cumulativeSavings: number }[];
+};
+
 type InsightsData = {
     predictiveAlert?: {
         severity: "High" | "Medium" | "Low";
@@ -21,6 +51,7 @@ type InsightsData = {
         confidence: number;
         recommendation: string;
     };
+    analytics?: AnalyticsData;
 };
 
 export default function AIInsightsPage() {
@@ -176,9 +207,12 @@ export default function AIInsightsPage() {
                     <ChevronIcon open={advancedOpen} />
                 </button>
 
-                {advancedOpen ? (
-                    <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                        Placeholder for charts and analytics (wire to approved, auditable metrics only).
+                {advancedOpen && insightsData?.analytics ? (
+                    <AdvancedAnalytics analytics={insightsData.analytics} />
+                ) : advancedOpen ? (
+                    <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500 text-center">
+                        <LoadingSpinner />
+                        <span className="ml-2">Loading analytics data…</span>
                     </div>
                 ) : null}
             </div>
@@ -320,6 +354,277 @@ export default function AIInsightsPage() {
                 </div>
             )}
         </section>
+    );
+}
+
+function LoadingSpinner() {
+    return (
+        <svg className="inline h-4 w-4 animate-spin text-slate-400" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+        </svg>
+    );
+}
+
+/* ── Colour palette for charts ──────────────────────────────────── */
+const CHART_COLORS = ["#7c3aed", "#2563eb", "#059669", "#d97706", "#e11d48", "#6366f1"];
+const RISK_COLOR = (risk: number) =>
+    risk >= 70 ? "#e11d48" : risk >= 45 ? "#d97706" : "#059669";
+
+/* ── Advanced Analytics Panel ───────────────────────────────────── */
+function AdvancedAnalytics({ analytics }: { analytics: AnalyticsData }) {
+    const { modelStats, featureImportance, healthTrend, failureDistribution, componentRisk, costSavings } = analytics;
+    const [activeTab, setActiveTab] = useState<"overview" | "health" | "failures" | "cost">("overview");
+
+    const tabs = [
+        { key: "overview" as const, label: "Overview" },
+        { key: "health" as const, label: "Health Trend" },
+        { key: "failures" as const, label: "Failure Analysis" },
+        { key: "cost" as const, label: "Cost Savings" },
+    ];
+
+    return (
+        <div className="mt-3 space-y-4">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                <StatCard label="Model Accuracy" value={`${modelStats.accuracy}%`} color="text-emerald-600" />
+                <StatCard label="Predictions Made" value={modelStats.predictionsMade.toLocaleString()} color="text-blue-600" />
+                <StatCard label="Est. Cost Savings" value={`$${modelStats.estimatedCostSavings}M`} color="text-violet-600" />
+                <StatCard label="Avg Lead Time" value={`${modelStats.avgLeadTimeDays} days`} color="text-amber-600" />
+                <StatCard label="False Positive Rate" value={`${modelStats.falsePositiveRate}%`} color="text-rose-600" />
+            </div>
+
+            {/* Tab bar */}
+            <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+                {tabs.map((t) => (
+                    <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => setActiveTab(t.key)}
+                        className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                            activeTab === t.key
+                                ? "bg-white text-slate-900 shadow-sm"
+                                : "text-slate-500 hover:text-slate-700"
+                        }`}
+                    >
+                        {t.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Tab content */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                {activeTab === "overview" && (
+                    <OverviewTab featureImportance={featureImportance} componentRisk={componentRisk} />
+                )}
+                {activeTab === "health" && <HealthTrendTab data={healthTrend} />}
+                {activeTab === "failures" && <FailureTab data={failureDistribution} />}
+                {activeTab === "cost" && <CostTab data={costSavings} />}
+            </div>
+        </div>
+    );
+}
+
+/* ── KPI stat card ──────────────────────────────────────────────── */
+function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
+    return (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm">
+            <div className="text-xs font-medium text-slate-500">{label}</div>
+            <div className={`mt-1 text-xl font-bold ${color}`}>{value}</div>
+        </div>
+    );
+}
+
+/* ── Overview: Feature Importance + Component Risk ──────────────── */
+function OverviewTab({
+    featureImportance,
+    componentRisk,
+}: {
+    featureImportance: AnalyticsData["featureImportance"];
+    componentRisk: AnalyticsData["componentRisk"];
+}) {
+    return (
+        <div className="grid gap-6 lg:grid-cols-2">
+            {/* Feature Importance */}
+            <div>
+                <h4 className="mb-3 text-sm font-semibold text-slate-900">Feature Importance in Predictions</h4>
+                <div className="space-y-3">
+                    {featureImportance.map((f, i) => (
+                        <div key={f.feature} className="flex items-center gap-3">
+                            <span className="w-44 shrink-0 text-xs text-slate-600">{f.feature}</span>
+                            <div className="flex flex-1 items-center gap-2">
+                                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                    <div
+                                        className="h-full rounded-full transition-all"
+                                        style={{
+                                            width: `${f.importance}%`,
+                                            backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
+                                        }}
+                                    />
+                                </div>
+                                <span className="w-9 text-right text-xs font-semibold text-slate-900">{f.importance}%</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Component Risk */}
+            <div>
+                <h4 className="mb-3 text-sm font-semibold text-slate-900">Component Risk Assessment</h4>
+                <div className="space-y-3">
+                    {componentRisk.map((c) => (
+                        <div key={c.component} className="flex items-center gap-3">
+                            <span className="w-32 shrink-0 text-xs text-slate-600">{c.component}</span>
+                            <div className="flex flex-1 items-center gap-2">
+                                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                    <div
+                                        className="h-full rounded-full transition-all"
+                                        style={{
+                                            width: `${c.risk}%`,
+                                            backgroundColor: RISK_COLOR(c.risk),
+                                        }}
+                                    />
+                                </div>
+                                <span className="w-9 text-right text-xs font-semibold" style={{ color: RISK_COLOR(c.risk) }}>
+                                    {c.risk}%
+                                </span>
+                                <span className="text-[10px] text-slate-400">
+                                    {c.trend === "up" ? "▲" : c.trend === "down" ? "▼" : "―"}
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-3 flex gap-4 text-[10px] text-slate-400">
+                    <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-rose-500" /> High ≥70%</span>
+                    <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-amber-500" /> Medium ≥45%</span>
+                    <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-emerald-500" /> Low &lt;45%</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ── Health Trend (Line Chart) ──────────────────────────────────── */
+function HealthTrendTab({ data }: { data: AnalyticsData["healthTrend"] }) {
+    return (
+        <div>
+            <h4 className="mb-1 text-sm font-semibold text-slate-900">System Health Over Time</h4>
+            <p className="mb-4 text-xs text-slate-500">Overall aircraft health score trend (6 months)</p>
+            <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#64748b" }} />
+                        <YAxis domain={[70, 100]} tick={{ fontSize: 11, fill: "#64748b" }} unit="%" />
+                        <Tooltip
+                            contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
+                            formatter={(v: unknown) => [`${v}%`, "Health Score"]}
+                        />
+                        <Line
+                            type="monotone"
+                            dataKey="health"
+                            stroke="#7c3aed"
+                            strokeWidth={2.5}
+                            dot={{ r: 4, fill: "#7c3aed", strokeWidth: 2, stroke: "#fff" }}
+                            activeDot={{ r: 6 }}
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+}
+
+/* ── Failure Distribution (Bar Chart) ───────────────────────────── */
+function FailureTab({ data }: { data: AnalyticsData["failureDistribution"] }) {
+    return (
+        <div>
+            <h4 className="mb-1 text-sm font-semibold text-slate-900">Predicted Failure Distribution</h4>
+            <p className="mb-4 text-xs text-slate-500">Failure predictions by system category</p>
+            <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="category" tick={{ fontSize: 11, fill: "#64748b" }} />
+                        <YAxis tick={{ fontSize: 11, fill: "#64748b" }} allowDecimals={false} />
+                        <Tooltip
+                            contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
+                            formatter={(v: unknown) => [`${v}`, "Predictions"]}
+                        />
+                        <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                            {data.map((_entry, index) => (
+                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+}
+
+/* ── Cost Savings (Area Chart) ──────────────────────────────────── */
+function CostTab({ data }: { data: AnalyticsData["costSavings"] }) {
+    const formatted = data.map((d) => ({
+        ...d,
+        monthlySavingsK: Math.round(d.monthlySavings / 1000),
+        cumulativeSavingsK: Math.round(d.cumulativeSavings / 1000),
+    }));
+
+    return (
+        <div>
+            <h4 className="mb-1 text-sm font-semibold text-slate-900">Estimated Cost Savings</h4>
+            <p className="mb-4 text-xs text-slate-500">Preventive maintenance savings (monthly &amp; cumulative, in $K)</p>
+            <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={formatted} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                        <defs>
+                            <linearGradient id="grad-cumulative" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.3} />
+                                <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.02} />
+                            </linearGradient>
+                            <linearGradient id="grad-monthly" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#059669" stopOpacity={0.3} />
+                                <stop offset="100%" stopColor="#059669" stopOpacity={0.02} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#64748b" }} />
+                        <YAxis tick={{ fontSize: 11, fill: "#64748b" }} unit="K" />
+                        <Tooltip
+                            contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
+                            formatter={(v: unknown, name: unknown) => [
+                                `$${v}K`,
+                                String(name) === "cumulativeSavingsK" ? "Cumulative" : "Monthly",
+                            ]}
+                        />
+                        <Legend
+                            formatter={(value: string) =>
+                                value === "cumulativeSavingsK" ? "Cumulative Savings" : "Monthly Savings"
+                            }
+                            iconType="circle"
+                            wrapperStyle={{ fontSize: 11 }}
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="cumulativeSavingsK"
+                            stroke="#7c3aed"
+                            strokeWidth={2}
+                            fill="url(#grad-cumulative)"
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="monthlySavingsK"
+                            stroke="#059669"
+                            strokeWidth={2}
+                            fill="url(#grad-monthly)"
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
     );
 }
 
