@@ -30,6 +30,7 @@ type BillingInvoice = {
     description: string;
     amount: string;
     status: "Paid" | "Unpaid" | string;
+    invoiceUrl?: string;
 };
 
 type SubscriptionBillingPayload = {
@@ -524,12 +525,18 @@ export default function SubscriptionBillingPage() {
                                         </span>
                                     </td>
                                     <td className="px-4 py-3">
-                                        <button
-                                            type="button"
-                                            className="text-sm font-semibold text-slate-700 hover:text-slate-900"
-                                        >
-                                            Download
-                                        </button>
+                                        {row.invoiceUrl ? (
+                                            <a
+                                                href={row.invoiceUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-sm font-semibold text-slate-700 hover:text-slate-900"
+                                            >
+                                                Download
+                                            </a>
+                                        ) : (
+                                            <span className="text-sm text-slate-400">—</span>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

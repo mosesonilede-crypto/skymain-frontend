@@ -27,6 +27,7 @@ type BillingInvoice = {
     description: string;
     amount: string;
     status: "Paid" | "Unpaid" | string;
+    invoiceUrl?: string;
 };
 
 type SubscriptionBillingPayload = {
@@ -258,6 +259,7 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
                 description: inv.lines.data[0]?.description || "Subscription",
                 amount: `$${((inv.amount_paid ?? 0) / 100).toFixed(2)}`,
                 status: inv.status === "paid" ? "Paid" : "Unpaid",
+                invoiceUrl: inv.invoice_pdf || inv.hosted_invoice_url || undefined,
             })),
         };
     } catch (error) {

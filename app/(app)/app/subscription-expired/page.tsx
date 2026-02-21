@@ -85,13 +85,13 @@ export default function SubscriptionExpiredPage() {
                     {/* CTA Buttons */}
                     <div className="space-y-3">
                         <Link
-                            href="/pricing"
+                            href="/app/subscription-billing"
                             className="block w-full bg-[#155dfc] hover:bg-[#1447e6] text-white font-semibold py-3 px-6 rounded-xl transition-colors"
                         >
-                            View Pricing Plans
+                            Choose a Plan
                         </Link>
                         <Link
-                            href="/contact"
+                            href="/contact?intent=support"
                             className="block w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold py-3 px-6 rounded-xl transition-colors"
                         >
                             Contact Sales
