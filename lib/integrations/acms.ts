@@ -53,6 +53,20 @@ export type AcmsInsightResponse = {
         costSavings?: { month: string; monthlySavings: number; cumulativeSavings: number }[];
     };
     lastUpdated?: string;
+    analytics?: {
+        modelStats: {
+            accuracy: number;
+            predictionsMade: number;
+            estimatedCostSavings: number;
+            avgLeadTimeDays: number;
+            falsePositiveRate: number;
+        };
+        featureImportance: { feature: string; importance: number }[];
+        healthTrend: { month: string; health: number }[];
+        failureDistribution: { category: string; count: number }[];
+        componentRisk: { component: string; risk: number; trend: string }[];
+        costSavings: { month: string; monthlySavings: number; cumulativeSavings: number }[];
+    };
 };
 
 export async function fetchAlerts(aircraftReg: string): Promise<AcmsAlertsResponse> {

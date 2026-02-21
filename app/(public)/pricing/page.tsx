@@ -1,143 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { CONTACT_DEMO, CONTACT_PRICING } from "@/lib/routes";
+import Link from "next/link";
+import { CONTACT_DEMO, CONTACT_SUPPORT } from "@/lib/routes";
+import { PLAN_DETAILS } from "@/lib/stripe";
 
-type DataMode = "mock" | "live" | "hybrid";
-type TierId = "starter" | "professional" | "enterprise";
-
-type PricingTier = {
-    id: TierId;
-    name: string;
-    tagline: string;
-    bullets: string[];
-    cta_label: string;
-    cta_href: string;
-    is_popular?: boolean;
-};
-
-type PricingDoc = {
-    badge: string;
-    headline: string;
-    subhead: string;
-    note: string;
-    tiers: PricingTier[];
-    footer_note: string;
-    cta: {
-        headline: string;
-        primary: { label: string; href: string };
-        secondary: { label: string; href: string };
-    };
-};
-
-type ApiEnvelope<T> = { ok: boolean; data: T; meta?: { request_id?: string } };
+type BillingInterval = "monthly" | "yearly";
+type PlanId = "starter" | "professional" | "enterprise";
 
 function cx(...classes: Array<string | false | null | undefined>): string {
     return classes.filter(Boolean).join(" ");
 }
 
-function getDataMode(): DataMode {
-    const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "").toLowerCase();
-    if (raw === "mock" || raw === "live" || raw === "hybrid") return raw;
-    const base = (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
-    if (process.env.NODE_ENV === "production" && base) return "live";
-    return "mock";
-}
-
-function getApiBaseUrl(): string {
-    return (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
-}
-
-const PRICING_INTENT_HREF = CONTACT_PRICING;
-
-const DEFAULT_DOC: PricingDoc = {
-    badge: "Pricing",
-    headline: "Pricing Designed for Aviation Operations",
-    subhead:
-        "Flexible pricing models to support operators, MROs, and maintenance organizations of all sizes.",
-    note:
-        "SkyMaintain pricing is tailored based on operational scale, data scope, and integration requirements.",
-    tiers: [
-        {
-            id: "starter",
-            name: "Starter (Pilot Program)",
-            tagline: "Ideal for evaluation and proof-of-concept use.",
-            bullets: ["Limited user access", "Core analytics and dashboards", "Initial data ingestion support"],
-            cta_label: "Contact us for pricing",
-            cta_href: PRICING_INTENT_HREF,
-        },
-        {
-            id: "professional",
-            name: "Professional",
-            tagline: "Designed for active operational use.",
-            bullets: ["Expanded user access", "Advanced analytics", "Compliance-aligned reporting", "Priority support"],
-            cta_label: "Contact us for pricing",
-            cta_href: PRICING_INTENT_HREF,
-            is_popular: true,
-        },
-        {
-            id: "enterprise",
-            name: "Enterprise",
-            tagline: "For large operators and complex environments.",
-            bullets: ["Custom integrations", "Dedicated support", "SLA options", "Flexible deployment models"],
-            cta_label: "Contact us for pricing",
-            cta_href: PRICING_INTENT_HREF,
-        },
-    ],
-    footer_note:
-        "SkyMaintain pricing is customized to ensure alignment with operational complexity and regulatory requirements.",
-    cta: {
-        headline: "Ready to get started?",
-        primary: { label: "Request Pricing", href: PRICING_INTENT_HREF },
-        secondary: { label: "Schedule a Demo", href: CONTACT_DEMO },
-    },
-};
-
-let mockStore: PricingDoc = structuredClone(DEFAULT_DOC);
-
-async function apiGetPricing(signal?: AbortSignal): Promise<PricingDoc> {
-    const mode = getDataMode();
-
-    if (mode === "mock") {
-        await new Promise((r) => setTimeout(r, 90));
-        return structuredClone(mockStore);
-    }
-
-    const base = getApiBaseUrl();
-    if (!base) {
-        await new Promise((r) => setTimeout(r, 70));
-        return structuredClone(mockStore);
-    }
-
-    try {
-        const res = await fetch(`${base}/v1/public/pricing`, {
-            method: "GET",
-            credentials: "include",
-            headers: { Accept: "application/json" },
-            signal,
-        });
-
-        if (!res.ok) {
-            if (mode === "hybrid") return structuredClone(mockStore);
-            return structuredClone(mockStore);
-        }
-
-        const json = (await res.json()) as ApiEnvelope<PricingDoc>;
-        if (!json?.ok || !json?.data) {
-            if (mode === "hybrid") return structuredClone(mockStore);
-            return structuredClone(mockStore);
-        }
-
-        if (mode === "hybrid") mockStore = structuredClone(json.data);
-        return json.data;
-    } catch {
-        return structuredClone(mockStore);
-    }
-}
-
 function CheckIcon(): React.ReactElement {
     return (
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
                 <path
                     d="M20 6 9 17l-5-5"
@@ -151,13 +28,31 @@ function CheckIcon(): React.ReactElement {
     );
 }
 
-function TierCard({ tier }: { tier: PricingTier }): React.ReactElement {
-    const isPopular = Boolean(tier.is_popular);
+function PricingCard({
+    planId,
+    plan,
+    interval,
+    isPopular,
+}: {
+    planId: PlanId;
+    plan: (typeof PLAN_DETAILS)[PlanId];
+    interval: BillingInterval;
+    isPopular: boolean;
+}) {
+    const price = interval === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+    const displayPrice = `$${(price / 100).toLocaleString()}`;
+    const period = interval === "yearly" ? "/year" : "/month";
+
+    const monthlySavings = interval === "yearly"
+        ? Math.round((plan.monthlyPrice * 12 - plan.yearlyPrice) / 100)
+        : 0;
+
+    const isEnterprise = planId === "enterprise";
 
     return (
         <div
             className={cx(
-                "relative rounded-2xl border bg-white p-7 shadow-sm",
+                "relative flex flex-col rounded-2xl border bg-white p-7 shadow-sm transition-shadow hover:shadow-md",
                 isPopular ? "border-blue-600 ring-2 ring-blue-200" : "border-slate-200"
             )}
         >
@@ -170,157 +65,280 @@ function TierCard({ tier }: { tier: PricingTier }): React.ReactElement {
             )}
 
             <div className="text-left">
-                <h2 className="text-xl font-semibold text-slate-900">{tier.name}</h2>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">{tier.tagline}</p>
+                <h2 className="text-xl font-semibold text-slate-900">{plan.name}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{plan.tagline}</p>
             </div>
 
-            <ul className="mt-6 space-y-3 text-sm text-slate-700">
-                {tier.bullets.map((b, i) => (
+            <div className="mt-5">
+                <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-bold tracking-tight text-slate-900">
+                        {displayPrice}
+                    </span>
+                    <span className="text-sm font-medium text-slate-500">{period}</span>
+                </div>
+                {interval === "yearly" && monthlySavings > 0 && (
+                    <p className="mt-1 text-sm font-medium text-emerald-600">
+                        Save ${monthlySavings}/year vs monthly
+                    </p>
+                )}
+                {interval === "monthly" && (
+                    <p className="mt-1 text-sm text-slate-500">
+                        ${(plan.yearlyPrice / 100 / 12).toFixed(0)}/mo billed annually
+                    </p>
+                )}
+            </div>
+
+            <ul className="mt-6 flex-1 space-y-3 text-sm text-slate-700">
+                {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-3">
                         <div className="mt-0.5">{CheckIcon()}</div>
-                        <span>{b}</span>
+                        <span>{feature}</span>
                     </li>
                 ))}
             </ul>
 
             <div className="mt-7">
-                <a
-                    href={tier.cta_href}
-                    className={cx(
-                        "inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold",
-                        isPopular
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "bg-slate-900 text-white hover:bg-slate-800"
-                    )}
-                >
-                    {tier.cta_label}
-                </a>
+                {isEnterprise ? (
+                    <a
+                        href={CONTACT_SUPPORT}
+                        className="inline-flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
+                    >
+                        Contact Sales
+                    </a>
+                ) : (
+                    <Link
+                        href="/signup"
+                        className={cx(
+                            "inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
+                            isPopular
+                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                : "bg-slate-900 text-white hover:bg-slate-800"
+                        )}
+                    >
+                        Get Started
+                    </Link>
+                )}
             </div>
         </div>
     );
 }
 
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+    const [open, setOpen] = React.useState(false);
+
+    return (
+        <div className="border-b border-slate-200 last:border-0">
+            <button
+                type="button"
+                className="flex w-full items-center justify-between py-4 text-left text-sm font-semibold text-slate-900 hover:text-slate-700"
+                onClick={() => setOpen(!open)}
+            >
+                <span>{question}</span>
+                <span className="ml-4 shrink-0 text-slate-400">{open ? "−" : "+"}</span>
+            </button>
+            {open && (
+                <div className="pb-4 text-sm leading-relaxed text-slate-600">{answer}</div>
+            )}
+        </div>
+    );
+}
+
+const FAQS = [
+    {
+        question: "Can I switch plans at any time?",
+        answer: "Yes. You can upgrade or downgrade your plan at any time. When upgrading, you'll be charged a prorated amount for the remainder of your billing cycle. Downgrades take effect at the next billing period.",
+    },
+    {
+        question: "Is there a free trial?",
+        answer: "Yes — all new accounts start with a 14-day free trial with full access to Professional features. No credit card required to get started.",
+    },
+    {
+        question: "What payment methods do you accept?",
+        answer: "We accept all major credit cards (Visa, Mastercard, American Express, Discover) and bank transfers for Enterprise plans. All payments are processed securely through Stripe.",
+    },
+    {
+        question: "Can I cancel at any time?",
+        answer: "Absolutely. There are no long-term contracts. Cancel anytime and you'll retain access until the end of your current billing period.",
+    },
+    {
+        question: "Do you offer discounts for annual billing?",
+        answer: "Yes — annual plans save approximately 17% compared to monthly billing. The savings are reflected in the pricing toggle above.",
+    },
+    {
+        question: "What happens when my trial expires?",
+        answer: "When your 14-day trial ends, you'll be prompted to choose a plan to continue. Your data is preserved for 30 days, giving you time to decide.",
+    },
+];
+
 export default function PricingPage(): React.ReactElement {
-    const mode = getDataMode();
+    const [interval, setInterval] = React.useState<BillingInterval>("yearly");
 
-    const [loading, setLoading] = React.useState(true);
-    const [error, setError] = React.useState<string | null>(null);
-    const [doc, setDoc] = React.useState<PricingDoc>(structuredClone(DEFAULT_DOC));
-
-    React.useEffect(() => {
-        const ac = new AbortController();
-        (async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const data = await apiGetPricing(ac.signal);
-                setDoc(data);
-            } catch (e) {
-                const msg = e instanceof Error ? e.message : "Failed to load Pricing.";
-                setError(msg);
-                setDoc(structuredClone(DEFAULT_DOC));
-            } finally {
-                setLoading(false);
-            }
-        })();
-        return () => ac.abort();
-    }, []);
-
-    const content = loading ? DEFAULT_DOC : doc;
+    const plans: { id: PlanId; isPopular: boolean }[] = [
+        { id: "starter", isPopular: false },
+        { id: "professional", isPopular: true },
+        { id: "enterprise", isPopular: false },
+    ];
 
     return (
         <div className="w-full">
-            <section className="rounded-2xl bg-gradient-to-b from-slate-50 to-white px-6 py-12 text-center">
+            {/* Hero */}
+            <section className="rounded-2xl bg-gradient-to-b from-slate-50 to-white px-6 py-16 text-center">
                 <div className="inline-flex items-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white">
-                    {content.badge}
+                    Pricing
                 </div>
 
                 <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
-                    {content.headline}
+                    Simple, transparent pricing
                 </h1>
 
-                <p className="mx-auto mt-4 max-w-3xl text-sm leading-relaxed text-slate-700">
-                    {content.subhead}
+                <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
+                    Choose the plan that fits your operation. Start with a 14-day free trial — no credit card required.
                 </p>
 
-                <p className="mx-auto mt-4 max-w-3xl text-sm leading-relaxed text-slate-600">
-                    {content.note}
-                </p>
-
-                {mode !== "mock" ? (
-                    <div className="mt-4">
+                {/* Billing interval toggle */}
+                <div className="mx-auto mt-8 flex items-center justify-center gap-3">
+                    <span
+                        className={cx(
+                            "text-sm font-medium",
+                            interval === "monthly" ? "text-slate-900" : "text-slate-500"
+                        )}
+                    >
+                        Monthly
+                    </span>
+                    <button
+                        type="button"
+                        className={cx(
+                            "relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
+                            interval === "yearly" ? "bg-blue-600" : "bg-slate-300"
+                        )}
+                        onClick={() => setInterval(interval === "monthly" ? "yearly" : "monthly")}
+                        role="switch"
+                        aria-checked={interval === "yearly"}
+                    >
                         <span
                             className={cx(
-                                "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
-                                mode === "live"
-                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                    : "border-amber-200 bg-amber-50 text-amber-800"
+                                "pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                                interval === "yearly" ? "translate-x-5" : "translate-x-0"
                             )}
-                            title="Data mode is controlled by NEXT_PUBLIC_DATA_MODE"
-                        >
-                            Data: {mode.toUpperCase()}
+                        />
+                    </button>
+                    <span
+                        className={cx(
+                            "text-sm font-medium",
+                            interval === "yearly" ? "text-slate-900" : "text-slate-500"
+                        )}
+                    >
+                        Annual
+                    </span>
+                    {interval === "yearly" && (
+                        <span className="ml-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                            Save ~17%
                         </span>
-                    </div>
-                ) : null}
-
-                {error && (
-                    <div className="mx-auto mt-6 max-w-2xl rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                        {error}
-                    </div>
-                )}
+                    )}
+                </div>
             </section>
 
-            <section className="mx-auto mt-10 max-w-5xl">
-                {loading ? (
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                        {Array.from({ length: 3 }).map((_, idx) => (
-                            <div key={idx} className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
-                                <div className="h-6 w-3/4 animate-pulse rounded bg-slate-100" />
-                                <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-100" />
-                                <div className="mt-6 space-y-2">
-                                    <div className="h-4 w-5/6 animate-pulse rounded bg-slate-100" />
-                                    <div className="h-4 w-4/6 animate-pulse rounded bg-slate-100" />
-                                    <div className="h-4 w-3/6 animate-pulse rounded bg-slate-100" />
-                                    <div className="h-4 w-4/6 animate-pulse rounded bg-slate-100" />
-                                </div>
-                                <div className="mt-7 h-10 w-full animate-pulse rounded bg-slate-100" />
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                        {content.tiers.map((tier) => (
-                            <TierCard key={tier.id} tier={tier} />
-                        ))}
-                    </div>
-                )}
+            {/* Plan cards */}
+            <section className="mx-auto mt-10 max-w-5xl px-4">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    {plans.map(({ id, isPopular }) => (
+                        <PricingCard
+                            key={id}
+                            planId={id}
+                            plan={PLAN_DETAILS[id]}
+                            interval={interval}
+                            isPopular={isPopular}
+                        />
+                    ))}
+                </div>
 
-                <p className="mx-auto mt-10 max-w-4xl text-center text-sm leading-relaxed text-slate-600">
-                    {content.footer_note}
+                <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-slate-500">
+                    All plans include SSL encryption, 99.9% uptime SLA, and GDPR-compliant data handling.
+                    Pricing is in USD. Volume discounts available for Enterprise.
                 </p>
             </section>
 
-            <section className="mx-auto mt-10 max-w-5xl overflow-hidden rounded-2xl border border-slate-200">
+            {/* Feature comparison table */}
+            <section className="mx-auto mt-16 max-w-4xl px-4">
+                <h2 className="text-center text-2xl font-semibold text-slate-900">Compare Plans</h2>
+                <p className="mt-2 text-center text-sm text-slate-600">
+                    See which plan is right for your operation
+                </p>
+
+                <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50">
+                            <tr>
+                                <th className="px-5 py-3 font-semibold text-slate-900">Feature</th>
+                                <th className="px-5 py-3 text-center font-semibold text-slate-900">Starter</th>
+                                <th className="px-5 py-3 text-center font-semibold text-blue-600">Professional</th>
+                                <th className="px-5 py-3 text-center font-semibold text-slate-900">Enterprise</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                            {[
+                                ["Aircraft", "Up to 5", "Up to 25", "Unlimited"],
+                                ["AI Insights", "Basic", "Advanced", "Advanced"],
+                                ["Cloud Storage", "1 GB", "50 GB", "Unlimited"],
+                                ["API Access", "—", "✓", "Full"],
+                                ["Compliance Reports", "Standard", "Custom", "Custom"],
+                                ["IoT Integration", "—", "✓", "✓"],
+                                ["Multi-location", "—", "✓", "✓"],
+                                ["Custom Integrations", "—", "—", "✓"],
+                                ["SLA Guarantee", "—", "—", "✓"],
+                                ["Support", "Email", "Priority", "24/7 Dedicated"],
+                            ].map(([feature, starter, pro, enterprise], i) => (
+                                <tr key={i} className="hover:bg-slate-50/50">
+                                    <td className="px-5 py-3 font-medium text-slate-700">{feature}</td>
+                                    <td className="px-5 py-3 text-center text-slate-600">{starter}</td>
+                                    <td className="px-5 py-3 text-center text-slate-900 font-medium">{pro}</td>
+                                    <td className="px-5 py-3 text-center text-slate-600">{enterprise}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            {/* FAQ */}
+            <section className="mx-auto mt-16 max-w-3xl px-4">
+                <h2 className="text-center text-2xl font-semibold text-slate-900">
+                    Frequently Asked Questions
+                </h2>
+                <div className="mt-8 rounded-2xl border border-slate-200 bg-white px-6">
+                    {FAQS.map((faq, i) => (
+                        <FAQItem key={i} question={faq.question} answer={faq.answer} />
+                    ))}
+                </div>
+            </section>
+
+            {/* CTA */}
+            <section className="mx-auto mt-16 max-w-5xl overflow-hidden rounded-2xl border border-slate-200">
                 <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 px-6 py-12 text-center text-white">
-                    <h3 className="text-3xl font-semibold tracking-tight">{content.cta.headline}</h3>
+                    <h3 className="text-3xl font-semibold tracking-tight">Ready to get started?</h3>
+                    <p className="mx-auto mt-3 max-w-xl text-sm text-white/80">
+                        Start your 14-day free trial today. No credit card required. Full access to Professional features.
+                    </p>
 
                     <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                        <a
-                            href={content.cta.primary.href}
-                            className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+                        <Link
+                            href="/signup"
+                            className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-100 transition-colors"
                         >
-                            {content.cta.primary.label}
-                        </a>
+                            Start Free Trial
+                        </Link>
 
                         <a
-                            href={content.cta.secondary.href}
-                            className="inline-flex items-center justify-center rounded-lg border border-white/30 bg-white/10 px-6 py-2.5 text-sm font-semibold text-white hover:bg-white/15"
+                            href={CONTACT_DEMO}
+                            className="inline-flex items-center justify-center rounded-xl border border-white/30 bg-white/10 px-6 py-2.5 text-sm font-semibold text-white hover:bg-white/15 transition-colors"
                         >
-                            {content.cta.secondary.label}
+                            Schedule a Demo
                         </a>
                     </div>
                 </div>
             </section>
+
+            <div className="h-12" />
         </div>
     );
 }

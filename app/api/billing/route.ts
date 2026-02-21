@@ -38,6 +38,7 @@ type SubscriptionBillingPayload = {
     teamMembers: number;
     teamMembersAllowed: number;
     billingCycle: BillingCycle;
+    stripeCustomerId?: string;
     plans: Plan[];
     paymentMethods: PaymentMethod[];
     billingHistory: BillingInvoice[];
@@ -209,6 +210,7 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
             teamMembers: 5, // TODO: Get from your database
             teamMembersAllowed: currentPlan === "starter" ? 5 : currentPlan === "professional" ? 25 : 999,
             billingCycle,
+            stripeCustomerId: customerId,
             plans: [
                 {
                     id: "starter",

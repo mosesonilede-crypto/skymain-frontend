@@ -41,6 +41,7 @@ type SubscriptionBillingPayload = {
     teamMembers: number;
     teamMembersAllowed: number;
     billingCycle: BillingCycle;
+    stripeCustomerId?: string;
     plans: Plan[];
     paymentMethods: PaymentMethod[];
     billingHistory: BillingInvoice[];
@@ -288,14 +289,17 @@ export default function SubscriptionBillingPage() {
     }
 
     async function onManageBilling() {
+        if (!payload.stripeCustomerId) {
+            setError("No Stripe customer found. Please subscribe to a plan first.");
+            return;
+        }
         setCheckoutLoading(true);
         try {
             const res = await fetch("/api/billing/portal", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    // In production, get customerId from your auth/user context
-                    customerId: "cus_placeholder", // Replace with actual customer ID
+                    customerId: payload.stripeCustomerId,
                 }),
             });
 
