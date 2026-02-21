@@ -48,6 +48,20 @@ type RegisterAircraftForm = {
     operator: string;
     currentLocation: string;
     status: AircraftStatus | "";
+    // Maintenance fields
+    lastMaintenanceDate: string;
+    nextMaintenanceDate: string;
+    totalFlightHours: string;
+    cycleCount: string;
+    maintenanceProvider: string;
+    maintenanceStatus: string;
+    // Compliance fields
+    certificateNumber: string;
+    certificateExpiry: string;
+    lastInspectionDate: string;
+    nextInspectionDate: string;
+    complianceStatus: string;
+    regulatoryAuthority: string;
 };
 
 const MANUFACTURERS = ["Airbus", "Boeing", "Bombardier", "Cessna", "Embraer", "Gulfstream", "Other"];
@@ -794,6 +808,18 @@ export default function AdminPanelPage() {
         operator: "",
         currentLocation: "",
         status: "",
+        lastMaintenanceDate: "",
+        nextMaintenanceDate: "",
+        totalFlightHours: "",
+        cycleCount: "",
+        maintenanceProvider: "",
+        maintenanceStatus: "",
+        certificateNumber: "",
+        certificateExpiry: "",
+        lastInspectionDate: "",
+        nextInspectionDate: "",
+        complianceStatus: "",
+        regulatoryAuthority: "",
     }));
 
     const [submitError, setSubmitError] = useState<string>("");
@@ -904,6 +930,18 @@ export default function AdminPanelPage() {
             operator: "",
             currentLocation: "",
             status: "",
+            lastMaintenanceDate: "",
+            nextMaintenanceDate: "",
+            totalFlightHours: "",
+            cycleCount: "",
+            maintenanceProvider: "",
+            maintenanceStatus: "",
+            certificateNumber: "",
+            certificateExpiry: "",
+            lastInspectionDate: "",
+            nextInspectionDate: "",
+            complianceStatus: "",
+            regulatoryAuthority: "",
         });
         setSubmitError("");
     }
@@ -1482,12 +1520,134 @@ export default function AdminPanelPage() {
                                     ) : null}
                                 </div>
                             ) : registerTab === "maintenance" ? (
-                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
-                                    Maintenance Data (prototype tab). Wire fields when your data model is ready.
+                                <div className="space-y-6">
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-900">Maintenance Schedule</div>
+                                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                            <div>
+                                                <FieldLabel>Last Maintenance Date</FieldLabel>
+                                                <input
+                                                    type="date"
+                                                    value={form.lastMaintenanceDate}
+                                                    onChange={(e) => setForm((f) => ({ ...f, lastMaintenanceDate: e.target.value }))}
+                                                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                                />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>Next Scheduled Maintenance</FieldLabel>
+                                                <input
+                                                    type="date"
+                                                    value={form.nextMaintenanceDate}
+                                                    onChange={(e) => setForm((f) => ({ ...f, nextMaintenanceDate: e.target.value }))}
+                                                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                                />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>Total Flight Hours</FieldLabel>
+                                                <Input
+                                                    value={form.totalFlightHours}
+                                                    onChange={(v) => setForm((f) => ({ ...f, totalFlightHours: v }))}
+                                                    placeholder="e.g., 15000"
+                                                />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>Cycle Count</FieldLabel>
+                                                <Input
+                                                    value={form.cycleCount}
+                                                    onChange={(v) => setForm((f) => ({ ...f, cycleCount: v }))}
+                                                    placeholder="e.g., 8500"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-900">Maintenance Provider</div>
+                                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                            <div>
+                                                <FieldLabel>Provider Name</FieldLabel>
+                                                <Input
+                                                    value={form.maintenanceProvider}
+                                                    onChange={(v) => setForm((f) => ({ ...f, maintenanceProvider: v }))}
+                                                    placeholder="e.g., AeroMaintenance Inc."
+                                                />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>Maintenance Status</FieldLabel>
+                                                <Select
+                                                    value={form.maintenanceStatus}
+                                                    onChange={(v) => setForm((f) => ({ ...f, maintenanceStatus: v }))}
+                                                    options={["Up to Date", "Due Soon", "Overdue", "In Progress"]}
+                                                    placeholder="Select Status"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
-                                    Compliance (prototype tab). Wire fields when your compliance schema is ready.
+                                <div className="space-y-6">
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-900">Certification</div>
+                                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                            <div>
+                                                <FieldLabel>Certificate Number</FieldLabel>
+                                                <Input
+                                                    value={form.certificateNumber}
+                                                    onChange={(v) => setForm((f) => ({ ...f, certificateNumber: v }))}
+                                                    placeholder="e.g., FAA-2026-12345"
+                                                />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>Certificate Expiry</FieldLabel>
+                                                <input
+                                                    type="date"
+                                                    value={form.certificateExpiry}
+                                                    onChange={(e) => setForm((f) => ({ ...f, certificateExpiry: e.target.value }))}
+                                                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-900">Inspection</div>
+                                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                            <div>
+                                                <FieldLabel>Last Inspection Date</FieldLabel>
+                                                <input
+                                                    type="date"
+                                                    value={form.lastInspectionDate}
+                                                    onChange={(e) => setForm((f) => ({ ...f, lastInspectionDate: e.target.value }))}
+                                                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                                />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>Next Inspection Date</FieldLabel>
+                                                <input
+                                                    type="date"
+                                                    value={form.nextInspectionDate}
+                                                    onChange={(e) => setForm((f) => ({ ...f, nextInspectionDate: e.target.value }))}
+                                                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                                />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>Compliance Status</FieldLabel>
+                                                <Select
+                                                    value={form.complianceStatus}
+                                                    onChange={(v) => setForm((f) => ({ ...f, complianceStatus: v }))}
+                                                    options={["Compliant", "Non-Compliant", "Pending Review"]}
+                                                    placeholder="Select Status"
+                                                />
+                                            </div>
+                                            <div>
+                                                <FieldLabel>Regulatory Authority</FieldLabel>
+                                                <Select
+                                                    value={form.regulatoryAuthority}
+                                                    onChange={(v) => setForm((f) => ({ ...f, regulatoryAuthority: v }))}
+                                                    options={["FAA", "EASA", "CAA", "Transport Canada", "CASA"]}
+                                                    placeholder="Select Authority"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
