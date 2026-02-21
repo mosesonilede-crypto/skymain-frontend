@@ -71,11 +71,11 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ aircraftReg: string }> }
 ) {
-    try {
-        const { aircraftReg: reg } = await params;
-        const aircraftReg = reg.toUpperCase();
-        const rand = seededRandom(aircraftReg);
+    const { aircraftReg: reg } = await params;
+    const aircraftReg = reg.toUpperCase();
+    const rand = seededRandom(aircraftReg);
 
+    try {
         const data = await fetchInsights(aircraftReg);
 
         // Augment live data with analytics if not already present
@@ -107,7 +107,6 @@ export async function GET(
         });
     } catch (error) {
         if (error instanceof IntegrationNotConfiguredError && allowMockFallback()) {
-            const rand = seededRandom(aircraftReg);
             return NextResponse.json(
                 {
                     predictiveAlert: null,
