@@ -11,6 +11,7 @@ create table if not exists public.user_profiles (
     subscription_status text default 'trial',
     subscription_plan text default 'starter',
     payment_details text,
+    avatar_url text,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );

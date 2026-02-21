@@ -27,8 +27,10 @@ import {
     X,
     UserCircle,
     Wrench,
+    ChevronUp,
 } from "lucide-react";
 import AppSidebarNav from "@/components/app/AppSidebarNav";
+import SidebarProfilePanel from "@/components/app/SidebarProfilePanel";
 import AIMechanicFAB from "@/components/ai/AIMechanicFAB";
 import AIMechanicPanel from "@/components/ai/AIMechanicPanel";
 import { useAuth } from "@/lib/AuthContext";
@@ -58,6 +60,9 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const [aiOpen, setAiOpen] = useState(false);
     const [aiInitialQuery, setAiInitialQuery] = useState<string | undefined>(undefined);
     const [aiContext, setAiContext] = useState<string | undefined>(undefined);
+    const [profileOpen, setProfileOpen] = useState(false);
+    const [profileDisplayName, setProfileDisplayName] = useState<string>("");
+    const [profileAvatar, setProfileAvatar] = useState<string>("");
     const roleHints = useMemo(() => {
         if (typeof window === "undefined") {
             return {} as { role?: string; licenseCode?: string; email?: string };
@@ -95,6 +100,17 @@ export default function AppShellClient({ children }: AppShellClientProps) {
 
     // Session timeout management
     const { isWarningVisible, remainingSeconds, extendSession } = useSessionTimeout();
+
+    // Listen for profile updates from the profile panel
+    useEffect(() => {
+        const handler = (event: Event) => {
+            const detail = (event as CustomEvent<{ full_name?: string; avatar_url?: string }>).detail;
+            if (detail?.full_name) setProfileDisplayName(detail.full_name);
+            if (detail?.avatar_url) setProfileAvatar(detail.avatar_url);
+        };
+        window.addEventListener("profile:updated", handler);
+        return () => window.removeEventListener("profile:updated", handler);
+    }, []);
 
     // Scroll to top when route changes
     useEffect(() => {
@@ -162,22 +178,39 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                             <AppSidebarNav items={navItems} />
                         </div>
 
-                        <div className="border-t border-[#e5e7eb]">
-                            <div className="px-4 py-4 pb-8">
+                        <div className="relative border-t border-[#e5e7eb]">
+                            <button
+                                onClick={() => setProfileOpen((prev) => !prev)}
+                                className="w-full px-4 py-4 pb-8 text-left hover:bg-[#f9fafb] transition-colors cursor-pointer group"
+                                aria-label="Edit profile"
+                            >
                                 <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 overflow-hidden rounded-full">
-                                        <UserCircle className="h-10 w-10 text-[#9ca3af]" />
+                                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-transparent group-hover:border-[#2563eb] transition-colors">
+                                        {profileAvatar ? (
+                                            <img src={profileAvatar} alt="Avatar" className="h-full w-full object-cover" />
+                                        ) : (
+                                            <UserCircle className="h-10 w-10 text-[#9ca3af]" />
+                                        )}
                                     </div>
-                                    <div className="overflow-hidden">
+                                    <div className="overflow-hidden flex-1">
                                         <div className="truncate text-[14px] leading-5 text-[#0a0a0a]">
-                                            {user?.email?.split("@")[0] || "User"}
+                                            {profileDisplayName || user?.displayName || user?.email?.split("@")[0] || "User"}
                                         </div>
                                         <div className="truncate text-[12px] leading-4 text-[#6a7282] capitalize">
                                             {(user?.role || roleHints.role || "User").replace(/_/g, " ")}
                                         </div>
                                     </div>
+                                    <ChevronUp className={`h-4 w-4 text-[#9ca3af] shrink-0 transition-transform ${profileOpen ? "rotate-180" : ""}`} />
                                 </div>
-                            </div>
+                            </button>
+
+                            {/* Expandable profile edit panel */}
+                            <SidebarProfilePanel
+                                isOpen={profileOpen}
+                                onClose={() => setProfileOpen(false)}
+                                userEmail={user?.email}
+                                userRole={user?.role || roleHints.role}
+                            />
                         </div>
                     </aside>
                 )}
