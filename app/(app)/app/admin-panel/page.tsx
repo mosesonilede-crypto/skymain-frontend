@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { isAdminRole, resolveSessionRole } from "@/lib/auth/roles";
+import { supabase } from "@/lib/supabaseClient";
 
 type AdminKpis = {
     totalAircraft: number;
@@ -96,6 +97,45 @@ async function fetchLive(): Promise<AdminPanelPayload> {
 }
 
 async function registerAircraftLive(form: RegisterAircraftForm): Promise<void> {
+    // Insert directly into Supabase using the authenticated client session.
+    // This avoids the server-side API route which may lack SUPABASE_SERVICE_ROLE_KEY.
+    if (supabase) {
+        const row = {
+            registration_number: form.registrationNumber,
+            tail_number: form.tailNumber,
+            serial_number: form.serialNumber,
+            year_of_manufacture: Number(form.yearOfManufacture) || new Date().getFullYear(),
+            manufacturer: form.manufacturer,
+            model: form.model,
+            aircraft_type: form.aircraftType || "Commercial",
+            category: form.category || "Narrow-body",
+            owner: form.owner,
+            operator: form.operator,
+            current_location: form.currentLocation || null,
+            status: form.status || "Available",
+            last_maintenance_date: form.lastMaintenanceDate || null,
+            next_maintenance_date: form.nextMaintenanceDate || null,
+            total_flight_hours: form.totalFlightHours ? Number(form.totalFlightHours) : null,
+            cycle_count: form.cycleCount ? Number(form.cycleCount) : null,
+            maintenance_provider: form.maintenanceProvider || null,
+            maintenance_status: form.maintenanceStatus || null,
+            certificate_number: form.certificateNumber || null,
+            certificate_expiry: form.certificateExpiry || null,
+            last_inspection_date: form.lastInspectionDate || null,
+            next_inspection_date: form.nextInspectionDate || null,
+            compliance_status: form.complianceStatus || null,
+            regulatory_authority: form.regulatoryAuthority || null,
+        };
+
+        const { error } = await supabase.from("aircraft").insert(row);
+
+        if (error) {
+            throw new Error(error.message || "Failed to register aircraft in database.");
+        }
+        return;
+    }
+
+    // Fallback: try the API route
     const res = await fetch("/api/aircraft", {
         method: "POST",
         credentials: "include",

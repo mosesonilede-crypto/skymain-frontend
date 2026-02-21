@@ -71,106 +71,114 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-    let body: Record<string, unknown>;
     try {
-        body = await request.json();
-    } catch {
-        return NextResponse.json(
-            { error: "Invalid JSON body" },
-            { status: 400 }
-        );
-    }
-
-    // Try CMMS integration first
-    try {
-        const created = await createAircraft(body as Parameters<typeof createAircraft>[0]);
-        return NextResponse.json({ aircraft: created, source: "live" });
-    } catch (cmmsError) {
-        if (!(cmmsError instanceof IntegrationNotConfiguredError)) {
-            console.error("CMMS create aircraft error:", cmmsError);
+        let body: Record<string, unknown>;
+        try {
+            body = await request.json();
+        } catch {
             return NextResponse.json(
-                { error: cmmsError instanceof Error ? cmmsError.message : "Failed to create aircraft" },
-                { status: 500 }
+                { error: "Invalid JSON body" },
+                { status: 400 }
             );
         }
-    }
 
-    // Fallback: store in Supabase
-    if (supabaseServer) {
+        // Try CMMS integration first
         try {
-            const row = {
-                registration_number: body.registrationNumber || body.registration,
-                tail_number: body.tailNumber || body.registration,
-                serial_number: body.serialNumber || "",
-                year_of_manufacture: Number(body.yearOfManufacture) || new Date().getFullYear(),
-                manufacturer: body.manufacturer || "",
-                model: body.model || "",
-                aircraft_type: body.aircraftType || "Commercial",
-                category: body.category || "Narrow-body",
-                owner: body.owner || "",
-                operator: body.operator || "",
-                current_location: body.currentLocation || "",
-                status: body.status || "Available",
-                last_maintenance_date: body.lastMaintenanceDate || null,
-                next_maintenance_date: body.nextMaintenanceDate || null,
-                total_flight_hours: body.totalFlightHours ? Number(body.totalFlightHours) : null,
-                cycle_count: body.cycleCount ? Number(body.cycleCount) : null,
-                maintenance_provider: body.maintenanceProvider || null,
-                maintenance_status: body.maintenanceStatus || null,
-                certificate_number: body.certificateNumber || null,
-                certificate_expiry: body.certificateExpiry || null,
-                last_inspection_date: body.lastInspectionDate || null,
-                next_inspection_date: body.nextInspectionDate || null,
-                compliance_status: body.complianceStatus || null,
-                regulatory_authority: body.regulatoryAuthority || null,
-            };
-
-            const { data, error } = await supabaseServer
-                .from("aircraft")
-                .insert(row)
-                .select()
-                .single();
-
-            if (error) {
-                console.error("Supabase aircraft insert error:", error);
+            const created = await createAircraft(body as Parameters<typeof createAircraft>[0]);
+            return NextResponse.json({ aircraft: created, source: "live" });
+        } catch (cmmsError) {
+            if (!(cmmsError instanceof IntegrationNotConfiguredError)) {
+                console.error("CMMS create aircraft error:", cmmsError);
                 return NextResponse.json(
-                    { error: error.message || "Failed to register aircraft" },
-                    { status: 400 }
+                    { error: cmmsError instanceof Error ? cmmsError.message : "Failed to create aircraft" },
+                    { status: 500 }
                 );
             }
-
-            return NextResponse.json({
-                aircraft: {
-                    id: data.id,
-                    registration: data.registration_number,
-                    model: `${data.manufacturer} ${data.model}`,
-                    manufacturer: data.manufacturer,
-                    ...data,
-                },
-                source: "live",
-            });
-        } catch (dbError) {
-            console.error("Supabase aircraft create error:", dbError);
-            return NextResponse.json(
-                { error: dbError instanceof Error ? dbError.message : "Database error" },
-                { status: 500 }
-            );
         }
-    }
 
-    // Mock fallback
-    if (allowMockFallback()) {
-        const mockId = `MOCK-${Date.now()}`;
-        return NextResponse.json({
-            aircraft: { ...body, id: mockId },
-            source: "mock",
-            fallback: true,
-            message: "Aircraft created (mock fallback - not persisted)",
-        });
-    }
+        // Fallback: store in Supabase
+        if (supabaseServer) {
+            try {
+                const row = {
+                    registration_number: body.registrationNumber || body.registration,
+                    tail_number: body.tailNumber || body.registration,
+                    serial_number: body.serialNumber || "",
+                    year_of_manufacture: Number(body.yearOfManufacture) || new Date().getFullYear(),
+                    manufacturer: body.manufacturer || "",
+                    model: body.model || "",
+                    aircraft_type: body.aircraftType || "Commercial",
+                    category: body.category || "Narrow-body",
+                    owner: body.owner || "",
+                    operator: body.operator || "",
+                    current_location: body.currentLocation || "",
+                    status: body.status || "Available",
+                    last_maintenance_date: body.lastMaintenanceDate || null,
+                    next_maintenance_date: body.nextMaintenanceDate || null,
+                    total_flight_hours: body.totalFlightHours ? Number(body.totalFlightHours) : null,
+                    cycle_count: body.cycleCount ? Number(body.cycleCount) : null,
+                    maintenance_provider: body.maintenanceProvider || null,
+                    maintenance_status: body.maintenanceStatus || null,
+                    certificate_number: body.certificateNumber || null,
+                    certificate_expiry: body.certificateExpiry || null,
+                    last_inspection_date: body.lastInspectionDate || null,
+                    next_inspection_date: body.nextInspectionDate || null,
+                    compliance_status: body.complianceStatus || null,
+                    regulatory_authority: body.regulatoryAuthority || null,
+                };
 
-    return NextResponse.json(
-        { error: "No storage backend is configured. Please contact your administrator." },
-        { status: 503 }
-    );
+                const { data, error } = await supabaseServer
+                    .from("aircraft")
+                    .insert(row)
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.error("Supabase aircraft insert error:", error);
+                    return NextResponse.json(
+                        { error: error.message || "Failed to register aircraft" },
+                        { status: 400 }
+                    );
+                }
+
+                return NextResponse.json({
+                    aircraft: {
+                        id: data.id,
+                        registration: data.registration_number,
+                        model: `${data.manufacturer} ${data.model}`,
+                        manufacturer: data.manufacturer,
+                        ...data,
+                    },
+                    source: "live",
+                });
+            } catch (dbError) {
+                console.error("Supabase aircraft create error:", dbError);
+                return NextResponse.json(
+                    { error: dbError instanceof Error ? dbError.message : "Database error" },
+                    { status: 500 }
+                );
+            }
+        }
+
+        // Mock fallback
+        if (allowMockFallback()) {
+            const mockId = `MOCK-${Date.now()}`;
+            return NextResponse.json({
+                aircraft: { ...body, id: mockId },
+                source: "mock",
+                fallback: true,
+                message: "Aircraft created (mock fallback - not persisted)",
+            });
+        }
+
+        return NextResponse.json(
+            { error: "No storage backend is configured. Please contact your administrator." },
+            { status: 503 }
+        );
+    } catch (fatal) {
+        console.error("Unhandled error in POST /api/aircraft:", fatal);
+        return NextResponse.json(
+            { error: fatal instanceof Error ? fatal.message : "Internal server error" },
+            { status: 500 }
+        );
+    }
 }
