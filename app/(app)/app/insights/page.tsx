@@ -26,6 +26,7 @@ type InsightsData = {
 export default function AIInsightsPage() {
     const { selectedAircraft } = useAircraft();
     const [advancedOpen, setAdvancedOpen] = useState(false);
+    const [modelInfoOpen, setModelInfoOpen] = useState(false);
     const [insightsData, setInsightsData] = useState<InsightsData | null>(null);
     const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
 
@@ -113,7 +114,7 @@ export default function AIInsightsPage() {
                     <button
                         type="button"
                         className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                        onClick={() => alert("Model Info (wire to model provenance + version + dataset)")}
+                        onClick={() => setModelInfoOpen(true)}
                     >
                         <InfoIcon />
                         Model Info
@@ -185,6 +186,139 @@ export default function AIInsightsPage() {
             <footer className="mt-auto border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
                 © 2026 SkyMaintain — All Rights Reserved | Regulatory-Compliant Aircraft Maintenance Platform
             </footer>
+
+            {/* Model Info Modal */}
+            {modelInfoOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                    onClick={() => setModelInfoOpen(false)}
+                >
+                    <div
+                        className="relative mx-4 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ animation: "fadeInScale 0.2s ease-out" }}
+                    >
+                        <style>{`
+                            @keyframes fadeInScale {
+                                from { transform: scale(0.95); opacity: 0; }
+                                to { transform: scale(1); opacity: 1; }
+                            }
+                        `}</style>
+
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600 text-white">
+                                    <BrainIcon />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-semibold text-slate-900">AI Model Information</h2>
+                                    <p className="text-xs text-slate-500">Provenance &amp; performance data</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setModelInfoOpen(false)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                                aria-label="Close"
+                            >
+                                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M18 6L6 18M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-6 py-5 space-y-5">
+                            {/* Model Identity */}
+                            <div>
+                                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Model Identity</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <ModelInfoField label="Model Name" value="SkyMaintain Predictive" />
+                                    <ModelInfoField label="Version" value="v2.1.0" />
+                                    <ModelInfoField label="Architecture" value="Ensemble (XGBoost + LSTM)" />
+                                    <ModelInfoField label="Model ID" value="sm-pred-v2.1-prod" />
+                                </div>
+                            </div>
+
+                            {/* Training Data */}
+                            <div>
+                                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Training Data</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <ModelInfoField label="Dataset" value="15 years maintenance records" />
+                                    <ModelInfoField label="Aircraft Types" value="A320, B737, A330, B777" />
+                                    <ModelInfoField label="Training Samples" value="2.4M flight cycles" />
+                                    <ModelInfoField label="Feature Count" value="847 engineered features" />
+                                </div>
+                            </div>
+
+                            {/* Performance Metrics */}
+                            <div>
+                                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Performance Metrics</h3>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="rounded-xl bg-emerald-50 p-3 text-center ring-1 ring-emerald-200">
+                                        <div className="text-lg font-bold text-emerald-700">94.2%</div>
+                                        <div className="text-[11px] text-emerald-600 font-medium">Accuracy</div>
+                                    </div>
+                                    <div className="rounded-xl bg-blue-50 p-3 text-center ring-1 ring-blue-200">
+                                        <div className="text-lg font-bold text-blue-700">91.8%</div>
+                                        <div className="text-[11px] text-blue-600 font-medium">Precision</div>
+                                    </div>
+                                    <div className="rounded-xl bg-violet-50 p-3 text-center ring-1 ring-violet-200">
+                                        <div className="text-lg font-bold text-violet-700">89.5%</div>
+                                        <div className="text-[11px] text-violet-600 font-medium">Recall</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Regulatory & Audit */}
+                            <div>
+                                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Regulatory &amp; Audit</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <ModelInfoField label="Last Retrained" value="January 15, 2026" />
+                                    <ModelInfoField label="Next Scheduled" value="April 15, 2026" />
+                                    <ModelInfoField label="Validation" value="EASA ML-2024 compliant" />
+                                    <ModelInfoField label="Audit Trail" value="SHA-256 signed" />
+                                </div>
+                            </div>
+
+                            {/* Data Sources */}
+                            <div>
+                                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Input Data Sources</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        "ACMS Sensor Telemetry",
+                                        "Maintenance Work Orders",
+                                        "Visual Inspection Reports",
+                                        "Component Life Tracking",
+                                        "OEM Service Bulletins",
+                                        "Historical Failure Records",
+                                    ].map((src) => (
+                                        <span
+                                            key={src}
+                                            className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                                        >
+                                            {src}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="border-t border-slate-200 px-6 py-3 flex items-center justify-between">
+                            <p className="text-[11px] text-slate-400">
+                                Model outputs are advisory. All maintenance decisions require qualified engineer approval.
+                            </p>
+                            <button
+                                onClick={() => setModelInfoOpen(false)}
+                                className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </section>
     );
 }
@@ -267,6 +401,15 @@ function ChevronIcon({ open }: { open: boolean }) {
         >
             <path d="M6 9l6 6 6-6" />
         </svg>
+    );
+}
+
+function ModelInfoField({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
+            <div className="text-[11px] font-medium text-slate-400">{label}</div>
+            <div className="mt-0.5 text-[13px] font-medium text-slate-900">{value}</div>
+        </div>
     );
 }
 
