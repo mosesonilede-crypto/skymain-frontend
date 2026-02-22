@@ -44,6 +44,7 @@ type SubscriptionBillingPayload = {
     teamMembersAllowed: number;
     billingCycle: BillingCycle;
     stripeCustomerId?: string;
+    priceSyncStatus?: "stripe" | "fallback";
     plans: Plan[];
     paymentMethods: PaymentMethod[];
     billingHistory: BillingInvoice[];
@@ -57,6 +58,7 @@ const EMPTY_PAYLOAD: SubscriptionBillingPayload = {
     teamMembers: 0,
     teamMembersAllowed: 0,
     billingCycle: "Annual",
+    priceSyncStatus: "fallback",
     plans: [],
     paymentMethods: [],
     billingHistory: [],
@@ -414,7 +416,19 @@ export default function SubscriptionBillingPage() {
 
             <div className="mt-6">
                 <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-slate-900">Available Plans</div>
+                    <div className="flex items-center gap-2">
+                        <div className="text-sm font-semibold text-slate-900">Available Plans</div>
+                        <span
+                            className={[
+                                "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                                payload.priceSyncStatus === "stripe"
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                    : "border-amber-200 bg-amber-50 text-amber-700",
+                            ].join(" ")}
+                        >
+                            {payload.priceSyncStatus === "stripe" ? "Stripe prices loaded" : "Fallback prices"}
+                        </span>
+                    </div>
                     {payload.status === "Active" && (
                         <button
                             type="button"

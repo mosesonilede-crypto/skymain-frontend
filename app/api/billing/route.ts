@@ -18,6 +18,7 @@ type Plan = {
 
 type PlanId = Plan["id"];
 type PlanPricing = Record<PlanId, { monthly: number; yearly: number }>;
+type PriceSyncStatus = "stripe" | "fallback";
 
 const PLAN_IDS: PlanId[] = ["starter", "professional", "enterprise"];
 
@@ -54,10 +55,12 @@ function toCentsFromStripe(unitAmount?: number | null): number | null {
     return unitAmount;
 }
 
-async function fetchStripePlanPricing(): Promise<PlanPricing> {
+async function fetchStripePlanPricing(): Promise<{ pricing: PlanPricing; priceSyncStatus: PriceSyncStatus }> {
     const stripe = getStripe();
     const pricing = defaultPlanPricing();
-    if (!stripe) return pricing;
+    if (!stripe) return { pricing, priceSyncStatus: "fallback" };
+
+    let syncedCount = 0;
 
     for (const planId of PLAN_IDS) {
         const monthlyId = STRIPE_PRICES[planId].monthly;
@@ -67,7 +70,10 @@ async function fetchStripePlanPricing(): Promise<PlanPricing> {
             try {
                 const monthlyPrice = await stripe.prices.retrieve(monthlyId);
                 const cents = toCentsFromStripe(monthlyPrice.unit_amount);
-                if (cents !== null) pricing[planId].monthly = cents;
+                if (cents !== null) {
+                    pricing[planId].monthly = cents;
+                    syncedCount += 1;
+                }
             } catch {
                 // Keep fallback defaults for this plan interval
             }
@@ -77,14 +83,20 @@ async function fetchStripePlanPricing(): Promise<PlanPricing> {
             try {
                 const yearlyPrice = await stripe.prices.retrieve(yearlyId);
                 const cents = toCentsFromStripe(yearlyPrice.unit_amount);
-                if (cents !== null) pricing[planId].yearly = cents;
+                if (cents !== null) {
+                    pricing[planId].yearly = cents;
+                    syncedCount += 1;
+                }
             } catch {
                 // Keep fallback defaults for this plan interval
             }
         }
     }
 
-    return pricing;
+    return {
+        pricing,
+        priceSyncStatus: syncedCount > 0 ? "stripe" : "fallback",
+    };
 }
 
 type PaymentMethod = {
@@ -115,9 +127,10 @@ type SubscriptionBillingPayload = {
     plans: Plan[];
     paymentMethods: PaymentMethod[];
     billingHistory: BillingInvoice[];
+    priceSyncStatus: PriceSyncStatus;
 };
 
-function generateMockBillingData(pricing?: PlanPricing): SubscriptionBillingPayload {
+function generateMockBillingData(pricing?: PlanPricing, priceSyncStatus: PriceSyncStatus = "fallback"): SubscriptionBillingPayload {
     const effectivePricing = pricing ?? defaultPlanPricing();
     return {
         status: "Active",
@@ -227,6 +240,7 @@ function generateMockBillingData(pricing?: PlanPricing): SubscriptionBillingPayl
                 status: "Paid",
             },
         ],
+        priceSyncStatus,
     };
 }
 
@@ -236,7 +250,7 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
     if (!stripe) return null;
 
     try {
-        const pricing = await fetchStripePlanPricing();
+        const { pricing, priceSyncStatus } = await fetchStripePlanPricing();
 
         const toPlans = (currentPlan?: PlanId): Plan[] => {
             return [
@@ -277,7 +291,7 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
         };
 
         if (!customerId) {
-            const mockWithLivePrices = generateMockBillingData(pricing);
+            const mockWithLivePrices = generateMockBillingData(pricing, priceSyncStatus);
             return {
                 ...mockWithLivePrices,
                 plans: toPlans("professional"),
@@ -306,6 +320,7 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
                 plans: toPlans(undefined),
                 paymentMethods: [],
                 billingHistory: [],
+                priceSyncStatus,
             };
         }
 
@@ -361,6 +376,7 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
                 status: inv.status === "paid" ? "Paid" : "Unpaid",
                 invoiceUrl: inv.invoice_pdf || inv.hosted_invoice_url || undefined,
             })),
+            priceSyncStatus,
         };
     } catch (error) {
         console.error("Error fetching Stripe data:", error);
@@ -394,8 +410,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Mock/hybrid mode: return mock data (prefer live Stripe catalog prices if available)
-        const pricing = await fetchStripePlanPricing();
-        const billingData = generateMockBillingData(pricing);
+        const { pricing, priceSyncStatus } = await fetchStripePlanPricing();
+        const billingData = generateMockBillingData(pricing, priceSyncStatus);
 
         return NextResponse.json(billingData, {
             headers: {
