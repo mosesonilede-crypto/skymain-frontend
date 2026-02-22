@@ -16,6 +16,7 @@ export default function SignInPage() {
     const [orgName, setOrgName] = React.useState("");
     const [licenseCode, setLicenseCode] = React.useState("");
     const [password, setPassword] = React.useState("");
+    const [showLicenseCode, setShowLicenseCode] = React.useState(false);
     const [showPassword, setShowPassword] = React.useState(false);
     const [remember, setRemember] = React.useState(true);
 
@@ -175,14 +176,25 @@ export default function SignInPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-700">License Code (required after trial)</label>
-                                <input
-                                    value={licenseCode}
-                                    onChange={(e) => setLicenseCode(e.target.value)}
-                                    type="text"
-                                    autoComplete="off"
-                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
-                                    placeholder="Enter your license code"
-                                />
+                                <div className="relative mt-1">
+                                    <input
+                                        value={licenseCode}
+                                        onChange={(e) => setLicenseCode(e.target.value)}
+                                        type={showLicenseCode ? "text" : "password"}
+                                        autoComplete="off"
+                                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-16 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
+                                        placeholder="Enter your license code"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowLicenseCode((prev) => !prev)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-600 hover:text-slate-900"
+                                        aria-label={showLicenseCode ? "Hide license code" : "Show license code"}
+                                        aria-pressed={showLicenseCode}
+                                    >
+                                        {showLicenseCode ? "Hide" : "Show"}
+                                    </button>
+                                </div>
                             </div>
 
                             <div>

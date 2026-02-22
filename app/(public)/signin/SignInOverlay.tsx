@@ -70,6 +70,7 @@ export default function SignInOverlay() {
     const [email, setEmail] = useState("");
     const [orgName, setOrgName] = useState("");
     const [licenseCode, setLicenseCode] = useState("");
+    const [showLicenseCode, setShowLicenseCode] = useState(false);
     const [password, setPassword] = useState("");
     const [remember, setRemember] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -207,12 +208,21 @@ export default function SignInOverlay() {
                             <div className="relative">
                                 <Image src={imgIcon28} alt="" width={16} height={16} unoptimized className="absolute left-[12px] top-[10px] h-[16px] w-[16px]" />
                                 <input
-                                    type="text"
+                                    type={showLicenseCode ? "text" : "password"}
                                     value={licenseCode}
                                     onChange={(event) => setLicenseCode(event.target.value)}
                                     placeholder="Enter license code"
-                                    className="h-[36px] w-full rounded-[8px] bg-[#f3f3f5] pl-[40px] pr-[12px] text-[14px] text-[#0a0a0a] outline-none"
+                                    className="h-[36px] w-full rounded-[8px] bg-[#f3f3f5] pl-[40px] pr-[64px] text-[14px] text-[#0a0a0a] outline-none"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowLicenseCode((prev) => !prev)}
+                                    className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[12px] font-medium text-[#4a5565] hover:text-[#0a0a0a]"
+                                    aria-label={showLicenseCode ? "Hide license code" : "Show license code"}
+                                    aria-pressed={showLicenseCode}
+                                >
+                                    {showLicenseCode ? "Hide" : "Show"}
+                                </button>
                             </div>
                             <span className="text-[12px] text-[#6a7282]">Validated before 2FA</span>
                         </label>
