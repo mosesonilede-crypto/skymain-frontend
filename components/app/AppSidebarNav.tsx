@@ -15,7 +15,15 @@ export type AppNavItem = {
     disabledReason?: string;
 };
 
-export default function AppSidebarNav({ items, onNavigate }: { items: AppNavItem[]; onNavigate?: () => void }) {
+export default function AppSidebarNav({
+    items,
+    onNavigate,
+    onLockedClick,
+}: {
+    items: AppNavItem[];
+    onNavigate?: () => void;
+    onLockedClick?: (item: AppNavItem) => void;
+}) {
     const pathname = usePathname();
 
     return (
@@ -46,7 +54,10 @@ export default function AppSidebarNav({ items, onNavigate }: { items: AppNavItem
                             disabled={item.disabled}
                             title={item.disabledReason}
                             onClick={() => {
-                                if (item.disabled) return;
+                                if (item.disabled) {
+                                    onLockedClick?.(item);
+                                    return;
+                                }
                                 item.onClick?.();
                                 onNavigate?.();
                             }}
@@ -66,6 +77,7 @@ export default function AppSidebarNav({ items, onNavigate }: { items: AppNavItem
                         onClick={(event) => {
                             if (item.disabled) {
                                 event.preventDefault();
+                                onLockedClick?.(item);
                                 return;
                             }
                             onNavigate?.();

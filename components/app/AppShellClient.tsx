@@ -64,6 +64,7 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const [aiInitialQuery, setAiInitialQuery] = useState<string | undefined>(undefined);
     const [aiContext, setAiContext] = useState<string | undefined>(undefined);
     const [profileOpen, setProfileOpen] = useState(false);
+    const [lockedModal, setLockedModal] = useState<{ label: string; reason?: string } | null>(null);
     const [profileDisplayName, setProfileDisplayName] = useState<string>(() => {
         if (typeof window === "undefined") return "";
         try {
@@ -239,7 +240,15 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                         </div>
 
                         <div className="flex-1 overflow-y-auto">
-                            <AppSidebarNav items={navItems} />
+                            <AppSidebarNav
+                                items={navItems}
+                                onLockedClick={(item) => {
+                                    setLockedModal({
+                                        label: item.label,
+                                        reason: item.disabledReason,
+                                    });
+                                }}
+                            />
                         </div>
 
                         <div className="relative border-t border-[#e5e7eb]">
@@ -321,6 +330,45 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                 remainingSeconds={remainingSeconds}
                 onExtend={extendSession}
             />
+
+            {lockedModal ? (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+                    onClick={() => setLockedModal(null)}
+                >
+                    <div
+                        className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="text-lg font-semibold text-slate-900">Feature Locked</div>
+                        <p className="mt-2 text-sm text-slate-600">
+                            {lockedModal.label} is not available on your current subscription.
+                        </p>
+                        {lockedModal.reason ? (
+                            <p className="mt-2 text-sm text-slate-600">{lockedModal.reason}</p>
+                        ) : null}
+                        <div className="mt-5 flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setLockedModal(null)}
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                            >
+                                Close
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setLockedModal(null);
+                                    router.push("/app/subscription-billing");
+                                }}
+                                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                            >
+                                Upgrade Plan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }
