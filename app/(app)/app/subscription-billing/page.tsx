@@ -11,6 +11,7 @@ type Plan = {
     id: "starter" | "professional" | "enterprise";
     name: string;
     tagline: string;
+    priceMonth: number;
     priceYear: number;
     savePerYear: number;
     bullets: string[];
@@ -139,7 +140,7 @@ function PlanCard({
     const interval = billingCycle === "Annual" ? "yearly" : "monthly";
     const displayPrice = billingCycle === "Annual"
         ? `$${(plan.priceYear / 100).toFixed(0)}`
-        : `$${Math.round(plan.priceYear / 12 / 100)}`;
+        : `$${(plan.priceMonth / 100).toFixed(0)}`;
 
     return (
         <div

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDataMode } from "@/lib/dataService";
-import { getStripe, PLAN_DETAILS } from "@/lib/stripe";
+import { getStripe, PLAN_DETAILS, STRIPE_PRICES } from "@/lib/stripe";
 
 type BillingCycle = "Monthly" | "Annual";
 
@@ -8,12 +8,84 @@ type Plan = {
     id: "starter" | "professional" | "enterprise";
     name: string;
     tagline: string;
+    priceMonth: number;
     priceYear: number;
     savePerYear: number;
     bullets: string[];
     badge?: "Most Popular" | "Current Plan";
     isCurrent?: boolean;
 };
+
+type PlanId = Plan["id"];
+type PlanPricing = Record<PlanId, { monthly: number; yearly: number }>;
+
+const PLAN_IDS: PlanId[] = ["starter", "professional", "enterprise"];
+
+function defaultPlanPricing(): PlanPricing {
+    return {
+        starter: {
+            monthly: PLAN_DETAILS.starter.monthlyPrice,
+            yearly: PLAN_DETAILS.starter.yearlyPrice,
+        },
+        professional: {
+            monthly: PLAN_DETAILS.professional.monthlyPrice,
+            yearly: PLAN_DETAILS.professional.yearlyPrice,
+        },
+        enterprise: {
+            monthly: PLAN_DETAILS.enterprise.monthlyPrice,
+            yearly: PLAN_DETAILS.enterprise.yearlyPrice,
+        },
+    };
+}
+
+function resolvePlanFromPrice(priceId?: string | null): PlanId | undefined {
+    if (!priceId) return undefined;
+    for (const planId of PLAN_IDS) {
+        const mapped = STRIPE_PRICES[planId];
+        if (mapped.monthly === priceId || mapped.yearly === priceId) {
+            return planId;
+        }
+    }
+    return undefined;
+}
+
+function toCentsFromStripe(unitAmount?: number | null): number | null {
+    if (typeof unitAmount !== "number") return null;
+    return unitAmount;
+}
+
+async function fetchStripePlanPricing(): Promise<PlanPricing> {
+    const stripe = getStripe();
+    const pricing = defaultPlanPricing();
+    if (!stripe) return pricing;
+
+    for (const planId of PLAN_IDS) {
+        const monthlyId = STRIPE_PRICES[planId].monthly;
+        const yearlyId = STRIPE_PRICES[planId].yearly;
+
+        if (monthlyId) {
+            try {
+                const monthlyPrice = await stripe.prices.retrieve(monthlyId);
+                const cents = toCentsFromStripe(monthlyPrice.unit_amount);
+                if (cents !== null) pricing[planId].monthly = cents;
+            } catch {
+                // Keep fallback defaults for this plan interval
+            }
+        }
+
+        if (yearlyId) {
+            try {
+                const yearlyPrice = await stripe.prices.retrieve(yearlyId);
+                const cents = toCentsFromStripe(yearlyPrice.unit_amount);
+                if (cents !== null) pricing[planId].yearly = cents;
+            } catch {
+                // Keep fallback defaults for this plan interval
+            }
+        }
+    }
+
+    return pricing;
+}
 
 type PaymentMethod = {
     id: string;
@@ -45,11 +117,12 @@ type SubscriptionBillingPayload = {
     billingHistory: BillingInvoice[];
 };
 
-function generateMockBillingData(): SubscriptionBillingPayload {
+function generateMockBillingData(pricing?: PlanPricing): SubscriptionBillingPayload {
+    const effectivePricing = pricing ?? defaultPlanPricing();
     return {
         status: "Active",
         currentPlanLabel: "professional",
-        currentPlanPriceYear: 4990,
+        currentPlanPriceYear: effectivePricing.professional.yearly,
         nextBilling: "Feb 1, 2026",
         autoRenewEnabled: true,
         teamMembers: 5,
@@ -60,8 +133,9 @@ function generateMockBillingData(): SubscriptionBillingPayload {
                 id: "starter",
                 name: "Starter",
                 tagline: "Perfect for small operations",
-                priceYear: 1990,
-                savePerYear: 398,
+                priceMonth: effectivePricing.starter.monthly,
+                priceYear: effectivePricing.starter.yearly,
+                savePerYear: effectivePricing.starter.monthly * 12 - effectivePricing.starter.yearly,
                 bullets: [
                     "Up to 5 aircraft",
                     "Basic maintenance tracking",
@@ -75,8 +149,9 @@ function generateMockBillingData(): SubscriptionBillingPayload {
                 id: "professional",
                 name: "Professional",
                 tagline: "For growing fleets",
-                priceYear: 4990,
-                savePerYear: 998,
+                priceMonth: effectivePricing.professional.monthly,
+                priceYear: effectivePricing.professional.yearly,
+                savePerYear: effectivePricing.professional.monthly * 12 - effectivePricing.professional.yearly,
                 bullets: [
                     "Up to 25 aircraft",
                     "Advanced AI insights",
@@ -94,8 +169,9 @@ function generateMockBillingData(): SubscriptionBillingPayload {
                 id: "enterprise",
                 name: "Enterprise",
                 tagline: "For large-scale operations",
-                priceYear: 9990,
-                savePerYear: 1998,
+                priceMonth: effectivePricing.enterprise.monthly,
+                priceYear: effectivePricing.enterprise.yearly,
+                savePerYear: effectivePricing.enterprise.monthly * 12 - effectivePricing.enterprise.yearly,
                 bullets: [
                     "Unlimited aircraft",
                     "Advanced AI insights",
@@ -157,9 +233,57 @@ function generateMockBillingData(): SubscriptionBillingPayload {
 // Stripe integration - when STRIPE_SECRET_KEY is set, fetch real data
 async function fetchStripeBillingData(customerId?: string): Promise<SubscriptionBillingPayload | null> {
     const stripe = getStripe();
-    if (!stripe || !customerId) return null;
+    if (!stripe) return null;
 
     try {
+        const pricing = await fetchStripePlanPricing();
+
+        const toPlans = (currentPlan?: PlanId): Plan[] => {
+            return [
+                {
+                    id: "starter",
+                    name: PLAN_DETAILS.starter.name,
+                    tagline: PLAN_DETAILS.starter.tagline,
+                    priceMonth: pricing.starter.monthly,
+                    priceYear: pricing.starter.yearly,
+                    savePerYear: pricing.starter.monthly * 12 - pricing.starter.yearly,
+                    bullets: [...PLAN_DETAILS.starter.features],
+                    isCurrent: currentPlan === "starter",
+                    badge: currentPlan === "starter" ? "Current Plan" : undefined,
+                },
+                {
+                    id: "professional",
+                    name: PLAN_DETAILS.professional.name,
+                    tagline: PLAN_DETAILS.professional.tagline,
+                    priceMonth: pricing.professional.monthly,
+                    priceYear: pricing.professional.yearly,
+                    savePerYear: pricing.professional.monthly * 12 - pricing.professional.yearly,
+                    bullets: [...PLAN_DETAILS.professional.features],
+                    isCurrent: currentPlan === "professional",
+                    badge: currentPlan === "professional" ? "Current Plan" : "Most Popular",
+                },
+                {
+                    id: "enterprise",
+                    name: PLAN_DETAILS.enterprise.name,
+                    tagline: PLAN_DETAILS.enterprise.tagline,
+                    priceMonth: pricing.enterprise.monthly,
+                    priceYear: pricing.enterprise.yearly,
+                    savePerYear: pricing.enterprise.monthly * 12 - pricing.enterprise.yearly,
+                    bullets: [...PLAN_DETAILS.enterprise.features],
+                    isCurrent: currentPlan === "enterprise",
+                    badge: currentPlan === "enterprise" ? "Current Plan" : undefined,
+                },
+            ];
+        };
+
+        if (!customerId) {
+            const mockWithLivePrices = generateMockBillingData(pricing);
+            return {
+                ...mockWithLivePrices,
+                plans: toPlans("professional"),
+            };
+        }
+
         // Fetch customer's subscriptions
         const subscriptions = await stripe.subscriptions.list({
             customer: customerId,
@@ -168,7 +292,22 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
         });
 
         const subscription = subscriptions.data[0];
-        if (!subscription) return null;
+        if (!subscription) {
+            return {
+                status: "Inactive",
+                currentPlanLabel: "not_subscribed",
+                currentPlanPriceYear: 0,
+                nextBilling: "Not scheduled",
+                autoRenewEnabled: false,
+                teamMembers: 0,
+                teamMembersAllowed: 0,
+                billingCycle: "Annual",
+                stripeCustomerId: customerId,
+                plans: toPlans(undefined),
+                paymentMethods: [],
+                billingHistory: [],
+            };
+        }
 
         // Fetch payment methods
         const paymentMethods = await stripe.paymentMethods.list({
@@ -182,16 +321,8 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
             limit: 10,
         });
 
-        // Determine current plan from price
         const priceId = subscription.items.data[0]?.price.id;
-        type PlanType = "starter" | "professional" | "enterprise";
-        const determinePlan = (): PlanType => {
-            // TODO: Map priceId to actual plan
-            // For now, default to professional
-            void priceId; // suppress unused warning
-            return "professional";
-        };
-        const currentPlan: PlanType = determinePlan();
+        const currentPlan: PlanId = resolvePlanFromPrice(priceId) ?? "professional";
         let billingCycle: BillingCycle = "Annual";
 
         // Map price ID to plan (you'll need to set these)
@@ -201,7 +332,7 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
         return {
             status: subscription.status === "active" ? "Active" : "Inactive",
             currentPlanLabel: currentPlan,
-            currentPlanPriceYear: PLAN_DETAILS[currentPlan].yearlyPrice,
+            currentPlanPriceYear: pricing[currentPlan].yearly,
             nextBilling: new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -212,38 +343,7 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
             teamMembersAllowed: currentPlan === "starter" ? 5 : currentPlan === "professional" ? 25 : 999,
             billingCycle,
             stripeCustomerId: customerId,
-            plans: [
-                {
-                    id: "starter",
-                    name: PLAN_DETAILS.starter.name,
-                    tagline: PLAN_DETAILS.starter.tagline,
-                    priceYear: PLAN_DETAILS.starter.yearlyPrice,
-                    savePerYear: PLAN_DETAILS.starter.monthlyPrice * 12 - PLAN_DETAILS.starter.yearlyPrice,
-                    bullets: [...PLAN_DETAILS.starter.features],
-                    isCurrent: currentPlan === "starter",
-                    badge: currentPlan === "starter" ? "Current Plan" : undefined,
-                },
-                {
-                    id: "professional",
-                    name: PLAN_DETAILS.professional.name,
-                    tagline: PLAN_DETAILS.professional.tagline,
-                    priceYear: PLAN_DETAILS.professional.yearlyPrice,
-                    savePerYear: PLAN_DETAILS.professional.monthlyPrice * 12 - PLAN_DETAILS.professional.yearlyPrice,
-                    bullets: [...PLAN_DETAILS.professional.features],
-                    isCurrent: currentPlan === "professional",
-                    badge: currentPlan === "professional" ? "Current Plan" : "Most Popular",
-                },
-                {
-                    id: "enterprise",
-                    name: PLAN_DETAILS.enterprise.name,
-                    tagline: PLAN_DETAILS.enterprise.tagline,
-                    priceYear: PLAN_DETAILS.enterprise.yearlyPrice,
-                    savePerYear: PLAN_DETAILS.enterprise.monthlyPrice * 12 - PLAN_DETAILS.enterprise.yearlyPrice,
-                    bullets: [...PLAN_DETAILS.enterprise.features],
-                    isCurrent: currentPlan === "enterprise",
-                    badge: currentPlan === "enterprise" ? "Current Plan" : undefined,
-                },
-            ],
+            plans: toPlans(currentPlan),
             paymentMethods: paymentMethods.data.map((pm) => ({
                 id: pm.id,
                 label: `${pm.card?.brand?.charAt(0).toUpperCase()}${pm.card?.brand?.slice(1)} ending in ${pm.card?.last4}`,
@@ -293,8 +393,9 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // Mock/hybrid mode: return mock data
-        const billingData = generateMockBillingData();
+        // Mock/hybrid mode: return mock data (prefer live Stripe catalog prices if available)
+        const pricing = await fetchStripePlanPricing();
+        const billingData = generateMockBillingData(pricing);
 
         return NextResponse.json(billingData, {
             headers: {
