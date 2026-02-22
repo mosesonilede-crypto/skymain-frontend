@@ -72,9 +72,9 @@ const DEFAULT_MESSAGE: Message = {
         {
             title: "EASA Part-M Continuing Airworthiness",
             source: "European Union Aviation Safety Agency (easa.europa.eu)",
-            url: "https://www.easa.europa.eu/en/regulations/part-m",
+            url: "https://www.easa.europa.eu/en/acceptable-means-compliance-and-guidance-material-group/part-m-continuing-airworthiness",
             effectiveDate: "2020-03-24",
-            retrievedDate: "2026-02-04",
+            retrievedDate: "2026-02-22",
         },
         {
             title: "ICAO Annex 6 - Aircraft Operations",
@@ -103,9 +103,9 @@ const DEFAULT_REFERENCES = [
     {
         title: "EASA Part-M Continuing Airworthiness",
         source: "European Union Aviation Safety Agency (easa.europa.eu)",
-        url: "https://www.easa.europa.eu/en/regulations/part-m",
+        url: "https://www.easa.europa.eu/en/acceptable-means-compliance-and-guidance-material-group/part-m-continuing-airworthiness",
         effectiveDate: "2020-03-24",
-        retrievedDate: "2026-02-04",
+        retrievedDate: "2026-02-22",
     },
     {
         title: "ICAO Annex 8 - Airworthiness of Aircraft",
