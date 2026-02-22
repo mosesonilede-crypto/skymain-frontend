@@ -160,6 +160,29 @@ async function registerAircraftLive(form: RegisterAircraftForm): Promise<void> {
     }
 }
 
+async function addUserLive(form: { name: string; email: string; role: string; status: string }): Promise<void> {
+    const res = await fetch("/api/admin/users", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(form),
+    });
+
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({} as Record<string, unknown>));
+        if (data.code === "TEAM_MEMBER_LIMIT_REACHED") {
+            const currentCount = typeof data.currentCount === "number" ? data.currentCount : null;
+            const maxTeamMembers = typeof data.maxTeamMembers === "number" ? data.maxTeamMembers : null;
+            throw new Error(
+                currentCount !== null && maxTeamMembers !== null
+                    ? `Team member limit reached for your current plan (${currentCount}/${maxTeamMembers}). Upgrade your plan to add more users.`
+                    : "Team member limit reached for your current plan. Upgrade your plan to add more users."
+            );
+        }
+        throw new Error(typeof data.error === "string" ? data.error : `Failed to add user: ${res.status}`);
+    }
+}
+
 function Pill({ label, tone }: { label: string; tone: "green" | "slate" | "blue" }) {
     const cls =
         tone === "green"
@@ -943,7 +966,7 @@ export default function AdminPanelPage() {
         setIsUserModalOpen(true);
     }
 
-    function saveUser() {
+    async function saveUser() {
         const name = userForm.name.trim();
         const email = userForm.email.trim();
         if (!name || !email) {
@@ -963,11 +986,25 @@ export default function AdminPanelPage() {
             return;
         }
 
-        setUserList((prev) => {
-            if (editingUserIndex === null) {
-                return [...prev, { ...userForm, name, email }];
+        if (editingUserIndex === null) {
+            try {
+                await addUserLive({
+                    name,
+                    email,
+                    role: userForm.role,
+                    status: userForm.status,
+                });
+                const live = await fetchLive();
+                setPayload(live);
+                setIsUserModalOpen(false);
+                return;
+            } catch (e) {
+                setUserFormError(e instanceof Error ? e.message : "Failed to add user.");
+                return;
             }
+        }
 
+        setUserList((prev) => {
             return prev.map((u, idx) => (idx === editingUserIndex ? { ...userForm, name, email } : u));
         });
 
@@ -1254,7 +1291,7 @@ export default function AdminPanelPage() {
                         </table>
                     </div>
                     <p className="mt-3 text-xs text-slate-500">
-                        Changes made here update the local list for this session.
+                        New users are persisted to your organization; inline edits remain local in this view.
                     </p>
                 </section>
 
