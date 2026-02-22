@@ -623,26 +623,88 @@ export default function SuperAdminPage() {
 
         setSavingDemoVideo(true);
         try {
-            const formData = new FormData();
-            formData.append("video", selectedDemoVideoFile);
+            let completed = false;
 
-            const response = await fetch("/api/admin/demo-video", {
+            const initResponse = await fetch("/api/admin/demo-video", {
                 method: "POST",
                 credentials: "include",
-                body: formData,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    action: "init-upload",
+                    fileName: selectedDemoVideoFile.name,
+                    mimeType: selectedDemoVideoFile.type,
+                    fileSize: selectedDemoVideoFile.size,
+                }),
             });
 
-            const data = (await response.json()) as DemoVideoApiResponse | { error?: string };
-            if (!response.ok) {
-                const message = "error" in data && data.error ? data.error : "Failed to upload demo video.";
-                throw new Error(message);
+            if (initResponse.ok) {
+                const initData = (await initResponse.json()) as {
+                    uploadUrl?: string;
+                    targetPath?: string;
+                };
+
+                if (initData.uploadUrl && initData.targetPath) {
+                    const uploadResponse = await fetch(initData.uploadUrl, {
+                        method: "PUT",
+                        headers: { "Content-Type": selectedDemoVideoFile.type },
+                        body: selectedDemoVideoFile,
+                    });
+
+                    if (!uploadResponse.ok) {
+                        throw new Error(`Direct upload failed (${uploadResponse.status})`);
+                    }
+
+                    const finalizeResponse = await fetch("/api/admin/demo-video", {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            action: "finalize-upload",
+                            targetPath: initData.targetPath,
+                            fileName: selectedDemoVideoFile.name,
+                            mimeType: selectedDemoVideoFile.type,
+                        }),
+                    });
+
+                    const finalizeData = (await finalizeResponse.json()) as DemoVideoApiResponse | { error?: string };
+                    if (!finalizeResponse.ok) {
+                        const message = "error" in finalizeData && finalizeData.error ? finalizeData.error : "Failed to finalize demo video upload.";
+                        throw new Error(message);
+                    }
+
+                    if ((finalizeData as DemoVideoApiResponse).source === "upload") {
+                        const uploadData = finalizeData as Extract<DemoVideoApiResponse, { source: "upload" }>;
+                        setDemoVideoUrl(uploadData.videoUrl);
+                        setDemoVideoFileName(uploadData.fileName || selectedDemoVideoFile.name);
+                        setDemoVideoUpdatedAt(uploadData.updatedAt || new Date().toISOString());
+                    }
+
+                    completed = true;
+                }
             }
 
-            if ((data as DemoVideoApiResponse).source === "upload") {
-                const uploadData = data as Extract<DemoVideoApiResponse, { source: "upload" }>;
-                setDemoVideoUrl(uploadData.videoUrl);
-                setDemoVideoFileName(uploadData.fileName || selectedDemoVideoFile.name);
-                setDemoVideoUpdatedAt(uploadData.updatedAt || new Date().toISOString());
+            if (!completed) {
+                const formData = new FormData();
+                formData.append("video", selectedDemoVideoFile);
+
+                const response = await fetch("/api/admin/demo-video", {
+                    method: "POST",
+                    credentials: "include",
+                    body: formData,
+                });
+
+                const data = (await response.json()) as DemoVideoApiResponse | { error?: string };
+                if (!response.ok) {
+                    const message = "error" in data && data.error ? data.error : "Failed to upload demo video.";
+                    throw new Error(message);
+                }
+
+                if ((data as DemoVideoApiResponse).source === "upload") {
+                    const uploadData = data as Extract<DemoVideoApiResponse, { source: "upload" }>;
+                    setDemoVideoUrl(uploadData.videoUrl);
+                    setDemoVideoFileName(uploadData.fileName || selectedDemoVideoFile.name);
+                    setDemoVideoUpdatedAt(uploadData.updatedAt || new Date().toISOString());
+                }
             }
 
             setSelectedDemoVideoFile(null);

@@ -4,6 +4,7 @@ import path from "path";
 import {
     DeleteObjectCommand,
     GetObjectCommand,
+    HeadObjectCommand,
     ListObjectsV2Command,
     PutObjectCommand,
     S3Client,
@@ -34,6 +35,20 @@ type DemoVideoConfig = {
 };
 
 type StorageProvider = "supabase" | "s3" | "local";
+
+type DemoVideoS3InitRequest = {
+    action: "init-upload";
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+};
+
+type DemoVideoS3FinalizeRequest = {
+    action: "finalize-upload";
+    targetPath: string;
+    fileName: string;
+    mimeType: string;
+};
 
 const SESSION_COOKIE = "sm_session";
 const MAX_VIDEO_MB = Math.max(1, Number(process.env.SKYMAINTAIN_DEMO_VIDEO_MAX_MB || "50") || 50);
@@ -370,6 +385,137 @@ function extensionFromMime(mimeType: string): string {
     return "mp4";
 }
 
+function buildTargetName(fileName: string, mimeType: string): string {
+    const ext = extensionFromMime(mimeType);
+    const safeBaseName = fileName
+        .replace(/\.[^/.]+$/, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "") || "demo-video";
+    return `${safeBaseName}-${Date.now()}.${ext}`;
+}
+
+async function buildS3PlaybackUrl(targetPath: string): Promise<string> {
+    if (!s3Client) {
+        throw new Error("S3 client not configured");
+    }
+
+    if (S3_PUBLIC_BASE_URL) {
+        return `${S3_PUBLIC_BASE_URL}/${targetPath}`;
+    }
+
+    return getSignedUrl(
+        s3Client,
+        new GetObjectCommand({
+            Bucket: S3_BUCKET,
+            Key: targetPath,
+        }),
+        { expiresIn: S3_SIGNED_URL_TTL_SECONDS }
+    );
+}
+
+async function handleS3DirectUpload(req: NextRequest, session: SessionPayload): Promise<NextResponse> {
+    if (!s3Client || ACTIVE_STORAGE_PROVIDER !== "s3") {
+        return NextResponse.json({ error: "Direct upload is only available when S3 storage provider is active" }, { status: 400 });
+    }
+
+    const payload = (await req.json()) as DemoVideoS3InitRequest | DemoVideoS3FinalizeRequest;
+
+    if (payload.action === "init-upload") {
+        if (typeof payload.fileName !== "string" || typeof payload.mimeType !== "string" || typeof payload.fileSize !== "number") {
+            return NextResponse.json({ error: "Invalid upload metadata" }, { status: 400 });
+        }
+
+        if (!ALLOWED_MIME_TYPES.has(payload.mimeType)) {
+            return NextResponse.json({ error: "Unsupported video format" }, { status: 400 });
+        }
+
+        if (payload.fileSize > MAX_VIDEO_BYTES) {
+            return NextResponse.json({ error: `Video must be ${MAX_VIDEO_MB}MB or smaller` }, { status: 400 });
+        }
+
+        const targetName = buildTargetName(payload.fileName, payload.mimeType);
+        const targetPath = `${DEMO_VIDEO_PREFIX}/${targetName}`;
+
+        await ensureS3Bucket();
+
+        const uploadUrl = await getSignedUrl(
+            s3Client,
+            new PutObjectCommand({
+                Bucket: S3_BUCKET,
+                Key: targetPath,
+                ContentType: payload.mimeType,
+            }),
+            { expiresIn: S3_SIGNED_URL_TTL_SECONDS }
+        );
+
+        return NextResponse.json({
+            source: "upload",
+            mode: "direct",
+            uploadUrl,
+            targetPath,
+            expiresIn: S3_SIGNED_URL_TTL_SECONDS,
+            fileName: payload.fileName,
+            mimeType: payload.mimeType,
+        });
+    }
+
+    if (payload.action === "finalize-upload") {
+        if (typeof payload.targetPath !== "string" || typeof payload.fileName !== "string" || typeof payload.mimeType !== "string") {
+            return NextResponse.json({ error: "Invalid finalize payload" }, { status: 400 });
+        }
+
+        if (!payload.targetPath.startsWith(`${DEMO_VIDEO_PREFIX}/`)) {
+            return NextResponse.json({ error: "Invalid upload target path" }, { status: 400 });
+        }
+
+        if (!ALLOWED_MIME_TYPES.has(payload.mimeType)) {
+            return NextResponse.json({ error: "Unsupported video format" }, { status: 400 });
+        }
+
+        await ensureS3Bucket();
+
+        const headResult = await s3Client.send(
+            new HeadObjectCommand({
+                Bucket: S3_BUCKET,
+                Key: payload.targetPath,
+            })
+        );
+
+        const uploadedBytes = Number(headResult.ContentLength || 0);
+        if (!uploadedBytes) {
+            return NextResponse.json({ error: "Uploaded file could not be verified" }, { status: 400 });
+        }
+
+        if (uploadedBytes > MAX_VIDEO_BYTES) {
+            return NextResponse.json({ error: `Video must be ${MAX_VIDEO_MB}MB or smaller` }, { status: 400 });
+        }
+
+        const targetName = path.basename(payload.targetPath);
+        await deleteOldUploadedVideos(targetName);
+
+        const videoUrl = await buildS3PlaybackUrl(payload.targetPath);
+
+        const config: DemoVideoConfig = {
+            source: "upload",
+            videoUrl,
+            storagePath: payload.targetPath,
+            storageProvider: "s3",
+            fileName: payload.fileName,
+            mimeType: payload.mimeType,
+            updatedAt: new Date().toISOString(),
+            updatedBy: session.email,
+        };
+
+        await writeConfig(config);
+
+        return NextResponse.json(config);
+    }
+
+    return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
+}
+
 export async function GET() {
     const config = await readConfig();
     if (!config) {
@@ -384,6 +530,11 @@ export async function POST(req: NextRequest) {
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
     try {
+        const contentType = req.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+            return await handleS3DirectUpload(req, sessionOrResponse);
+        }
+
         const form = await req.formData();
         const uploaded = form.get("video");
 
@@ -399,14 +550,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: `Video must be ${MAX_VIDEO_MB}MB or smaller` }, { status: 400 });
         }
 
-        const ext = extensionFromMime(uploaded.type);
-        const safeBaseName = uploaded.name
-            .replace(/\.[^/.]+$/, "")
-            .toLowerCase()
-            .replace(/[^a-z0-9-_]+/g, "-")
-            .replace(/-+/g, "-")
-            .replace(/^-|-$/g, "") || "demo-video";
-        const targetName = `${safeBaseName}-${Date.now()}.${ext}`;
+        const targetName = buildTargetName(uploaded.name, uploaded.type);
         const targetPath = `${DEMO_VIDEO_PREFIX}/${targetName}`;
 
         const arrayBuffer = await uploaded.arrayBuffer();
