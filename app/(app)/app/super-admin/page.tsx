@@ -78,6 +78,7 @@ type SignupNotification = {
 const PARTNER_STORAGE_KEY = "skymaintain.partnerContent";
 const DEFAULT_DEMO_VIDEO_ID = "oMcy-bTjvJ0";
 const DEMO_VIDEO_MAX_MB = Math.max(1, Number(process.env.NEXT_PUBLIC_DEMO_VIDEO_MAX_MB || "50") || 50);
+const LARGE_VIDEO_FALLBACK_THRESHOLD_MB = 100;
 
 type DemoVideoApiResponse =
     | {
@@ -190,6 +191,7 @@ export default function SuperAdminPage() {
     const [demoVideoUpdatedAt, setDemoVideoUpdatedAt] = useState<string | null>(null);
     const [selectedDemoVideoFile, setSelectedDemoVideoFile] = useState<File | null>(null);
     const [savingDemoVideo, setSavingDemoVideo] = useState(false);
+    const [demoUploadProgress, setDemoUploadProgress] = useState<number | null>(null);
 
     // Announcements/Mass Email
     const [announcementSubject, setAnnouncementSubject] = useState("");
@@ -622,8 +624,38 @@ export default function SuperAdminPage() {
         }
 
         setSavingDemoVideo(true);
+        setDemoUploadProgress(null);
         try {
+            const uploadViaSignedUrl = async (uploadUrl: string, file: File) => {
+                await new Promise<void>((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open("PUT", uploadUrl);
+                    xhr.timeout = 30 * 60 * 1000;
+                    xhr.setRequestHeader("Content-Type", file.type);
+
+                    xhr.upload.onprogress = (event) => {
+                        if (!event.lengthComputable) return;
+                        const pct = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+                        setDemoUploadProgress(pct);
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            setDemoUploadProgress(100);
+                            resolve();
+                            return;
+                        }
+                        reject(new Error(`Direct upload failed (${xhr.status})`));
+                    };
+
+                    xhr.onerror = () => reject(new Error("Direct upload failed due to a network or CORS error"));
+                    xhr.ontimeout = () => reject(new Error("Direct upload timed out"));
+                    xhr.send(file);
+                });
+            };
+
             let completed = false;
+            const isLargeFile = selectedDemoVideoFile.size > LARGE_VIDEO_FALLBACK_THRESHOLD_MB * 1024 * 1024;
 
             const initResponse = await fetch("/api/admin/demo-video", {
                 method: "POST",
@@ -637,6 +669,17 @@ export default function SuperAdminPage() {
                 }),
             });
 
+            if (!initResponse.ok && isLargeFile) {
+                let initError = "Failed to initialize direct upload.";
+                try {
+                    const errorJson = (await initResponse.json()) as { error?: string };
+                    if (errorJson.error) initError = errorJson.error;
+                } catch {
+                    // Ignore non-JSON error response.
+                }
+                throw new Error(`${initError} Please verify R2 env variables and bucket CORS, then retry.`);
+            }
+
             if (initResponse.ok) {
                 const initData = (await initResponse.json()) as {
                     uploadUrl?: string;
@@ -644,15 +687,7 @@ export default function SuperAdminPage() {
                 };
 
                 if (initData.uploadUrl && initData.targetPath) {
-                    const uploadResponse = await fetch(initData.uploadUrl, {
-                        method: "PUT",
-                        headers: { "Content-Type": selectedDemoVideoFile.type },
-                        body: selectedDemoVideoFile,
-                    });
-
-                    if (!uploadResponse.ok) {
-                        throw new Error(`Direct upload failed (${uploadResponse.status})`);
-                    }
+                    await uploadViaSignedUrl(initData.uploadUrl, selectedDemoVideoFile);
 
                     const finalizeResponse = await fetch("/api/admin/demo-video", {
                         method: "POST",
@@ -680,6 +715,8 @@ export default function SuperAdminPage() {
                     }
 
                     completed = true;
+                } else if (isLargeFile) {
+                    throw new Error("Direct upload did not return a signed URL. Please redeploy and verify S3 provider settings.");
                 }
             }
 
@@ -708,10 +745,12 @@ export default function SuperAdminPage() {
             }
 
             setSelectedDemoVideoFile(null);
+            setDemoUploadProgress(null);
             showNotification("success", "Demo video updated successfully.");
         } catch (error) {
             showNotification("error", error instanceof Error ? error.message : "Failed to upload demo video.");
         } finally {
+            setDemoUploadProgress(null);
             setSavingDemoVideo(false);
         }
     }
@@ -1755,6 +1794,11 @@ export default function SuperAdminPage() {
                                     {selectedDemoVideoFile && (
                                         <p className="mt-2 text-xs text-slate-600">
                                             Selected: {selectedDemoVideoFile.name}
+                                        </p>
+                                    )}
+                                    {savingDemoVideo && demoUploadProgress !== null && (
+                                        <p className="mt-1 text-xs text-blue-700">
+                                            Upload progress: {demoUploadProgress}%
                                         </p>
                                     )}
                                 </div>
