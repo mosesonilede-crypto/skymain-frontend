@@ -275,8 +275,6 @@ export default function RegulatoryCompliancePage() {
                 countryOrRegion: "United States",
                 links: [
                     { label: "Airworthiness Directives Database", href: "https://www.faa.gov/regulations_policies/airworthiness_directives" },
-                    { label: "Regulatory & Guidance Library", href: "https://drs.faa.gov/browse" },
-                    { label: "AD Search Tool", href: "https://drs.faa.gov/browse/ADFRAWD/doctypeDetails" },
                 ],
             },
             {
