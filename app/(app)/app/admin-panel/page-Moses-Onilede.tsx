@@ -157,9 +157,8 @@ async function registerAircraftLive(baseUrl: string, form: RegisterAircraftForm)
     }
 }
 
-async function addUserLive(baseUrl: string, form: AddUserForm): Promise<void> {
-    const url = `${baseUrl.replace(/\/+$/, "")}/v1/admin/users`;
-    const res = await fetch(url, {
+async function addUserLive(form: AddUserForm): Promise<void> {
+    const res = await fetch("/api/admin/users", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -187,7 +186,7 @@ async function addUserLive(baseUrl: string, form: AddUserForm): Promise<void> {
             throw new Error(data.error);
         }
         const text = await res.text().catch(() => "");
-        throw new Error(`POST /v1/admin/users failed: ${res.status}${text ? ` • ${text}` : ""}`);
+        throw new Error(`POST /api/admin/users failed: ${res.status}${text ? ` • ${text}` : ""}`);
     }
 }
 
@@ -466,7 +465,7 @@ export default function AdminPanelPage() {
                 return;
             }
 
-            await addUserLive(baseUrl, addUserForm);
+            await addUserLive(addUserForm);
             setIsAddUserOpen(false);
             setAddUserForm({ name: "", email: "", role: "Viewer", status: "Active" });
             // Refresh data
