@@ -274,9 +274,9 @@ export default function RegulatoryCompliancePage() {
                 label: "FAA (Federal Aviation Administration)",
                 countryOrRegion: "United States",
                 links: [
-                    { label: "Airworthiness Directives Database", href: "https://ad.faa.gov/" },
-                    { label: "Regulatory & Guidance Library", href: "https://www.faa.gov/regulations_policies/" },
-                    { label: "AD Search Tool", href: "https://ad.faa.gov/ad/" },
+                    { label: "Airworthiness Directives Database", href: "https://rgl.faa.gov/Regulatory_and_Guidance_Library/rgAD.nsf/Frameset?OpenPage" },
+                    { label: "Regulatory & Guidance Library", href: "https://rgl.faa.gov/Regulatory_and_Guidance_Library" },
+                    { label: "AD Search Tool", href: "https://rgl.faa.gov/Regulatory_and_Guidance_Library/rgAD.nsf/MainFrame?OpenFrameSet" },
                 ],
             },
             {
