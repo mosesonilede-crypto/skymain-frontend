@@ -138,6 +138,19 @@ async function registerAircraftLive(baseUrl: string, form: RegisterAircraftForm)
     });
 
     if (!res.ok) {
+        const data = await res.json().catch(() => ({} as Record<string, unknown>));
+        if (data.code === "AIRCRAFT_LIMIT_REACHED") {
+            const currentCount = typeof data.currentCount === "number" ? data.currentCount : null;
+            const maxAircraft = typeof data.maxAircraft === "number" ? data.maxAircraft : null;
+            throw new Error(
+                currentCount !== null && maxAircraft !== null
+                    ? `Aircraft limit reached for your current plan (${currentCount}/${maxAircraft}). Upgrade your plan to add more aircraft.`
+                    : "Aircraft limit reached for your current plan. Upgrade your plan to add more aircraft."
+            );
+        }
+        if (typeof data.error === "string" && data.error) {
+            throw new Error(data.error);
+        }
         const text = await res.text().catch(() => "");
         throw new Error(`POST /v1/admin/aircraft failed: ${res.status}${text ? ` • ${text}` : ""}`);
     }
@@ -252,6 +265,7 @@ export default function AdminPanelPage() {
     });
     const [submitError, setSubmitError] = useState<string>("");
     const [submitting, setSubmitting] = useState<boolean>(false);
+    const isAircraftLimitError = submitError.toLowerCase().includes("aircraft limit reached");
 
     // Add User Modal State
     const [isAddUserOpen, setIsAddUserOpen] = useState<boolean>(false);
@@ -1329,7 +1343,25 @@ export default function AdminPanelPage() {
                                                         color: "#dc2626",
                                                     }}
                                                 >
-                                                    {submitError}
+                                                    <div>{submitError}</div>
+                                                    {isAircraftLimitError && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => router.push("/app/subscription-billing")}
+                                                            style={{
+                                                                marginTop: "12px",
+                                                                padding: "6px 12px",
+                                                                fontSize: "12px",
+                                                                color: "#ffffff",
+                                                                backgroundColor: "#155dfc",
+                                                                border: "none",
+                                                                borderRadius: "8px",
+                                                                cursor: "pointer",
+                                                            }}
+                                                        >
+                                                            Upgrade Plan
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

@@ -144,8 +144,18 @@ async function registerAircraftLive(form: RegisterAircraftForm): Promise<void> {
     });
 
     if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Failed to register aircraft: ${res.status}`);
+        const data = await res.json().catch(() => ({} as Record<string, unknown>));
+        if (data.code === "AIRCRAFT_LIMIT_REACHED") {
+            const currentCount = typeof data.currentCount === "number" ? data.currentCount : null;
+            const maxAircraft = typeof data.maxAircraft === "number" ? data.maxAircraft : null;
+            throw new Error(
+                currentCount !== null && maxAircraft !== null
+                    ? `Aircraft limit reached for your current plan (${currentCount}/${maxAircraft}). Upgrade your plan to add more aircraft.`
+                    : "Aircraft limit reached for your current plan. Upgrade your plan to add more aircraft."
+            );
+        }
+        const message = typeof data.error === "string" ? data.error : `Failed to register aircraft: ${res.status}`;
+        throw new Error(message);
     }
 }
 
@@ -864,6 +874,7 @@ export default function AdminPanelPage() {
 
     const [submitError, setSubmitError] = useState<string>("");
     const [submitting, setSubmitting] = useState<boolean>(false);
+    const isAircraftLimitError = submitError.toLowerCase().includes("aircraft limit reached");
     const shouldBlock = authLoading || !canAccessAdminPanel;
 
     useEffect(() => {
@@ -1555,7 +1566,16 @@ export default function AdminPanelPage() {
 
                                     {submitError ? (
                                         <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
-                                            {submitError}
+                                            <div>{submitError}</div>
+                                            {isAircraftLimitError ? (
+                                                <button
+                                                    type="button"
+                                                    className="mt-2 inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+                                                    onClick={() => router.push("/app/subscription-billing")}
+                                                >
+                                                    Upgrade Plan
+                                                </button>
+                                            ) : null}
                                         </div>
                                     ) : null}
                                 </div>

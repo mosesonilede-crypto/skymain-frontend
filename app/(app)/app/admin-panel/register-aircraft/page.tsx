@@ -117,8 +117,18 @@ async function registerAircraftLive(form: RegisterAircraftForm): Promise<void> {
     });
 
     if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Failed to register aircraft: ${res.status}`);
+        const data = await res.json().catch(() => ({} as Record<string, unknown>));
+        if (data.code === "AIRCRAFT_LIMIT_REACHED") {
+            const currentCount = typeof data.currentCount === "number" ? data.currentCount : null;
+            const maxAircraft = typeof data.maxAircraft === "number" ? data.maxAircraft : null;
+            throw new Error(
+                currentCount !== null && maxAircraft !== null
+                    ? `Aircraft limit reached for your current plan (${currentCount}/${maxAircraft}). Upgrade your plan to add more aircraft.`
+                    : "Aircraft limit reached for your current plan. Upgrade your plan to add more aircraft."
+            );
+        }
+        const message = typeof data.error === "string" ? data.error : `Failed to register aircraft: ${res.status}`;
+        throw new Error(message);
     }
 }
 
@@ -230,6 +240,7 @@ export default function RegisterAircraftPage() {
     });
     const [submitError, setSubmitError] = useState<string>("");
     const [submitting, setSubmitting] = useState<boolean>(false);
+    const isAircraftLimitError = submitError.toLowerCase().includes("aircraft limit reached");
 
     // Add User Modal State
     const [isAddUserOpen, setIsAddUserOpen] = useState<boolean>(false);
@@ -1445,7 +1456,27 @@ export default function RegisterAircraftPage() {
                                 color: "#b91c1c",
                             }}
                         >
-                            {submitError}
+                            <div>{submitError}</div>
+                            {isAircraftLimitError && (
+                                <button
+                                    type="button"
+                                    onClick={() => router.push("/app/subscription-billing")}
+                                    style={{
+                                        marginTop: "12px",
+                                        padding: "6px 12px",
+                                        backgroundColor: "#155dfc",
+                                        color: "#ffffff",
+                                        border: "none",
+                                        borderRadius: "8px",
+                                        cursor: "pointer",
+                                        fontSize: "12px",
+                                        lineHeight: "16px",
+                                        fontFamily: "Arial, sans-serif",
+                                    }}
+                                >
+                                    Upgrade Plan
+                                </button>
+                            )}
                         </div>
                     )}
 
