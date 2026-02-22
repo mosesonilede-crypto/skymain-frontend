@@ -8,6 +8,20 @@ import { PLAN_DETAILS } from "@/lib/stripe";
 type BillingInterval = "monthly" | "yearly";
 type PlanId = "starter" | "professional" | "enterprise";
 
+type BillingPlan = {
+    id: PlanId;
+    name: string;
+    tagline: string;
+    priceMonth: number;
+    priceYear: number;
+    bullets: string[];
+    badge?: "Most Popular" | "Current Plan";
+};
+
+type BillingApiResponse = {
+    plans: BillingPlan[];
+};
+
 function cx(...classes: Array<string | false | null | undefined>): string {
     return classes.filter(Boolean).join(" ");
 }
@@ -33,18 +47,22 @@ function PricingCard({
     plan,
     interval,
     isPopular,
+    onSelectPlan,
+    isLoading,
 }: {
     planId: PlanId;
-    plan: (typeof PLAN_DETAILS)[PlanId];
+    plan: BillingPlan;
     interval: BillingInterval;
     isPopular: boolean;
+    onSelectPlan: (planId: PlanId) => void;
+    isLoading: boolean;
 }) {
-    const price = interval === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+    const price = interval === "yearly" ? plan.priceYear : plan.priceMonth;
     const displayPrice = `$${(price / 100).toLocaleString()}`;
     const period = interval === "yearly" ? "/year" : "/month";
 
     const monthlySavings = interval === "yearly"
-        ? Math.round((plan.monthlyPrice * 12 - plan.yearlyPrice) / 100)
+        ? Math.round((plan.priceMonth * 12 - plan.priceYear) / 100)
         : 0;
 
     const isEnterprise = planId === "enterprise";
@@ -83,13 +101,13 @@ function PricingCard({
                 )}
                 {interval === "monthly" && (
                     <p className="mt-1 text-sm text-slate-500">
-                        ${(plan.yearlyPrice / 100 / 12).toFixed(0)}/mo billed annually
+                        ${(plan.priceYear / 100 / 12).toFixed(0)}/mo billed annually
                     </p>
                 )}
             </div>
 
             <ul className="mt-6 flex-1 space-y-3 text-sm text-slate-700">
-                {plan.features.map((feature, i) => (
+                {plan.bullets.map((feature: string, i: number) => (
                     <li key={i} className="flex items-start gap-3">
                         <div className="mt-0.5">{CheckIcon()}</div>
                         <span>{feature}</span>
@@ -106,17 +124,19 @@ function PricingCard({
                         Contact Sales
                     </a>
                 ) : (
-                    <Link
-                        href="/signup"
+                    <button
+                        type="button"
+                        onClick={() => onSelectPlan(planId)}
+                        disabled={isLoading}
                         className={cx(
-                            "inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
+                            "inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                             isPopular
                                 ? "bg-blue-600 text-white hover:bg-blue-700"
                                 : "bg-slate-900 text-white hover:bg-slate-800"
                         )}
                     >
-                        Get Started
-                    </Link>
+                        {isLoading ? "Redirecting..." : "Get Started"}
+                    </button>
                 )}
             </div>
         </div>
@@ -172,12 +192,113 @@ const FAQS = [
 
 export default function PricingPage(): React.ReactElement {
     const [interval, setInterval] = React.useState<BillingInterval>("yearly");
+    const [plansById, setPlansById] = React.useState<Record<PlanId, BillingPlan>>(() => ({
+        starter: {
+            id: "starter",
+            name: PLAN_DETAILS.starter.name,
+            tagline: PLAN_DETAILS.starter.tagline,
+            priceMonth: PLAN_DETAILS.starter.monthlyPrice,
+            priceYear: PLAN_DETAILS.starter.yearlyPrice,
+            bullets: [...PLAN_DETAILS.starter.features],
+        },
+        professional: {
+            id: "professional",
+            name: PLAN_DETAILS.professional.name,
+            tagline: PLAN_DETAILS.professional.tagline,
+            priceMonth: PLAN_DETAILS.professional.monthlyPrice,
+            priceYear: PLAN_DETAILS.professional.yearlyPrice,
+            bullets: [...PLAN_DETAILS.professional.features],
+            badge: "Most Popular",
+        },
+        enterprise: {
+            id: "enterprise",
+            name: PLAN_DETAILS.enterprise.name,
+            tagline: PLAN_DETAILS.enterprise.tagline,
+            priceMonth: PLAN_DETAILS.enterprise.monthlyPrice,
+            priceYear: PLAN_DETAILS.enterprise.yearlyPrice,
+            bullets: [...PLAN_DETAILS.enterprise.features],
+        },
+    }));
+    const [checkoutLoadingPlan, setCheckoutLoadingPlan] = React.useState<PlanId | null>(null);
+    const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
 
     const plans: { id: PlanId; isPopular: boolean }[] = [
         { id: "starter", isPopular: false },
         { id: "professional", isPopular: true },
         { id: "enterprise", isPopular: false },
     ];
+
+    React.useEffect(() => {
+        let cancelled = false;
+
+        async function loadLivePricing() {
+            try {
+                const response = await fetch("/api/billing", { cache: "no-store" });
+                if (!response.ok) return;
+
+                const payload = (await response.json()) as BillingApiResponse;
+                if (cancelled || !Array.isArray(payload.plans)) return;
+
+                setPlansById((prev) => {
+                    const next = { ...prev };
+                    payload.plans.forEach((plan) => {
+                        if (plan.id && next[plan.id]) {
+                            next[plan.id] = {
+                                id: plan.id,
+                                name: plan.name,
+                                tagline: plan.tagline,
+                                priceMonth: plan.priceMonth,
+                                priceYear: plan.priceYear,
+                                bullets: plan.bullets,
+                                badge: plan.badge,
+                            };
+                        }
+                    });
+                    return next;
+                });
+            } catch {
+                // Keep local fallback pricing
+            }
+        }
+
+        loadLivePricing();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    async function handleSelectPlan(planId: PlanId) {
+        if (planId === "enterprise") {
+            window.location.assign(CONTACT_SUPPORT);
+            return;
+        }
+
+        setCheckoutError(null);
+        setCheckoutLoadingPlan(planId);
+        try {
+            const response = await fetch("/api/billing/checkout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    plan: planId,
+                    interval,
+                }),
+            });
+
+            const data = (await response.json()) as { ok?: boolean; url?: string; error?: string };
+            if (data.ok && data.url) {
+                window.location.href = data.url;
+                return;
+            }
+
+            setCheckoutError(data.error || "Unable to start checkout right now.");
+        } catch {
+            setCheckoutError("Unable to start checkout right now.");
+        } finally {
+            setCheckoutLoadingPlan(null);
+        }
+    }
 
     return (
         <div className="w-full">
@@ -240,14 +361,21 @@ export default function PricingPage(): React.ReactElement {
 
             {/* Plan cards */}
             <section className="mx-auto mt-10 max-w-5xl px-4">
+                {checkoutError && (
+                    <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        {checkoutError}
+                    </div>
+                )}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                     {plans.map(({ id, isPopular }) => (
                         <PricingCard
                             key={id}
                             planId={id}
-                            plan={PLAN_DETAILS[id]}
+                            plan={plansById[id]}
                             interval={interval}
                             isPopular={isPopular}
+                            onSelectPlan={handleSelectPlan}
+                            isLoading={checkoutLoadingPlan === id}
                         />
                     ))}
                 </div>
