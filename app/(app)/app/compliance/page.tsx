@@ -294,7 +294,7 @@ export default function RegulatoryCompliancePage() {
 
     const otherResources = useMemo(
         () => [
-            { label: "FAA Safety Alerts", href: "https://www.faa.gov/hazmat/safety-alerts/" },
+            { label: "FAA Safety Alerts", href: "https://www.faa.gov/aircraft/safety/alerts" },
             { label: "EASA Safety Management", href: "https://www.easa.europa.eu/safety-and-performance/safety-management" },
             { label: "ICAO Safety Standards", href: "https://www.icao.int/safety/" },
         ],
