@@ -1,5 +1,7 @@
 export function normalizeRole(role?: string | null): string {
-    return (role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const normalized = (role || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    if (normalized === "superadmin") return "super_admin";
+    return normalized;
 }
 
 function normalizeLicenseCode(code?: string | null): string {
