@@ -65,13 +65,70 @@ const DEMO_CONFIG_PATH = `${DEMO_VIDEO_PREFIX}/current.json`;
 const DEMO_SIGNED_URL_TTL_SECONDS = 60 * 60;
 const DEMO_VIDEO_PROVIDER_PREFERRED = (process.env.SKYMAINTAIN_DEMO_VIDEO_PROVIDER || "supabase").toLowerCase();
 
-const S3_ENDPOINT = process.env.SKYMAINTAIN_DEMO_VIDEO_S3_ENDPOINT;
-const S3_REGION = process.env.SKYMAINTAIN_DEMO_VIDEO_S3_REGION || "auto";
-const S3_BUCKET = process.env.SKYMAINTAIN_DEMO_VIDEO_S3_BUCKET || DEMO_STORAGE_BUCKET;
-const S3_ACCESS_KEY_ID = process.env.SKYMAINTAIN_DEMO_VIDEO_S3_ACCESS_KEY_ID;
-const S3_SECRET_ACCESS_KEY = process.env.SKYMAINTAIN_DEMO_VIDEO_S3_SECRET_ACCESS_KEY;
+function stripWrappingQuotes(value: string): string {
+    const trimmed = value.trim();
+    if (
+        (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+        return trimmed.slice(1, -1).trim();
+    }
+    return trimmed;
+}
+
+function normalizeS3Endpoint(rawValue?: string): string | undefined {
+    const raw = stripWrappingQuotes(rawValue || "");
+    if (!raw) return undefined;
+
+    if (/^[a-f0-9]{32}$/i.test(raw)) {
+        return `https://${raw}.r2.cloudflarestorage.com`;
+    }
+
+    let endpoint = raw;
+    if (!/^https?:\/\//i.test(endpoint)) {
+        endpoint = `https://${endpoint}`;
+    }
+
+    endpoint = endpoint.replace(/\/+$/, "");
+
+    try {
+        const parsed = new URL(endpoint);
+        if (!parsed.hostname) {
+            throw new Error("missing hostname");
+        }
+    } catch {
+        throw new Error(
+            "Invalid S3 endpoint URL. Use either your 32-char Cloudflare account ID or https://<account_id>.r2.cloudflarestorage.com"
+        );
+    }
+
+    return endpoint;
+}
+
+function normalizeEnvValue(value?: string): string | undefined {
+    const normalized = stripWrappingQuotes(value || "");
+    return normalized || undefined;
+}
+
+const resolvedS3Endpoint = (() => {
+    try {
+        return { endpoint: normalizeS3Endpoint(process.env.SKYMAINTAIN_DEMO_VIDEO_S3_ENDPOINT), error: null as string | null };
+    } catch (error) {
+        return {
+            endpoint: undefined,
+            error: error instanceof Error ? error.message : "Invalid S3 endpoint URL",
+        };
+    }
+})();
+
+const S3_ENDPOINT = resolvedS3Endpoint.endpoint;
+const S3_ENDPOINT_ERROR = resolvedS3Endpoint.error;
+const S3_REGION = normalizeEnvValue(process.env.SKYMAINTAIN_DEMO_VIDEO_S3_REGION) || "auto";
+const S3_BUCKET = normalizeEnvValue(process.env.SKYMAINTAIN_DEMO_VIDEO_S3_BUCKET) || DEMO_STORAGE_BUCKET;
+const S3_ACCESS_KEY_ID = normalizeEnvValue(process.env.SKYMAINTAIN_DEMO_VIDEO_S3_ACCESS_KEY_ID);
+const S3_SECRET_ACCESS_KEY = normalizeEnvValue(process.env.SKYMAINTAIN_DEMO_VIDEO_S3_SECRET_ACCESS_KEY);
 const S3_FORCE_PATH_STYLE = (process.env.SKYMAINTAIN_DEMO_VIDEO_S3_FORCE_PATH_STYLE || "false").toLowerCase() === "true";
-const S3_PUBLIC_BASE_URL = (process.env.SKYMAINTAIN_DEMO_VIDEO_S3_PUBLIC_BASE_URL || "").replace(/\/$/, "");
+const S3_PUBLIC_BASE_URL = (normalizeEnvValue(process.env.SKYMAINTAIN_DEMO_VIDEO_S3_PUBLIC_BASE_URL) || "").replace(/\/$/, "");
 const S3_SIGNED_URL_TTL_SECONDS = Math.max(
     60,
     Number(process.env.SKYMAINTAIN_DEMO_VIDEO_S3_SIGNED_URL_TTL_SECONDS || DEMO_SIGNED_URL_TTL_SECONDS) || DEMO_SIGNED_URL_TTL_SECONDS
@@ -106,6 +163,10 @@ const CONFIG_PATH = path.join(PRIVATE_CONFIG_DIR, "demo-video.json");
 
 async function ensureS3Bucket(): Promise<void> {
     if (ACTIVE_STORAGE_PROVIDER !== "s3" || !s3Client) return;
+
+    if (S3_ENDPOINT_ERROR) {
+        throw new Error(S3_ENDPOINT_ERROR);
+    }
 
     try {
         await s3Client.send(new ListObjectsV2Command({ Bucket: S3_BUCKET, MaxKeys: 1 }));

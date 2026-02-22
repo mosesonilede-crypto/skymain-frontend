@@ -677,7 +677,7 @@ export default function SuperAdminPage() {
                 } catch {
                     // Ignore non-JSON error response.
                 }
-                throw new Error(`${initError} Please verify R2 env variables and bucket CORS, then retry.`);
+                throw new Error(initError);
             }
 
             if (initResponse.ok) {
