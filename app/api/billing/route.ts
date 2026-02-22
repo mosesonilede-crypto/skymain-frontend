@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDataMode } from "@/lib/dataService";
 import { getStripe, PLAN_DETAILS, STRIPE_PRICES } from "@/lib/stripe";
+import { verifyPayload } from "@/lib/twoFactor";
+import { resolveSessionRole } from "@/lib/auth/roles";
 
 type BillingCycle = "Monthly" | "Annual";
 
@@ -20,7 +22,55 @@ type PlanId = Plan["id"];
 type PlanPricing = Record<PlanId, { monthly: number; yearly: number }>;
 type PriceSyncStatus = "stripe" | "fallback";
 
+type SessionPayload = {
+    email: string;
+    role?: string;
+    licenseCode?: string;
+    exp: number;
+};
+
+const SESSION_COOKIE = "sm_session";
+
 const PLAN_IDS: PlanId[] = ["starter", "professional", "enterprise"];
+
+function getSession(req: NextRequest): SessionPayload | null {
+    const token = req.cookies.get(SESSION_COOKIE)?.value;
+    if (!token) return null;
+    const payload = verifyPayload<SessionPayload>(token);
+    if (!payload) return null;
+    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload;
+}
+
+function isSuperAdminSession(req: NextRequest): boolean {
+    const session = getSession(req);
+    if (!session) return false;
+
+    const resolved = resolveSessionRole({
+        rawRole: session.role,
+        licenseCode: session.licenseCode,
+        email: session.email,
+    });
+
+    return resolved === "super_admin";
+}
+
+function forceEnterprise(payload: SubscriptionBillingPayload, pricing: PlanPricing): SubscriptionBillingPayload {
+    const plans = payload.plans.map((plan) => ({
+        ...plan,
+        isCurrent: plan.id === "enterprise",
+        badge: plan.id === "enterprise" ? "Current Plan" : plan.badge === "Current Plan" ? undefined : plan.badge,
+    }));
+
+    return {
+        ...payload,
+        status: "Active",
+        currentPlanLabel: "enterprise",
+        currentPlanPriceYear: pricing.enterprise.yearly,
+        teamMembersAllowed: 999,
+        plans,
+    };
+}
 
 function defaultPlanPricing(): PlanPricing {
     return {
@@ -388,13 +438,16 @@ export async function GET(request: NextRequest) {
     const mode = getDataMode();
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get("customerId");
+    const forceEnterprisePlan = isSuperAdminSession(request);
 
     try {
         // In live mode, try to fetch from Stripe first
         if (mode === "live" || mode === "hybrid") {
             const stripeData = await fetchStripeBillingData(customerId || undefined);
             if (stripeData) {
-                return NextResponse.json(stripeData, {
+                const pricing = defaultPlanPricing();
+                const resolvedPayload = forceEnterprisePlan ? forceEnterprise(stripeData, pricing) : stripeData;
+                return NextResponse.json(resolvedPayload, {
                     headers: {
                         "Cache-Control": "private, no-cache",
                     },
@@ -411,7 +464,8 @@ export async function GET(request: NextRequest) {
 
         // Mock/hybrid mode: return mock data (prefer live Stripe catalog prices if available)
         const { pricing, priceSyncStatus } = await fetchStripePlanPricing();
-        const billingData = generateMockBillingData(pricing, priceSyncStatus);
+        const baseBillingData = generateMockBillingData(pricing, priceSyncStatus);
+        const billingData = forceEnterprisePlan ? forceEnterprise(baseBillingData, pricing) : baseBillingData;
 
         return NextResponse.json(billingData, {
             headers: {
