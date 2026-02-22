@@ -56,7 +56,13 @@ This matrix is the source of truth for Vercel Project Settings → Environment V
 | `SMTP_PASS` | `your-smtp-password` |
 | `SMTP_FROM` | `noreply@skymaintain.ai` |
 
-## 6) Suggested rollout profile
+## 6) Demo Video Upload Persistence (Recommended for Super Admin uploads)
+
+| Variable | Example | Notes |
+|---|---|---|
+| `SKYMAINTAIN_DEMO_VIDEO_BUCKET` | `demo-media` | Supabase Storage bucket for uploaded demo videos. Use a **public** bucket for direct playback on `/demo`. |
+
+## 7) Suggested rollout profile
 
 ### Preview
 - `NEXT_PUBLIC_DATA_MODE=hybrid`
@@ -73,7 +79,7 @@ This matrix is the source of truth for Vercel Project Settings → Environment V
 - `NEXT_PUBLIC_ALLOW_MOCK_FALLBACK=false`
 - Keep all integrations and billing fully configured.
 
-## 7) Fast validation after setting vars
+## 8) Fast validation after setting vars
 
 1. Trigger Vercel redeploy with cache clear.
 2. Confirm build output has no env hard-fail exceptions.
@@ -94,7 +100,7 @@ Run from `skymain-frontend` before deploying:
 
 The command exits with non-zero status only when required variables are missing.
 
-## 8) Security notes
+## 9) Security notes
 
 - Never place secrets in `NEXT_PUBLIC_*` unless they are intentionally public.
 - Keep `STRIPE_SECRET_KEY`, `TWO_FA_SECRET`, and integration API keys in server-side env vars only.

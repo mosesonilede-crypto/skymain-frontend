@@ -3,6 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { verifyPayload } from "@/lib/twoFactor";
 import { normalizeRole } from "@/lib/auth/roles";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,9 @@ const ALLOWED_MIME_TYPES = new Set([
     "video/ogg",
     "video/quicktime",
 ]);
+const DEMO_STORAGE_BUCKET = process.env.SKYMAINTAIN_DEMO_VIDEO_BUCKET || "demo-media";
+const DEMO_VIDEO_PREFIX = "demo-videos";
+const DEMO_CONFIG_PATH = `${DEMO_VIDEO_PREFIX}/current.json`;
 const PUBLIC_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "demo");
 const PRIVATE_CONFIG_DIR = path.join(process.cwd(), ".runtime-data");
 const CONFIG_PATH = path.join(PRIVATE_CONFIG_DIR, "demo-video.json");
@@ -44,6 +48,31 @@ function getSession(req: NextRequest): SessionPayload | null {
 }
 
 async function readConfig(): Promise<DemoVideoConfig | null> {
+    if (supabaseServer) {
+        try {
+            const { data, error } = await supabaseServer.storage
+                .from(DEMO_STORAGE_BUCKET)
+                .download(DEMO_CONFIG_PATH);
+
+            if (!error && data) {
+                const raw = await data.text();
+                const parsed = JSON.parse(raw) as Partial<DemoVideoConfig>;
+                if (
+                    parsed.source === "upload" &&
+                    typeof parsed.videoUrl === "string" &&
+                    typeof parsed.fileName === "string" &&
+                    typeof parsed.mimeType === "string" &&
+                    typeof parsed.updatedAt === "string" &&
+                    typeof parsed.updatedBy === "string"
+                ) {
+                    return parsed as DemoVideoConfig;
+                }
+            }
+        } catch {
+            // Fall through to local fallback.
+        }
+    }
+
     try {
         const raw = await fs.readFile(CONFIG_PATH, "utf8");
         const parsed = JSON.parse(raw) as Partial<DemoVideoConfig>;
@@ -64,11 +93,47 @@ async function readConfig(): Promise<DemoVideoConfig | null> {
 }
 
 async function writeConfig(config: DemoVideoConfig): Promise<void> {
+    if (supabaseServer) {
+        const payload = JSON.stringify(config, null, 2);
+        const { error } = await supabaseServer.storage
+            .from(DEMO_STORAGE_BUCKET)
+            .upload(DEMO_CONFIG_PATH, Buffer.from(payload), {
+                contentType: "application/json",
+                upsert: true,
+            });
+
+        if (error) {
+            throw new Error(error.message || "Failed to persist demo config in storage");
+        }
+
+        return;
+    }
+
     await fs.mkdir(PRIVATE_CONFIG_DIR, { recursive: true });
     await fs.writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
 }
 
 async function deleteOldUploadedVideos(exceptName: string): Promise<void> {
+    if (supabaseServer) {
+        try {
+            const { data } = await supabaseServer.storage
+                .from(DEMO_STORAGE_BUCKET)
+                .list(DEMO_VIDEO_PREFIX, { limit: 100, sortBy: { column: "name", order: "asc" } });
+
+            const stalePaths = (data || [])
+                .map((entry) => entry.name)
+                .filter((name) => name && name !== exceptName && name !== "current.json")
+                .map((name) => `${DEMO_VIDEO_PREFIX}/${name}`);
+
+            if (stalePaths.length > 0) {
+                await supabaseServer.storage.from(DEMO_STORAGE_BUCKET).remove(stalePaths);
+            }
+        } catch {
+            // Best effort cleanup only.
+        }
+        return;
+    }
+
     try {
         const files = await fs.readdir(PUBLIC_UPLOAD_DIR);
         await Promise.all(
@@ -137,18 +202,45 @@ export async function POST(req: NextRequest) {
             .replace(/-+/g, "-")
             .replace(/^-|-$/g, "") || "demo-video";
         const targetName = `${safeBaseName}-${Date.now()}.${ext}`;
-
-        await fs.mkdir(PUBLIC_UPLOAD_DIR, { recursive: true });
+        const targetPath = `${DEMO_VIDEO_PREFIX}/${targetName}`;
 
         const arrayBuffer = await uploaded.arrayBuffer();
-        const outputPath = path.join(PUBLIC_UPLOAD_DIR, targetName);
-        await fs.writeFile(outputPath, Buffer.from(arrayBuffer));
+        const fileBuffer = Buffer.from(arrayBuffer);
+
+        let videoUrl = `/uploads/demo/${targetName}`;
+
+        if (supabaseServer) {
+            const { error: uploadError } = await supabaseServer.storage
+                .from(DEMO_STORAGE_BUCKET)
+                .upload(targetPath, fileBuffer, {
+                    contentType: uploaded.type,
+                    upsert: true,
+                });
+
+            if (uploadError) {
+                return NextResponse.json({ error: uploadError.message || "Failed to upload demo video" }, { status: 500 });
+            }
+
+            const { data: publicData } = supabaseServer.storage
+                .from(DEMO_STORAGE_BUCKET)
+                .getPublicUrl(targetPath);
+
+            if (!publicData?.publicUrl) {
+                return NextResponse.json({ error: "Failed to resolve uploaded video URL" }, { status: 500 });
+            }
+
+            videoUrl = publicData.publicUrl;
+        } else {
+            await fs.mkdir(PUBLIC_UPLOAD_DIR, { recursive: true });
+            const outputPath = path.join(PUBLIC_UPLOAD_DIR, targetName);
+            await fs.writeFile(outputPath, fileBuffer);
+        }
 
         await deleteOldUploadedVideos(targetName);
 
         const config: DemoVideoConfig = {
             source: "upload",
-            videoUrl: `/uploads/demo/${targetName}`,
+            videoUrl,
             fileName: uploaded.name,
             mimeType: uploaded.type,
             updatedAt: new Date().toISOString(),
@@ -171,11 +263,29 @@ export async function DELETE(req: NextRequest) {
     try {
         const config = await readConfig();
         if (config?.videoUrl) {
-            const fileName = path.basename(config.videoUrl);
-            await fs.unlink(path.join(PUBLIC_UPLOAD_DIR, fileName)).catch(() => undefined);
+            if (supabaseServer) {
+                const normalizedPath = config.videoUrl.startsWith("http")
+                    ? new URL(config.videoUrl).pathname
+                    : config.videoUrl;
+                const fileName = path.basename(normalizedPath);
+                await supabaseServer.storage
+                    .from(DEMO_STORAGE_BUCKET)
+                    .remove([`${DEMO_VIDEO_PREFIX}/${fileName}`])
+                    .catch(() => undefined);
+            } else {
+                const fileName = path.basename(config.videoUrl);
+                await fs.unlink(path.join(PUBLIC_UPLOAD_DIR, fileName)).catch(() => undefined);
+            }
         }
 
-        await fs.unlink(CONFIG_PATH).catch(() => undefined);
+        if (supabaseServer) {
+            await supabaseServer.storage
+                .from(DEMO_STORAGE_BUCKET)
+                .remove([DEMO_CONFIG_PATH])
+                .catch(() => undefined);
+        } else {
+            await fs.unlink(CONFIG_PATH).catch(() => undefined);
+        }
 
         return NextResponse.json({ source: "youtube", youtubeVideoId: "oMcy-bTjvJ0" });
     } catch (error) {
