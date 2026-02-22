@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import BillingTabContent from "./BillingTabContent";
+import { useEntitlements } from "@/lib/useEntitlements";
 import {
     CreditCard,
     LayoutDashboard,
@@ -166,6 +167,25 @@ async function addUserLive(baseUrl: string, form: AddUserForm): Promise<void> {
     });
 
     if (!res.ok) {
+        const data = await res.json().catch(() => ({} as Record<string, unknown>));
+        if (
+            data.code === "TEAM_MEMBER_LIMIT_REACHED"
+            || data.code === "TEAM_LIMIT_REACHED"
+            || data.code === "USER_LIMIT_REACHED"
+        ) {
+            const currentCount = typeof data.currentCount === "number" ? data.currentCount : null;
+            const maxTeamMembers = typeof data.maxTeamMembers === "number"
+                ? data.maxTeamMembers
+                : (typeof data.maxUsers === "number" ? data.maxUsers : null);
+            throw new Error(
+                currentCount !== null && maxTeamMembers !== null
+                    ? `Team member limit reached for your current plan (${currentCount}/${maxTeamMembers}). Upgrade your plan to add more users.`
+                    : "Team member limit reached for your current plan. Upgrade your plan to add more users."
+            );
+        }
+        if (typeof data.error === "string" && data.error) {
+            throw new Error(data.error);
+        }
         const text = await res.text().catch(() => "");
         throw new Error(`POST /v1/admin/users failed: ${res.status}${text ? ` • ${text}` : ""}`);
     }
@@ -238,6 +258,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function AdminPanelPage() {
     const router = useRouter();
+    const { entitlements } = useEntitlements();
     const mode = useMemo(() => normalizeMode(getPublicEnv("NEXT_PUBLIC_DATA_MODE", "mock")), []);
     const baseUrl = useMemo(() => getPublicEnv("NEXT_PUBLIC_API_BASE_URL", ""), []);
 
@@ -277,6 +298,7 @@ export default function AdminPanelPage() {
     });
     const [addUserError, setAddUserError] = useState<string>("");
     const [addingUser, setAddingUser] = useState<boolean>(false);
+    const isTeamLimitError = addUserError.toLowerCase().includes("team member limit reached");
 
     // Edit User Modal State
     const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
@@ -419,6 +441,14 @@ export default function AdminPanelPage() {
         }
         if (!addUserForm.email.trim()) {
             setAddUserError("Email is required.");
+            return;
+        }
+
+        const maxTeamMembers = entitlements.limits.max_team_members;
+        if (typeof maxTeamMembers === "number" && payload.users.length >= maxTeamMembers) {
+            setAddUserError(
+                `Team member limit reached for your current plan (${payload.users.length}/${maxTeamMembers}). Upgrade your plan to add more users.`
+            );
             return;
         }
 
@@ -1621,7 +1651,25 @@ export default function AdminPanelPage() {
                                                 color: "#dc2626",
                                             }}
                                         >
-                                            {addUserError}
+                                            <div>{addUserError}</div>
+                                            {isTeamLimitError && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => router.push("/app/subscription-billing")}
+                                                    style={{
+                                                        marginTop: "12px",
+                                                        padding: "6px 12px",
+                                                        fontSize: "12px",
+                                                        color: "#ffffff",
+                                                        backgroundColor: "#155dfc",
+                                                        border: "none",
+                                                        borderRadius: "8px",
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    Upgrade Plan
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { isAdminRole, resolveSessionRole } from "@/lib/auth/roles";
 import { supabase } from "@/lib/supabaseClient";
+import { useEntitlements } from "@/lib/useEntitlements";
 
 type AdminKpis = {
     totalAircraft: number;
@@ -794,6 +795,7 @@ function AccessCodeManagementSection() {
 
 export default function AdminPanelPage() {
     const router = useRouter();
+    const { entitlements } = useEntitlements();
     const { user, isLoading: authLoading } = useAuth();
     const [roleHints, setRoleHints] = useState<{ role?: string; licenseCode?: string; email?: string }>({});
 
@@ -875,6 +877,7 @@ export default function AdminPanelPage() {
     const [submitError, setSubmitError] = useState<string>("");
     const [submitting, setSubmitting] = useState<boolean>(false);
     const isAircraftLimitError = submitError.toLowerCase().includes("aircraft limit reached");
+    const isTeamLimitError = userFormError.toLowerCase().includes("team member limit reached");
     const shouldBlock = authLoading || !canAccessAdminPanel;
 
     useEffect(() => {
@@ -949,6 +952,14 @@ export default function AdminPanelPage() {
         }
         if (!/^\S+@\S+\.\S+$/.test(email)) {
             setUserFormError("Enter a valid email address.");
+            return;
+        }
+
+        const maxTeamMembers = entitlements.limits.max_team_members;
+        if (editingUserIndex === null && typeof maxTeamMembers === "number" && userList.length >= maxTeamMembers) {
+            setUserFormError(
+                `Team member limit reached for your current plan (${userList.length}/${maxTeamMembers}). Upgrade your plan to add more users.`
+            );
             return;
         }
 
@@ -1345,7 +1356,16 @@ export default function AdminPanelPage() {
 
                             {userFormError ? (
                                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                                    {userFormError}
+                                    <div>{userFormError}</div>
+                                    {isTeamLimitError ? (
+                                        <button
+                                            type="button"
+                                            className="mt-2 inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+                                            onClick={() => router.push("/app/subscription-billing")}
+                                        >
+                                            Upgrade Plan
+                                        </button>
+                                    ) : null}
                                 </div>
                             ) : null}
                         </div>

@@ -15,6 +15,7 @@ import {
     Wrench,
     X,
 } from "lucide-react";
+import { useEntitlements } from "@/lib/useEntitlements";
 
 type AdminKpis = {
     totalAircraft: number;
@@ -198,6 +199,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function RegisterAircraftPage() {
     const router = useRouter();
+    const { entitlements } = useEntitlements();
 
     const [activeTab, setActiveTab] = useState<"overview" | "billing">("overview");
     const [payload, setPayload] = useState<AdminPanelPayload>({
@@ -247,6 +249,7 @@ export default function RegisterAircraftPage() {
     const [addUserForm, setAddUserForm] = useState({ name: "", email: "", role: "Viewer", status: "Active" });
     const [addUserError, setAddUserError] = useState<string>("");
     const [addingUser, setAddingUser] = useState<boolean>(false);
+    const isTeamLimitError = addUserError.toLowerCase().includes("team member limit reached");
 
     // Edit User Modal State
     const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
@@ -380,6 +383,14 @@ export default function RegisterAircraftPage() {
         }
         if (!addUserForm.email.trim()) {
             setAddUserError("Email is required.");
+            return;
+        }
+
+        const maxTeamMembers = entitlements.limits.max_team_members;
+        if (typeof maxTeamMembers === "number" && payload.users.length >= maxTeamMembers) {
+            setAddUserError(
+                `Team member limit reached for your current plan (${payload.users.length}/${maxTeamMembers}). Upgrade your plan to add more users.`
+            );
             return;
         }
 
@@ -1810,7 +1821,27 @@ export default function RegisterAircraftPage() {
 
                         {addUserError && (
                             <div style={{ marginTop: "16px", padding: "12px", backgroundColor: "#fef2f2", borderRadius: "8px", color: "#b91c1c", fontSize: "14px" }}>
-                                {addUserError}
+                                <div>{addUserError}</div>
+                                {isTeamLimitError && (
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push("/app/subscription-billing")}
+                                        style={{
+                                            marginTop: "12px",
+                                            padding: "6px 12px",
+                                            backgroundColor: "#155dfc",
+                                            color: "#ffffff",
+                                            border: "none",
+                                            borderRadius: "8px",
+                                            cursor: "pointer",
+                                            fontSize: "12px",
+                                            lineHeight: "16px",
+                                            fontFamily: "Arial, sans-serif",
+                                        }}
+                                    >
+                                        Upgrade Plan
+                                    </button>
+                                )}
                             </div>
                         )}
 
