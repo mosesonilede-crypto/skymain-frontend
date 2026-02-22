@@ -287,6 +287,17 @@ export default function AppShellClient({ children }: AppShellClientProps) {
         };
     }, []);
 
+    useEffect(() => {
+        const toggleSidebarHandler = () => {
+            setSidebarVisible((prev) => !prev);
+        };
+
+        window.addEventListener("app-shell:toggle-sidebar", toggleSidebarHandler);
+        return () => {
+            window.removeEventListener("app-shell:toggle-sidebar", toggleSidebarHandler);
+        };
+    }, []);
+
     return (
         <div className="h-dvh overflow-hidden bg-white text-[#0a0a0a]">
             <div className="flex h-full">

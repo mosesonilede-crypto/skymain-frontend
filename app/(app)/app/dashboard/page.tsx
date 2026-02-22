@@ -184,8 +184,13 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-4 flex-wrap">
                             {/* Menu Button */}
                             <button
+                                type="button"
                                 className="flex h-8 w-[82px] items-center justify-center gap-2 rounded-[8px] border border-black/10 bg-white text-[14px] text-[#0a0a0a] hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                                onClick={() => console.log("Menu clicked")}
+                                onClick={() => {
+                                    if (typeof window !== "undefined") {
+                                        window.dispatchEvent(new Event("app-shell:toggle-sidebar"));
+                                    }
+                                }}
                                 title="Open menu"
                             >
                                 <Menu className="h-4 w-4" />
