@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import {
+    DeleteObjectCommand,
+    GetObjectCommand,
+    ListObjectsV2Command,
+    PutObjectCommand,
+    S3Client,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { verifyPayload } from "@/lib/twoFactor";
 import { normalizeRole } from "@/lib/auth/roles";
 import { supabaseServer } from "@/lib/supabaseServer";
@@ -18,14 +26,18 @@ type DemoVideoConfig = {
     source: "upload";
     videoUrl: string;
     storagePath?: string;
+    storageProvider?: "supabase" | "s3" | "local";
     fileName: string;
     mimeType: string;
     updatedAt: string;
     updatedBy: string;
 };
 
+type StorageProvider = "supabase" | "s3" | "local";
+
 const SESSION_COOKIE = "sm_session";
-const MAX_VIDEO_BYTES = 250 * 1024 * 1024;
+const MAX_VIDEO_MB = Math.max(1, Number(process.env.SKYMAINTAIN_DEMO_VIDEO_MAX_MB || "50") || 50);
+const MAX_VIDEO_BYTES = MAX_VIDEO_MB * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
     "video/mp4",
     "video/webm",
@@ -36,12 +48,60 @@ const DEMO_STORAGE_BUCKET = process.env.SKYMAINTAIN_DEMO_VIDEO_BUCKET || "demo-m
 const DEMO_VIDEO_PREFIX = "demo-videos";
 const DEMO_CONFIG_PATH = `${DEMO_VIDEO_PREFIX}/current.json`;
 const DEMO_SIGNED_URL_TTL_SECONDS = 60 * 60;
+const DEMO_VIDEO_PROVIDER_PREFERRED = (process.env.SKYMAINTAIN_DEMO_VIDEO_PROVIDER || "supabase").toLowerCase();
+
+const S3_ENDPOINT = process.env.SKYMAINTAIN_DEMO_VIDEO_S3_ENDPOINT;
+const S3_REGION = process.env.SKYMAINTAIN_DEMO_VIDEO_S3_REGION || "auto";
+const S3_BUCKET = process.env.SKYMAINTAIN_DEMO_VIDEO_S3_BUCKET || DEMO_STORAGE_BUCKET;
+const S3_ACCESS_KEY_ID = process.env.SKYMAINTAIN_DEMO_VIDEO_S3_ACCESS_KEY_ID;
+const S3_SECRET_ACCESS_KEY = process.env.SKYMAINTAIN_DEMO_VIDEO_S3_SECRET_ACCESS_KEY;
+const S3_FORCE_PATH_STYLE = (process.env.SKYMAINTAIN_DEMO_VIDEO_S3_FORCE_PATH_STYLE || "false").toLowerCase() === "true";
+const S3_PUBLIC_BASE_URL = (process.env.SKYMAINTAIN_DEMO_VIDEO_S3_PUBLIC_BASE_URL || "").replace(/\/$/, "");
+const S3_SIGNED_URL_TTL_SECONDS = Math.max(
+    60,
+    Number(process.env.SKYMAINTAIN_DEMO_VIDEO_S3_SIGNED_URL_TTL_SECONDS || DEMO_SIGNED_URL_TTL_SECONDS) || DEMO_SIGNED_URL_TTL_SECONDS
+);
+
+const hasS3Credentials = Boolean(S3_ACCESS_KEY_ID && S3_SECRET_ACCESS_KEY);
+const s3Client = hasS3Credentials
+    ? new S3Client({
+        region: S3_REGION,
+        endpoint: S3_ENDPOINT,
+        forcePathStyle: S3_FORCE_PATH_STYLE,
+        credentials: {
+            accessKeyId: S3_ACCESS_KEY_ID as string,
+            secretAccessKey: S3_SECRET_ACCESS_KEY as string,
+        },
+    })
+    : null;
+
+function resolveStorageProvider(): StorageProvider {
+    if (DEMO_VIDEO_PROVIDER_PREFERRED === "s3" && s3Client) return "s3";
+    if (DEMO_VIDEO_PROVIDER_PREFERRED === "local") return "local";
+    if (DEMO_VIDEO_PROVIDER_PREFERRED === "supabase" && supabaseServer) return "supabase";
+    if (s3Client) return "s3";
+    if (supabaseServer) return "supabase";
+    return "local";
+}
+
+const ACTIVE_STORAGE_PROVIDER = resolveStorageProvider();
 const PUBLIC_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "demo");
 const PRIVATE_CONFIG_DIR = path.join(process.cwd(), ".runtime-data");
 const CONFIG_PATH = path.join(PRIVATE_CONFIG_DIR, "demo-video.json");
 
+async function ensureS3Bucket(): Promise<void> {
+    if (ACTIVE_STORAGE_PROVIDER !== "s3" || !s3Client) return;
+
+    try {
+        await s3Client.send(new ListObjectsV2Command({ Bucket: S3_BUCKET, MaxKeys: 1 }));
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown S3 error";
+        throw new Error(`S3 demo video bucket is not accessible: ${message}`);
+    }
+}
+
 async function ensureDemoBucket(): Promise<void> {
-    if (!supabaseServer) return;
+    if (ACTIVE_STORAGE_PROVIDER !== "supabase" || !supabaseServer) return;
 
     try {
         const { data, error } = await supabaseServer.storage.listBuckets();
@@ -64,7 +124,28 @@ async function ensureDemoBucket(): Promise<void> {
 }
 
 async function resolvePlayableUrl(config: DemoVideoConfig): Promise<string> {
-    if (!supabaseServer || !config.storagePath) return config.videoUrl;
+    if (!config.storagePath) return config.videoUrl;
+
+    if ((config.storageProvider === "s3" || ACTIVE_STORAGE_PROVIDER === "s3") && s3Client) {
+        if (S3_PUBLIC_BASE_URL) {
+            return `${S3_PUBLIC_BASE_URL}/${config.storagePath}`;
+        }
+
+        try {
+            return await getSignedUrl(
+                s3Client,
+                new GetObjectCommand({
+                    Bucket: S3_BUCKET,
+                    Key: config.storagePath,
+                }),
+                { expiresIn: S3_SIGNED_URL_TTL_SECONDS }
+            );
+        } catch {
+            return config.videoUrl;
+        }
+    }
+
+    if (!supabaseServer) return config.videoUrl;
 
     const { data, error } = await supabaseServer.storage
         .from(DEMO_STORAGE_BUCKET)
@@ -87,7 +168,39 @@ function getSession(req: NextRequest): SessionPayload | null {
 }
 
 async function readConfig(): Promise<DemoVideoConfig | null> {
-    if (supabaseServer) {
+    if (ACTIVE_STORAGE_PROVIDER === "s3" && s3Client) {
+        try {
+            await ensureS3Bucket();
+            const response = await s3Client.send(
+                new GetObjectCommand({
+                    Bucket: S3_BUCKET,
+                    Key: DEMO_CONFIG_PATH,
+                })
+            );
+
+            const raw = await response.Body?.transformToString();
+            if (raw) {
+                const parsed = JSON.parse(raw) as Partial<DemoVideoConfig>;
+                if (
+                    parsed.source === "upload" &&
+                    typeof parsed.videoUrl === "string" &&
+                    typeof parsed.fileName === "string" &&
+                    typeof parsed.mimeType === "string" &&
+                    typeof parsed.updatedAt === "string" &&
+                    typeof parsed.updatedBy === "string"
+                ) {
+                    const resolved = parsed as DemoVideoConfig;
+                    resolved.storageProvider = resolved.storageProvider || "s3";
+                    resolved.videoUrl = await resolvePlayableUrl(resolved);
+                    return resolved;
+                }
+            }
+        } catch {
+            // Fall through to local fallback.
+        }
+    }
+
+    if (ACTIVE_STORAGE_PROVIDER === "supabase" && supabaseServer) {
         try {
             await ensureDemoBucket();
             const { data, error } = await supabaseServer.storage
@@ -106,6 +219,7 @@ async function readConfig(): Promise<DemoVideoConfig | null> {
                     typeof parsed.updatedBy === "string"
                 ) {
                     const resolved = parsed as DemoVideoConfig;
+                    resolved.storageProvider = resolved.storageProvider || "supabase";
                     resolved.videoUrl = await resolvePlayableUrl(resolved);
                     return resolved;
                 }
@@ -135,7 +249,21 @@ async function readConfig(): Promise<DemoVideoConfig | null> {
 }
 
 async function writeConfig(config: DemoVideoConfig): Promise<void> {
-    if (supabaseServer) {
+    if (ACTIVE_STORAGE_PROVIDER === "s3" && s3Client) {
+        await ensureS3Bucket();
+        const payload = JSON.stringify(config, null, 2);
+        await s3Client.send(
+            new PutObjectCommand({
+                Bucket: S3_BUCKET,
+                Key: DEMO_CONFIG_PATH,
+                Body: Buffer.from(payload),
+                ContentType: "application/json",
+            })
+        );
+        return;
+    }
+
+    if (ACTIVE_STORAGE_PROVIDER === "supabase" && supabaseServer) {
         await ensureDemoBucket();
         const payload = JSON.stringify(config, null, 2);
         const { error } = await supabaseServer.storage
@@ -157,7 +285,40 @@ async function writeConfig(config: DemoVideoConfig): Promise<void> {
 }
 
 async function deleteOldUploadedVideos(exceptName: string): Promise<void> {
-    if (supabaseServer) {
+    if (ACTIVE_STORAGE_PROVIDER === "s3" && s3Client) {
+        const exceptPath = `${DEMO_VIDEO_PREFIX}/${exceptName}`;
+        try {
+            await ensureS3Bucket();
+            const listed = await s3Client.send(
+                new ListObjectsV2Command({
+                    Bucket: S3_BUCKET,
+                    Prefix: `${DEMO_VIDEO_PREFIX}/`,
+                    MaxKeys: 100,
+                })
+            );
+
+            const staleKeys = (listed.Contents || [])
+                .map((entry) => entry.Key)
+                .filter((key): key is string => Boolean(key))
+                .filter((key) => key !== exceptPath && key !== DEMO_CONFIG_PATH);
+
+            await Promise.all(
+                staleKeys.map((key) =>
+                    s3Client.send(
+                        new DeleteObjectCommand({
+                            Bucket: S3_BUCKET,
+                            Key: key,
+                        })
+                    )
+                )
+            );
+        } catch {
+            // Best effort cleanup only.
+        }
+        return;
+    }
+
+    if (ACTIVE_STORAGE_PROVIDER === "supabase" && supabaseServer) {
         try {
             await ensureDemoBucket();
             const { data } = await supabaseServer.storage
@@ -235,7 +396,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (uploaded.size > MAX_VIDEO_BYTES) {
-            return NextResponse.json({ error: "Video must be 250MB or smaller" }, { status: 400 });
+            return NextResponse.json({ error: `Video must be ${MAX_VIDEO_MB}MB or smaller` }, { status: 400 });
         }
 
         const ext = extensionFromMime(uploaded.type);
@@ -253,7 +414,30 @@ export async function POST(req: NextRequest) {
 
         let videoUrl = `/uploads/demo/${targetName}`;
 
-        if (supabaseServer) {
+        if (ACTIVE_STORAGE_PROVIDER === "s3" && s3Client) {
+            await ensureS3Bucket();
+            await s3Client.send(
+                new PutObjectCommand({
+                    Bucket: S3_BUCKET,
+                    Key: targetPath,
+                    Body: fileBuffer,
+                    ContentType: uploaded.type,
+                })
+            );
+
+            if (S3_PUBLIC_BASE_URL) {
+                videoUrl = `${S3_PUBLIC_BASE_URL}/${targetPath}`;
+            } else {
+                videoUrl = await getSignedUrl(
+                    s3Client,
+                    new GetObjectCommand({
+                        Bucket: S3_BUCKET,
+                        Key: targetPath,
+                    }),
+                    { expiresIn: S3_SIGNED_URL_TTL_SECONDS }
+                );
+            }
+        } else if (ACTIVE_STORAGE_PROVIDER === "supabase" && supabaseServer) {
             await ensureDemoBucket();
             const { error: uploadError } = await supabaseServer.storage
                 .from(DEMO_STORAGE_BUCKET)
@@ -286,7 +470,8 @@ export async function POST(req: NextRequest) {
         const config: DemoVideoConfig = {
             source: "upload",
             videoUrl,
-            storagePath: supabaseServer ? targetPath : undefined,
+            storagePath: ACTIVE_STORAGE_PROVIDER === "local" ? undefined : targetPath,
+            storageProvider: ACTIVE_STORAGE_PROVIDER,
             fileName: uploaded.name,
             mimeType: uploaded.type,
             updatedAt: new Date().toISOString(),
@@ -309,7 +494,19 @@ export async function DELETE(req: NextRequest) {
     try {
         const config = await readConfig();
         if (config) {
-            if (supabaseServer) {
+            if ((config.storageProvider === "s3" || ACTIVE_STORAGE_PROVIDER === "s3") && s3Client) {
+                await ensureS3Bucket();
+                if (config.storagePath) {
+                    await s3Client
+                        .send(
+                            new DeleteObjectCommand({
+                                Bucket: S3_BUCKET,
+                                Key: config.storagePath,
+                            })
+                        )
+                        .catch(() => undefined);
+                }
+            } else if (ACTIVE_STORAGE_PROVIDER === "supabase" && supabaseServer) {
                 await ensureDemoBucket();
                 if (config.storagePath) {
                     await supabaseServer.storage
@@ -323,7 +520,16 @@ export async function DELETE(req: NextRequest) {
             }
         }
 
-        if (supabaseServer) {
+        if (ACTIVE_STORAGE_PROVIDER === "s3" && s3Client) {
+            await s3Client
+                .send(
+                    new DeleteObjectCommand({
+                        Bucket: S3_BUCKET,
+                        Key: DEMO_CONFIG_PATH,
+                    })
+                )
+                .catch(() => undefined);
+        } else if (ACTIVE_STORAGE_PROVIDER === "supabase" && supabaseServer) {
             await supabaseServer.storage
                 .from(DEMO_STORAGE_BUCKET)
                 .remove([DEMO_CONFIG_PATH])

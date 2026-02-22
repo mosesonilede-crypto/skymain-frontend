@@ -60,7 +60,23 @@ This matrix is the source of truth for Vercel Project Settings → Environment V
 
 | Variable | Example | Notes |
 |---|---|---|
+| `SKYMAINTAIN_DEMO_VIDEO_PROVIDER` | `supabase` | Storage backend: `supabase`, `s3`, or `local`. Use `s3` to bypass Supabase object-size limits. |
 | `SKYMAINTAIN_DEMO_VIDEO_BUCKET` | `demo-media` | Supabase Storage bucket for uploaded demo videos. Use a **public** bucket for direct playback on `/demo`. |
+| `SKYMAINTAIN_DEMO_VIDEO_MAX_MB` | `50` | Server-side max upload size enforcement for demo videos. Set to match your Storage plan limit. |
+| `NEXT_PUBLIC_DEMO_VIDEO_MAX_MB` | `50` | Optional client-side mirror for UI hint and pre-upload validation. |
+
+### Optional S3-compatible variables (when `SKYMAINTAIN_DEMO_VIDEO_PROVIDER=s3`)
+
+| Variable | Example | Notes |
+|---|---|---|
+| `SKYMAINTAIN_DEMO_VIDEO_S3_BUCKET` | `demo-media` | Bucket for uploaded demo videos and config metadata. |
+| `SKYMAINTAIN_DEMO_VIDEO_S3_REGION` | `auto` | Region (use `auto` for Cloudflare R2). |
+| `SKYMAINTAIN_DEMO_VIDEO_S3_ENDPOINT` | `https://<accountid>.r2.cloudflarestorage.com` | Required for R2 and most non-AWS S3-compatible stores. |
+| `SKYMAINTAIN_DEMO_VIDEO_S3_ACCESS_KEY_ID` | `...` | S3-compatible access key ID. |
+| `SKYMAINTAIN_DEMO_VIDEO_S3_SECRET_ACCESS_KEY` | `...` | S3-compatible secret key. |
+| `SKYMAINTAIN_DEMO_VIDEO_S3_PUBLIC_BASE_URL` | `https://cdn.skymaintain.ai/demo` | Optional public base URL for direct playback instead of signed links. |
+| `SKYMAINTAIN_DEMO_VIDEO_S3_FORCE_PATH_STYLE` | `false` | Set `true` if provider requires path-style bucket addressing. |
+| `SKYMAINTAIN_DEMO_VIDEO_S3_SIGNED_URL_TTL_SECONDS` | `3600` | Signed playback URL TTL when public base URL is not configured. |
 
 ## 7) Suggested rollout profile
 

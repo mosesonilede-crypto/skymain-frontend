@@ -77,6 +77,7 @@ type SignupNotification = {
 
 const PARTNER_STORAGE_KEY = "skymaintain.partnerContent";
 const DEFAULT_DEMO_VIDEO_ID = "oMcy-bTjvJ0";
+const DEMO_VIDEO_MAX_MB = Math.max(1, Number(process.env.NEXT_PUBLIC_DEMO_VIDEO_MAX_MB || "50") || 50);
 
 type DemoVideoApiResponse =
     | {
@@ -612,6 +613,11 @@ export default function SuperAdminPage() {
     async function saveDemoVideoFile() {
         if (!selectedDemoVideoFile) {
             showNotification("error", "Please select a video file.");
+            return;
+        }
+
+        if (selectedDemoVideoFile.size > DEMO_VIDEO_MAX_MB * 1024 * 1024) {
+            showNotification("error", `Video must be ${DEMO_VIDEO_MAX_MB}MB or smaller.`);
             return;
         }
 
@@ -1682,7 +1688,7 @@ export default function SuperAdminPage() {
                                         </button>
                                     </div>
                                     <p className="mt-1 text-xs text-slate-500">
-                                        Accepted formats: MP4, WebM, OGG, MOV. Maximum file size: 250MB.
+                                        Accepted formats: MP4, WebM, OGG, MOV. Maximum file size: {DEMO_VIDEO_MAX_MB}MB.
                                     </p>
                                     {selectedDemoVideoFile && (
                                         <p className="mt-2 text-xs text-slate-600">
