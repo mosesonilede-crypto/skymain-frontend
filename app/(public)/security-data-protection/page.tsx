@@ -30,9 +30,7 @@ function cx(...classes: Array<string | false | null | undefined>): string {
 function getDataMode(): DataMode {
     const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "").toLowerCase();
     if (raw === "mock" || raw === "live" || raw === "hybrid") return raw;
-    const base = (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
-    if (process.env.NODE_ENV === "production" && base) return "live";
-    return "mock";
+    return "live";
 }
 
 function getApiBaseUrl(): string {
@@ -87,8 +85,11 @@ async function apiGetSecurityDoc(signal?: AbortSignal): Promise<SecurityDoc> {
 
     const base = getApiBaseUrl();
     if (!base) {
-        await new Promise((r) => setTimeout(r, 70));
-        return structuredClone(mockStore);
+        if (mode === "hybrid") {
+            await new Promise((r) => setTimeout(r, 70));
+            return structuredClone(mockStore);
+        }
+        throw new Error("NEXT_PUBLIC_API_BASE_URL is required in live mode.");
     }
 
     const res = await fetch(`${base}/v1/legal/security-data-protection`, {

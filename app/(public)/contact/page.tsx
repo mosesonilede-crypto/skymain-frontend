@@ -41,9 +41,7 @@ function cx(...classes: Array<string | false | null | undefined>): string {
 function getDataMode(): DataMode {
     const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "").toLowerCase();
     if (raw === "mock" || raw === "live" || raw === "hybrid") return raw;
-    const base = (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
-    if (process.env.NODE_ENV === "production" && base) return "live";
-    return "mock";
+    return "live";
 }
 
 function getApiBaseUrl(): string {
@@ -107,8 +105,11 @@ async function apiGetContact(signal?: AbortSignal): Promise<ContactDoc> {
 
     const base = getApiBaseUrl();
     if (!base) {
-        await new Promise((r) => setTimeout(r, 60));
-        return structuredClone(mockStore);
+        if (mode === "hybrid") {
+            await new Promise((r) => setTimeout(r, 60));
+            return structuredClone(mockStore);
+        }
+        throw new Error("NEXT_PUBLIC_API_BASE_URL is required in live mode.");
     }
 
     try {
@@ -121,19 +122,20 @@ async function apiGetContact(signal?: AbortSignal): Promise<ContactDoc> {
 
         if (!res.ok) {
             if (mode === "hybrid") return structuredClone(mockStore);
-            return structuredClone(mockStore);
+            throw new Error(`GET /v1/public/contact failed (${res.status})`);
         }
 
         const json = (await res.json()) as ApiEnvelope<ContactDoc>;
         if (!json?.ok || !json?.data) {
             if (mode === "hybrid") return structuredClone(mockStore);
-            return structuredClone(mockStore);
+            throw new Error("Unexpected response shape from GET /v1/public/contact");
         }
 
         if (mode === "hybrid") mockStore = structuredClone(json.data);
         return json.data;
     } catch {
-        return structuredClone(mockStore);
+        if (mode === "hybrid") return structuredClone(mockStore);
+        throw new Error("GET /v1/public/contact failed in live mode.");
     }
 }
 

@@ -40,9 +40,7 @@ function cx(...classes: Array<string | false | null | undefined>): string {
 function getDataMode(): DataMode {
     const raw = (process.env.NEXT_PUBLIC_DATA_MODE || "").toLowerCase();
     if (raw === "mock" || raw === "live" || raw === "hybrid") return raw;
-    const base = (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
-    if (process.env.NODE_ENV === "production" && base) return "live";
-    return "mock";
+    return "live";
 }
 
 function getApiBaseUrl(): string {
@@ -318,8 +316,11 @@ async function apiGetPolicy(signal?: AbortSignal): Promise<PrivacyPolicyDoc> {
 
     const base = getApiBaseUrl();
     if (!base) {
-        await new Promise((r) => setTimeout(r, 70));
-        return structuredClone(mockStore);
+        if (mode === "hybrid") {
+            await new Promise((r) => setTimeout(r, 70));
+            return structuredClone(mockStore);
+        }
+        throw new Error("NEXT_PUBLIC_API_BASE_URL is required in live mode.");
     }
 
     try {
@@ -344,7 +345,8 @@ async function apiGetPolicy(signal?: AbortSignal): Promise<PrivacyPolicyDoc> {
         if (mode === "hybrid") mockStore = structuredClone(json.data);
         return json.data;
     } catch {
-        return structuredClone(mockStore);
+        if (mode === "hybrid") return structuredClone(mockStore);
+        throw new Error("GET /v1/public/privacy failed in live mode.");
     }
 }
 

@@ -114,18 +114,17 @@ async function loadCompliance(): Promise<{ payload: CompliancePayload; source: "
     const rawMode = getEnv("NEXT_PUBLIC_DATA_MODE", "").toLowerCase();
     const mode = (rawMode === "mock" || rawMode === "live" || rawMode === "hybrid")
         ? rawMode
-        : (process.env.NODE_ENV === "production" && baseUrl ? "live" : "mock");
+        : "live";
 
     if (mode === "mock") return { payload: mockCompliance(), source: "mock" };
-    if (!baseUrl) return { payload: mockCompliance(), source: "mock" };
+    if (!baseUrl) {
+        if (mode === "hybrid") return { payload: mockCompliance(), source: "mock" };
+        throw new Error("NEXT_PUBLIC_API_BASE_URL is required in live mode");
+    }
 
     if (mode === "live") {
-        try {
-            const payload = await fetchComplianceLive(baseUrl);
-            return { payload, source: "live" };
-        } catch {
-            return { payload: mockCompliance(), source: "mock" };
-        }
+        const payload = await fetchComplianceLive(baseUrl);
+        return { payload, source: "live" };
     }
 
     try {

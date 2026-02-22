@@ -126,10 +126,19 @@ async function loadTerms(): Promise<{ payload: TermsPayload; source: "mock" | "l
     const rawMode = getEnv("NEXT_PUBLIC_DATA_MODE", "").toLowerCase();
     const mode = (rawMode === "mock" || rawMode === "live" || rawMode === "hybrid")
         ? rawMode
-        : "mock";
+        : "live";
     const baseUrl = getEnv("NEXT_PUBLIC_API_BASE_URL", "");
 
-    if (mode === "mock" || !baseUrl) return { payload: mockTerms(), source: "mock" };
+    if (mode === "mock") return { payload: mockTerms(), source: "mock" };
+    if (!baseUrl) {
+        if (mode === "hybrid") return { payload: mockTerms(), source: "mock" };
+        throw new Error("NEXT_PUBLIC_API_BASE_URL is required in live mode");
+    }
+
+    if (mode === "live") {
+        const payload = await fetchTermsLive(baseUrl);
+        return { payload, source: "live" };
+    }
 
     try {
         const payload = await fetchTermsLive(baseUrl);
