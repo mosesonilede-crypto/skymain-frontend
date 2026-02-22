@@ -66,7 +66,7 @@ export default function DashboardPage() {
                 setIntegrationMessage(null);
                 const [dashResponse, notifResponse] = await Promise.all([
                     fetch(`/api/dashboard/${selectedAircraft.registration}`),
-                    fetch("/api/notifications"),
+                    fetch("/internal-api/notifications"),
                 ]);
 
                 if (cancelled) return;

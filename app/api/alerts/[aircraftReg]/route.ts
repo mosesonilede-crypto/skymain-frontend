@@ -63,6 +63,19 @@ export async function GET(
         const aircraftReg = reg.toUpperCase();
 
         if (error instanceof IntegrationRequestError) {
+            if (error.status === 404) {
+                return NextResponse.json(
+                    {
+                        alerts: [],
+                        lastUpdated: null,
+                        live_no_data: true,
+                    },
+                    {
+                        headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" },
+                    }
+                );
+            }
+
             return NextResponse.json(
                 {
                     error: "ACMS connector request failed",

@@ -108,6 +108,20 @@ export async function GET(
         });
     } catch (error) {
         if (error instanceof IntegrationRequestError) {
+            if (error.status === 404) {
+                return NextResponse.json(
+                    {
+                        predictiveAlert: null,
+                        systemMetrics: [],
+                        analytics: null,
+                        live_no_data: true,
+                    },
+                    {
+                        headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" },
+                    }
+                );
+            }
+
             return NextResponse.json(
                 {
                     error: "ACMS connector request failed",

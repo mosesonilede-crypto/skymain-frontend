@@ -67,7 +67,7 @@ export default function AIInsightsPage() {
 
         try {
             setIntegrationMessage(null);
-            const response = await fetch(`/api/insights/${selectedAircraft.registration}`);
+            const response = await fetch(`/internal-api/insights/${selectedAircraft.registration}`);
             if (response.status === 503) {
                 const data = await response.json().catch(() => ({}));
                 setIntegrationMessage(
