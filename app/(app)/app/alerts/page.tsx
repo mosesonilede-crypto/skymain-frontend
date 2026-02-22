@@ -396,7 +396,7 @@ export default function PredictiveAlertsPage() {
         setError(null);
 
         try {
-            const response = await fetch(`/internal-api/alerts/${selectedAircraft.registration}`);
+            const response = await fetch(`/bridge/alerts/${selectedAircraft.registration}`);
             if (!response.ok) {
                 throw new Error("Unable to load alerts from the live service.");
             }
@@ -434,7 +434,7 @@ export default function PredictiveAlertsPage() {
         try {
             const results = await Promise.all(allAircraft.map(async (aircraft) => {
                 try {
-                    const response = await fetch(`/internal-api/alerts/${aircraft.registration}`);
+                    const response = await fetch(`/bridge/alerts/${aircraft.registration}`);
                     if (!response.ok) {
                         throw new Error("Alert fetch failed");
                     }
