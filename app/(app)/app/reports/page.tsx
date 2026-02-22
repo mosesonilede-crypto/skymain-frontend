@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { useAircraft } from "@/lib/AircraftContext";
+import { useEntitlements } from "@/lib/useEntitlements";
 
 type KV = { k: string; v: React.ReactNode };
 type HealthTile = { label: string; value: number };
@@ -20,6 +21,8 @@ export default function ReportsAnalyticsPage() {
     const [reportsData, setReportsData] = useState<ReportsData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
+    const { entitlements } = useEntitlements();
+    const canPrintCustomReport = entitlements.features.custom_compliance_reports;
 
     // Fetch live reports data
     const fetchReportsData = useCallback(async () => {
@@ -106,11 +109,18 @@ export default function ReportsAnalyticsPage() {
                 {integrationMessage ? (
                     <span className="text-sm text-slate-600">{integrationMessage}</span>
                 ) : null}
+                {!canPrintCustomReport ? (
+                    <span className="text-sm text-slate-600">Custom printable reports require Professional or Enterprise.</span>
+                ) : null}
                 {isLoading ? <span className="text-sm text-slate-500">Loading...</span> : null}
                 <button
                     type="button"
-                    onClick={() => window.print()}
-                    className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                    onClick={() => {
+                        if (!canPrintCustomReport) return;
+                        window.print();
+                    }}
+                    disabled={!canPrintCustomReport}
+                    className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Print Report
                 </button>

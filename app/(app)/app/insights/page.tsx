@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { useAircraft } from "@/lib/AircraftContext";
+import { useEntitlements } from "@/lib/useEntitlements";
 import {
     ResponsiveContainer,
     LineChart,
@@ -63,37 +64,14 @@ export default function AIInsightsPage() {
     const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
     const [isInsightsLoading, setIsInsightsLoading] = useState(false);
     const [hasLoadedInsights, setHasLoadedInsights] = useState(false);
-    const [hasAdvancedInsights, setHasAdvancedInsights] = useState(true);
+    const { entitlements, loading: entitlementsLoading } = useEntitlements();
+    const hasAdvancedInsights = entitlements.features.advanced_ai_insights;
 
     useEffect(() => {
-        let cancelled = false;
-
-        async function resolvePlanAccess() {
-            try {
-                const response = await fetch("/api/billing", {
-                    method: "GET",
-                    headers: { Accept: "application/json" },
-                });
-                if (!response.ok) return;
-                const data = await response.json() as { currentPlanLabel?: string };
-                const plan = (data.currentPlanLabel || "").toLowerCase();
-                const allowed = plan === "professional" || plan === "enterprise";
-                if (!cancelled) {
-                    setHasAdvancedInsights(allowed);
-                    if (!allowed) {
-                        setIntegrationMessage("Advanced AI Insights are available on Professional and Enterprise plans.");
-                    }
-                }
-            } catch {
-                // Preserve current behavior when billing lookup is unavailable.
-            }
+        if (!entitlementsLoading && !hasAdvancedInsights) {
+            setIntegrationMessage("Advanced AI Insights are available on Professional and Enterprise plans.");
         }
-
-        void resolvePlanAccess();
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    }, [entitlementsLoading, hasAdvancedInsights]);
 
     // Fetch live insights data
     async function fetchInsightsData() {

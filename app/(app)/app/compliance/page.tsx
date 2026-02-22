@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAircraft } from "@/lib/AircraftContext";
+import { useEntitlements } from "@/lib/useEntitlements";
 
 type AuthoritySource = {
     label: string;
@@ -143,8 +144,10 @@ function getAirworthinessTone(status: string): "good" | "warn" | "bad" {
 
 export default function RegulatoryCompliancePage() {
     const { selectedAircraft } = useAircraft();
+    const { entitlements } = useEntitlements();
     const aircraftReg = selectedAircraft?.registration || "";
     const aircraftModel = selectedAircraft?.model || "Unknown model";
+    const canCreateComplianceTasks = entitlements.features.custom_compliance_reports;
 
     const [lastChecked, setLastChecked] = useState("Unavailable");
     const [isLoading, setIsLoading] = useState(false);
@@ -321,6 +324,11 @@ export default function RegulatoryCompliancePage() {
                         {integrationMessage}
                     </div>
                 ) : null}
+                {!canCreateComplianceTasks ? (
+                    <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
+                        Compliance task creation requires Professional or Enterprise.
+                    </div>
+                ) : null}
                 {error ? (
                     <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
                         {error}
@@ -426,11 +434,13 @@ export default function RegulatoryCompliancePage() {
                                 <UpdateCard
                                     key={`${u.kind}-${idx}`}
                                     update={u}
+                                    canCreateTask={canCreateComplianceTasks}
                                     onViewDetails={() => {
                                         setSelectedUpdate(u);
                                         setIsDetailsModalOpen(true);
                                     }}
                                     onCreateTask={() => {
+                                        if (!canCreateComplianceTasks) return;
                                         setSelectedUpdate(u);
                                         setIsCreateTaskModalOpen(true);
                                     }}
@@ -665,10 +675,12 @@ function Metric({
 
 function UpdateCard({
     update,
+    canCreateTask,
     onViewDetails,
     onCreateTask
 }: {
     update: RegulatoryUpdate;
+    canCreateTask: boolean;
     onViewDetails: () => void;
     onCreateTask: () => void;
 }) {
@@ -704,7 +716,8 @@ function UpdateCard({
                 </button>
                 <button
                     type="button"
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                    disabled={!canCreateTask}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={onCreateTask}
                 >
                     Create Task
