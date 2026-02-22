@@ -94,8 +94,15 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { logout, user } = useAuth();
-    const { entitlements } = useEntitlements();
+    const { entitlements, loading: entitlementsLoading } = useEntitlements();
     const contentRef = useRef<HTMLDivElement>(null);
+
+    const planLabel = useMemo(() => {
+        if (entitlementsLoading) return "Loading plan...";
+        if (entitlements.tier === "enterprise") return "Enterprise";
+        if (entitlements.tier === "professional") return "Professional";
+        return "Starter";
+    }, [entitlementsLoading, entitlements.tier]);
 
     // Handle manual logout with session cleanup
     const handleLogout = useCallback(() => {
@@ -225,6 +232,9 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                                         <div>
                                             <div className="text-[18px] leading-7 text-[#0a0a0a]">SkyMaintain</div>
                                             <div className="text-[12px] leading-4 text-[#6a7282]">v1.0</div>
+                                            <div className="mt-1 inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
+                                                Current Plan: {planLabel}
+                                            </div>
                                         </div>
                                     </Link>
                                     <button
