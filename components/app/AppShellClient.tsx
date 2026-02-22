@@ -104,6 +104,21 @@ export default function AppShellClient({ children }: AppShellClientProps) {
         return "Starter";
     }, [entitlementsLoading, entitlements.tier]);
 
+    const usageSummary = useMemo(() => {
+        if (entitlementsLoading) return "Usage: loading...";
+
+        const aircraft = entitlements.limits.max_aircraft == null ? "∞" : String(entitlements.limits.max_aircraft);
+        const team = entitlements.limits.max_team_members == null ? "∞" : String(entitlements.limits.max_team_members);
+        const storage = entitlements.limits.max_storage_gb == null ? "∞" : `${entitlements.limits.max_storage_gb}GB`;
+
+        return `Usage: Aircraft ${aircraft} • Team ${team} • Storage ${storage}`;
+    }, [
+        entitlementsLoading,
+        entitlements.limits.max_aircraft,
+        entitlements.limits.max_team_members,
+        entitlements.limits.max_storage_gb,
+    ]);
+
     // Handle manual logout with session cleanup
     const handleLogout = useCallback(() => {
         clearSessionData();
@@ -234,6 +249,9 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                                             <div className="text-[12px] leading-4 text-[#6a7282]">v1.0</div>
                                             <div className="mt-1 inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
                                                 Current Plan: {planLabel}
+                                            </div>
+                                            <div className="mt-1 text-[10px] leading-4 text-slate-500">
+                                                {usageSummary}
                                             </div>
                                         </div>
                                     </Link>
