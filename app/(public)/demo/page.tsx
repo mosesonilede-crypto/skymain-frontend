@@ -10,30 +10,56 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 
 const DEFAULT_YOUTUBE_VIDEO_ID = "oMcy-bTjvJ0";
-const DEMO_VIDEO_STORAGE_KEY = "skymaintain.demoVideoId";
+
+type DemoVideoApiResponse =
+    | {
+        source: "upload";
+        videoUrl: string;
+        fileName?: string;
+    }
+    | {
+        source: "youtube";
+        youtubeVideoId: string;
+    };
 
 export default function DemoPage() {
     const [isPlaying, setIsPlaying] = useState(false);
-    const [videoId, setVideoId] = useState(() => {
-        if (typeof window === "undefined") return DEFAULT_YOUTUBE_VIDEO_ID;
-        try {
-            return window.localStorage.getItem(DEMO_VIDEO_STORAGE_KEY) || DEFAULT_YOUTUBE_VIDEO_ID;
-        } catch {
-            return DEFAULT_YOUTUBE_VIDEO_ID;
-        }
-    });
+    const [videoId, setVideoId] = useState(DEFAULT_YOUTUBE_VIDEO_ID);
+    const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
+    const [uploadedVideoFileName, setUploadedVideoFileName] = useState<string | null>(null);
 
     useEffect(() => {
-        if (typeof window === "undefined") return;
+        let cancelled = false;
 
-        // Listen for storage changes (when super admin updates the video)
-        const handleStorage = (event: StorageEvent) => {
-            if (event.key === DEMO_VIDEO_STORAGE_KEY && event.newValue) {
-                setVideoId(event.newValue);
+        async function loadDemoVideoConfig() {
+            try {
+                const response = await fetch("/api/admin/demo-video");
+                if (!response.ok) return;
+                const data = (await response.json()) as DemoVideoApiResponse;
+                if (cancelled) return;
+
+                if (data.source === "upload") {
+                    setUploadedVideoUrl(data.videoUrl);
+                    setUploadedVideoFileName(data.fileName || null);
+                    return;
+                }
+
+                setUploadedVideoUrl(null);
+                setUploadedVideoFileName(null);
+                setVideoId(data.youtubeVideoId || DEFAULT_YOUTUBE_VIDEO_ID);
+            } catch {
+                if (cancelled) return;
+                setUploadedVideoUrl(null);
+                setUploadedVideoFileName(null);
+                setVideoId(DEFAULT_YOUTUBE_VIDEO_ID);
             }
+        }
+
+        loadDemoVideoConfig();
+
+        return () => {
+            cancelled = true;
         };
-        window.addEventListener("storage", handleStorage);
-        return () => window.removeEventListener("storage", handleStorage);
     }, []);
 
     const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
@@ -68,7 +94,13 @@ export default function DemoPage() {
                 <div className="relative overflow-hidden rounded-2xl bg-slate-900 shadow-2xl">
                     {/* Video Container with 16:9 Aspect Ratio */}
                     <div className="relative aspect-video w-full">
-                        {!isPlaying ? (
+                        {uploadedVideoUrl ? (
+                            <video
+                                src={uploadedVideoUrl}
+                                controls
+                                className="absolute inset-0 h-full w-full"
+                            />
+                        ) : !isPlaying ? (
                             /* Thumbnail with Play Button */
                             <div
                                 className="absolute inset-0 cursor-pointer group"
@@ -117,20 +149,22 @@ export default function DemoPage() {
 
                 {/* Video Actions */}
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-                    <a
-                        href={watchUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                    >
-                        <svg className="h-4 w-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                        </svg>
-                        Watch on YouTube
-                    </a>
+                    {!uploadedVideoUrl && (
+                        <a
+                            href={watchUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                        >
+                            <svg className="h-4 w-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                            </svg>
+                            Watch on YouTube
+                        </a>
+                    )}
                     <button
                         onClick={() => {
-                            navigator.clipboard.writeText(watchUrl);
+                            navigator.clipboard.writeText(uploadedVideoUrl || watchUrl);
                             alert("Link copied to clipboard!");
                         }}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
@@ -141,6 +175,11 @@ export default function DemoPage() {
                         Copy Link
                     </button>
                 </div>
+                {uploadedVideoUrl && uploadedVideoFileName && (
+                    <p className="mt-3 text-center text-xs text-slate-500">
+                        Current uploaded demo: {uploadedVideoFileName}
+                    </p>
+                )}
             </section>
 
             {/* What You'll See Section */}

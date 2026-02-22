@@ -76,8 +76,21 @@ type SignupNotification = {
 };
 
 const PARTNER_STORAGE_KEY = "skymaintain.partnerContent";
-const DEMO_VIDEO_STORAGE_KEY = "skymaintain.demoVideoId";
 const DEFAULT_DEMO_VIDEO_ID = "oMcy-bTjvJ0";
+
+type DemoVideoApiResponse =
+    | {
+        source: "upload";
+        videoUrl: string;
+        fileName?: string;
+        mimeType?: string;
+        updatedAt?: string;
+        updatedBy?: string;
+    }
+    | {
+        source: "youtube";
+        youtubeVideoId: string;
+    };
 
 const defaultPartnerContent: PartnerContent = {
     featured: {
@@ -171,8 +184,10 @@ export default function SuperAdminPage() {
     const [activeTab, setActiveTab] = useState<"users" | "codes" | "notifications" | "partners" | "announcements" | "settings">("users");
 
     // Demo Video Settings
-    const [demoVideoId, setDemoVideoId] = useState("oMcy-bTjvJ0");
-    const [demoVideoIdDraft, setDemoVideoIdDraft] = useState("oMcy-bTjvJ0");
+    const [demoVideoUrl, setDemoVideoUrl] = useState<string | null>(null);
+    const [demoVideoFileName, setDemoVideoFileName] = useState<string | null>(null);
+    const [demoVideoUpdatedAt, setDemoVideoUpdatedAt] = useState<string | null>(null);
+    const [selectedDemoVideoFile, setSelectedDemoVideoFile] = useState<File | null>(null);
     const [savingDemoVideo, setSavingDemoVideo] = useState(false);
 
     // Announcements/Mass Email
@@ -557,47 +572,106 @@ export default function SuperAdminPage() {
         showNotification("success", "Partner content reset to default.");
     }
 
-    // Load demo video ID from localStorage
+    // Load demo video configuration
     useEffect(() => {
-        if (typeof window === "undefined") return;
-        try {
-            const stored = window.localStorage.getItem(DEMO_VIDEO_STORAGE_KEY);
-            if (stored) {
-                setDemoVideoId(stored);
-                setDemoVideoIdDraft(stored);
+        let cancelled = false;
+
+        async function loadDemoVideoConfig() {
+            try {
+                const response = await fetch("/api/admin/demo-video", { credentials: "include" });
+                if (!response.ok) return;
+                const data = (await response.json()) as DemoVideoApiResponse;
+                if (cancelled) return;
+
+                if (data.source === "upload") {
+                    setDemoVideoUrl(data.videoUrl);
+                    setDemoVideoFileName(data.fileName || null);
+                    setDemoVideoUpdatedAt(data.updatedAt || null);
+                    return;
+                }
+
+                setDemoVideoUrl(null);
+                setDemoVideoFileName(null);
+                setDemoVideoUpdatedAt(null);
+            } catch {
+                if (cancelled) return;
+                setDemoVideoUrl(null);
+                setDemoVideoFileName(null);
+                setDemoVideoUpdatedAt(null);
             }
-        } catch {
-            // Ignore
         }
+
+        loadDemoVideoConfig();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
-    // Save demo video ID
-    function saveDemoVideoId() {
-        if (!demoVideoIdDraft.trim()) {
-            showNotification("error", "Please enter a YouTube video ID.");
+    // Upload demo video
+    async function saveDemoVideoFile() {
+        if (!selectedDemoVideoFile) {
+            showNotification("error", "Please select a video file.");
             return;
         }
+
         setSavingDemoVideo(true);
         try {
-            if (typeof window !== "undefined") {
-                window.localStorage.setItem(DEMO_VIDEO_STORAGE_KEY, demoVideoIdDraft.trim());
+            const formData = new FormData();
+            formData.append("video", selectedDemoVideoFile);
+
+            const response = await fetch("/api/admin/demo-video", {
+                method: "POST",
+                credentials: "include",
+                body: formData,
+            });
+
+            const data = (await response.json()) as DemoVideoApiResponse | { error?: string };
+            if (!response.ok) {
+                const message = "error" in data && data.error ? data.error : "Failed to upload demo video.";
+                throw new Error(message);
             }
-            setDemoVideoId(demoVideoIdDraft.trim());
+
+            if ((data as DemoVideoApiResponse).source === "upload") {
+                const uploadData = data as Extract<DemoVideoApiResponse, { source: "upload" }>;
+                setDemoVideoUrl(uploadData.videoUrl);
+                setDemoVideoFileName(uploadData.fileName || selectedDemoVideoFile.name);
+                setDemoVideoUpdatedAt(uploadData.updatedAt || new Date().toISOString());
+            }
+
+            setSelectedDemoVideoFile(null);
             showNotification("success", "Demo video updated successfully.");
-        } catch {
-            showNotification("error", "Failed to save demo video.");
+        } catch (error) {
+            showNotification("error", error instanceof Error ? error.message : "Failed to upload demo video.");
         } finally {
             setSavingDemoVideo(false);
         }
     }
 
-    function resetDemoVideoId() {
-        setDemoVideoIdDraft(DEFAULT_DEMO_VIDEO_ID);
-        setDemoVideoId(DEFAULT_DEMO_VIDEO_ID);
-        if (typeof window !== "undefined") {
-            window.localStorage.removeItem(DEMO_VIDEO_STORAGE_KEY);
+    async function resetDemoVideoFile() {
+        setSavingDemoVideo(true);
+        try {
+            const response = await fetch("/api/admin/demo-video", {
+                method: "DELETE",
+                credentials: "include",
+            });
+
+            const data = (await response.json()) as DemoVideoApiResponse | { error?: string };
+            if (!response.ok) {
+                const message = "error" in data && data.error ? data.error : "Failed to reset demo video.";
+                throw new Error(message);
+            }
+
+            setDemoVideoUrl(null);
+            setDemoVideoFileName(null);
+            setDemoVideoUpdatedAt(null);
+            setSelectedDemoVideoFile(null);
+            showNotification("success", "Demo video reset to default YouTube video.");
+        } catch (error) {
+            showNotification("error", error instanceof Error ? error.message : "Failed to reset demo video.");
+        } finally {
+            setSavingDemoVideo(false);
         }
-        showNotification("success", "Demo video reset to default.");
     }
 
     // Fetch recipient count for announcements
@@ -1539,7 +1613,7 @@ export default function SuperAdminPage() {
                                 <div>
                                     <h2 className="text-lg font-semibold text-slate-900">Demo Video</h2>
                                     <p className="text-sm text-slate-600">
-                                        Configure the YouTube video displayed on the Watch Demo page.
+                                        Upload a demo video file from your computer for the public demo page.
                                     </p>
                                 </div>
                             </div>
@@ -1550,71 +1624,79 @@ export default function SuperAdminPage() {
                                     <label className="text-xs font-semibold text-slate-600 uppercase">
                                         Current Demo Video
                                     </label>
-                                    <div className="mt-3 aspect-video w-full max-w-md overflow-hidden rounded-lg border border-slate-200 bg-black">
-                                        <iframe
-                                            src={`https://www.youtube.com/embed/${demoVideoId}?rel=0&modestbranding=1`}
-                                            title="Current Demo Video"
-                                            className="h-full w-full"
-                                            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                            allowFullScreen
-                                        />
-                                    </div>
-                                    <p className="mt-2 text-xs text-slate-500">
-                                        Video ID: <code className="rounded bg-slate-200 px-1.5 py-0.5">{demoVideoId}</code>
-                                    </p>
+                                    {demoVideoUrl ? (
+                                        <>
+                                            <div className="mt-3 aspect-video w-full max-w-md overflow-hidden rounded-lg border border-slate-200 bg-black">
+                                                <video
+                                                    src={demoVideoUrl}
+                                                    controls
+                                                    className="h-full w-full"
+                                                />
+                                            </div>
+                                            <p className="mt-2 text-xs text-slate-500">
+                                                File: <code className="rounded bg-slate-200 px-1.5 py-0.5">{demoVideoFileName || "Uploaded video"}</code>
+                                            </p>
+                                            {demoVideoUpdatedAt && (
+                                                <p className="mt-1 text-xs text-slate-500">
+                                                    Updated: {new Date(demoVideoUpdatedAt).toLocaleString()}
+                                                </p>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="mt-3 aspect-video w-full max-w-md overflow-hidden rounded-lg border border-slate-200 bg-black">
+                                                <iframe
+                                                    src={`https://www.youtube.com/embed/${DEFAULT_DEMO_VIDEO_ID}?rel=0&modestbranding=1`}
+                                                    title="Default Demo Video"
+                                                    className="h-full w-full"
+                                                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowFullScreen
+                                                />
+                                            </div>
+                                            <p className="mt-2 text-xs text-slate-500">
+                                                Using default YouTube video.
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
 
-                                {/* Video ID Input */}
+                                {/* Upload Input */}
                                 <div>
                                     <label className="text-xs font-semibold text-slate-600 uppercase">
-                                        YouTube Video ID
+                                        Upload New Video
                                     </label>
-                                    <div className="mt-2 flex gap-2">
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
                                         <input
-                                            type="text"
-                                            value={demoVideoIdDraft}
-                                            onChange={(e) => setDemoVideoIdDraft(e.target.value)}
-                                            placeholder="Enter YouTube video ID (e.g., oMcy-bTjvJ0)"
-                                            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                            type="file"
+                                            accept="video/mp4,video/webm,video/ogg,video/quicktime"
+                                            onChange={(e) => setSelectedDemoVideoFile(e.target.files?.[0] || null)}
+                                            className="flex-1 min-w-[240px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                                         />
                                         <button
                                             type="button"
-                                            onClick={saveDemoVideoId}
-                                            disabled={savingDemoVideo || demoVideoIdDraft === demoVideoId}
+                                            onClick={saveDemoVideoFile}
+                                            disabled={savingDemoVideo || !selectedDemoVideoFile}
                                             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            {savingDemoVideo ? "Saving..." : "Save"}
+                                            {savingDemoVideo ? "Uploading..." : "Upload"}
                                         </button>
                                     </div>
                                     <p className="mt-1 text-xs text-slate-500">
-                                        The video ID is the part after &quot;v=&quot; in a YouTube URL. For example, in
-                                        &quot;youtube.com/watch?v=<strong>oMcy-bTjvJ0</strong>&quot;, the ID is &quot;oMcy-bTjvJ0&quot;.
+                                        Accepted formats: MP4, WebM, OGG, MOV. Maximum file size: 250MB.
                                     </p>
+                                    {selectedDemoVideoFile && (
+                                        <p className="mt-2 text-xs text-slate-600">
+                                            Selected: {selectedDemoVideoFile.name}
+                                        </p>
+                                    )}
                                 </div>
-
-                                {/* Preview New Video */}
-                                {demoVideoIdDraft && demoVideoIdDraft !== demoVideoId && (
-                                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-                                        <label className="text-xs font-semibold text-blue-600 uppercase">
-                                            Preview (Unsaved)
-                                        </label>
-                                        <div className="mt-3 aspect-video w-full max-w-md overflow-hidden rounded-lg border border-blue-200 bg-black">
-                                            <iframe
-                                                src={`https://www.youtube.com/embed/${demoVideoIdDraft}?rel=0&modestbranding=1`}
-                                                title="Preview Demo Video"
-                                                className="h-full w-full"
-                                                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                allowFullScreen
-                                            />
-                                        </div>
-                                    </div>
-                                )}
 
                                 {/* Reset Button */}
                                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                                     <button
                                         type="button"
-                                        onClick={resetDemoVideoId}
+                                        onClick={resetDemoVideoFile}
+                                        disabled={savingDemoVideo}
                                         className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                     >
                                         Reset to Default
@@ -1624,8 +1706,8 @@ export default function SuperAdminPage() {
                         </div>
 
                         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
-                            Demo video settings are stored locally in your browser. To persist these settings
-                            across all users and devices, connect this to a database-backed configuration service.
+                            Uploaded demo videos are served globally from this deployment and replace the default
+                            YouTube demo on the public page.
                         </div>
                     </div>
                 )}

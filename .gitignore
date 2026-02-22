@@ -45,5 +45,7 @@ next-env.d.ts
 
 # temp
 .tmp/
+.runtime-data/
+public/uploads/demo/
 
 .env*.local
