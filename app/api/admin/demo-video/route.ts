@@ -24,14 +24,20 @@ type SessionPayload = {
 };
 
 type DemoVideoConfig = {
+    id: string;
     source: "upload";
     videoUrl: string;
     storagePath?: string;
     storageProvider?: "supabase" | "s3" | "local";
     fileName: string;
+    title: string;
     mimeType: string;
     updatedAt: string;
     updatedBy: string;
+};
+
+type DemoVideoManifest = {
+    videos: DemoVideoConfig[];
 };
 
 type StorageProvider = "supabase" | "s3" | "local";
@@ -41,6 +47,7 @@ type DemoVideoS3InitRequest = {
     fileName: string;
     mimeType: string;
     fileSize: number;
+    title?: string;
 };
 
 type DemoVideoS3FinalizeRequest = {
@@ -48,6 +55,7 @@ type DemoVideoS3FinalizeRequest = {
     targetPath: string;
     fileName: string;
     mimeType: string;
+    title?: string;
 };
 
 const SESSION_COOKIE = "sm_session";
@@ -62,6 +70,7 @@ const ALLOWED_MIME_TYPES = new Set([
 const DEMO_STORAGE_BUCKET = process.env.SKYMAINTAIN_DEMO_VIDEO_BUCKET || "demo-media";
 const DEMO_VIDEO_PREFIX = "demo-videos";
 const DEMO_CONFIG_PATH = `${DEMO_VIDEO_PREFIX}/current.json`;
+const DEMO_MANIFEST_PATH = `${DEMO_VIDEO_PREFIX}/manifest.json`;
 const DEMO_SIGNED_URL_TTL_SECONDS = 60 * 60;
 const DEMO_VIDEO_PROVIDER_PREFERRED = (process.env.SKYMAINTAIN_DEMO_VIDEO_PROVIDER || "supabase").toLowerCase();
 
@@ -243,36 +252,45 @@ function getSession(req: NextRequest): SessionPayload | null {
     return payload;
 }
 
-async function readConfig(): Promise<DemoVideoConfig | null> {
+function generateVideoId(): string {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function migrateLegacyEntry(raw: Record<string, unknown>): DemoVideoConfig | null {
+    if (
+        raw.source === "upload" &&
+        typeof raw.videoUrl === "string" &&
+        typeof raw.fileName === "string" &&
+        typeof raw.mimeType === "string" &&
+        typeof raw.updatedAt === "string" &&
+        typeof raw.updatedBy === "string"
+    ) {
+        return {
+            id: typeof raw.id === "string" && raw.id ? raw.id : generateVideoId(),
+            source: "upload",
+            videoUrl: raw.videoUrl,
+            storagePath: typeof raw.storagePath === "string" ? raw.storagePath : undefined,
+            storageProvider: (raw.storageProvider as DemoVideoConfig["storageProvider"]) || undefined,
+            fileName: raw.fileName,
+            title: typeof raw.title === "string" && raw.title ? raw.title : raw.fileName,
+            mimeType: raw.mimeType,
+            updatedAt: raw.updatedAt,
+            updatedBy: raw.updatedBy,
+        };
+    }
+    return null;
+}
+
+async function readStorageRaw(storagePath: string): Promise<string | null> {
     if (ACTIVE_STORAGE_PROVIDER === "s3" && s3Client) {
         try {
             await ensureS3Bucket();
             const response = await s3Client.send(
-                new GetObjectCommand({
-                    Bucket: S3_BUCKET,
-                    Key: DEMO_CONFIG_PATH,
-                })
+                new GetObjectCommand({ Bucket: S3_BUCKET, Key: storagePath })
             );
-
-            const raw = await response.Body?.transformToString();
-            if (raw) {
-                const parsed = JSON.parse(raw) as Partial<DemoVideoConfig>;
-                if (
-                    parsed.source === "upload" &&
-                    typeof parsed.videoUrl === "string" &&
-                    typeof parsed.fileName === "string" &&
-                    typeof parsed.mimeType === "string" &&
-                    typeof parsed.updatedAt === "string" &&
-                    typeof parsed.updatedBy === "string"
-                ) {
-                    const resolved = parsed as DemoVideoConfig;
-                    resolved.storageProvider = resolved.storageProvider || "s3";
-                    resolved.videoUrl = await resolvePlayableUrl(resolved);
-                    return resolved;
-                }
-            }
+            return (await response.Body?.transformToString()) || null;
         } catch {
-            // Fall through to local fallback.
+            return null;
         }
     }
 
@@ -281,57 +299,91 @@ async function readConfig(): Promise<DemoVideoConfig | null> {
             await ensureDemoBucket();
             const { data, error } = await supabaseServer.storage
                 .from(DEMO_STORAGE_BUCKET)
-                .download(DEMO_CONFIG_PATH);
-
-            if (!error && data) {
-                const raw = await data.text();
-                const parsed = JSON.parse(raw) as Partial<DemoVideoConfig>;
-                if (
-                    parsed.source === "upload" &&
-                    typeof parsed.videoUrl === "string" &&
-                    typeof parsed.fileName === "string" &&
-                    typeof parsed.mimeType === "string" &&
-                    typeof parsed.updatedAt === "string" &&
-                    typeof parsed.updatedBy === "string"
-                ) {
-                    const resolved = parsed as DemoVideoConfig;
-                    resolved.storageProvider = resolved.storageProvider || "supabase";
-                    resolved.videoUrl = await resolvePlayableUrl(resolved);
-                    return resolved;
-                }
-            }
+                .download(storagePath);
+            if (!error && data) return await data.text();
         } catch {
-            // Fall through to local fallback.
+            // fallthrough
         }
+        return null;
     }
 
     try {
-        const raw = await fs.readFile(CONFIG_PATH, "utf8");
-        const parsed = JSON.parse(raw) as Partial<DemoVideoConfig>;
-        if (
-            parsed.source === "upload" &&
-            typeof parsed.videoUrl === "string" &&
-            typeof parsed.fileName === "string" &&
-            typeof parsed.mimeType === "string" &&
-            typeof parsed.updatedAt === "string" &&
-            typeof parsed.updatedBy === "string"
-        ) {
-            return parsed as DemoVideoConfig;
-        }
-        return null;
+        return await fs.readFile(
+            path.join(PRIVATE_CONFIG_DIR, path.basename(storagePath)),
+            "utf8"
+        );
     } catch {
         return null;
     }
 }
 
-async function writeConfig(config: DemoVideoConfig): Promise<void> {
+async function readManifest(): Promise<DemoVideoConfig[]> {
+    // 1. Try manifest.json first
+    const manifestRaw = await readStorageRaw(DEMO_MANIFEST_PATH);
+    if (manifestRaw) {
+        try {
+            const parsed = JSON.parse(manifestRaw) as Partial<DemoVideoManifest>;
+            if (Array.isArray(parsed.videos)) {
+                const resolved: DemoVideoConfig[] = [];
+                for (const entry of parsed.videos) {
+                    const migrated = migrateLegacyEntry(entry as Record<string, unknown>);
+                    if (migrated) {
+                        migrated.storageProvider = migrated.storageProvider || (ACTIVE_STORAGE_PROVIDER as DemoVideoConfig["storageProvider"]);
+                        migrated.videoUrl = await resolvePlayableUrl(migrated);
+                        resolved.push(migrated);
+                    }
+                }
+                return resolved;
+            }
+        } catch {
+            // corrupt manifest — fallthrough
+        }
+    }
+
+    // 2. Backward compat: try legacy current.json
+    const legacyRaw = await readStorageRaw(DEMO_CONFIG_PATH);
+    if (legacyRaw) {
+        try {
+            const legacy = JSON.parse(legacyRaw) as Record<string, unknown>;
+            const migrated = migrateLegacyEntry(legacy);
+            if (migrated) {
+                migrated.storageProvider = migrated.storageProvider || (ACTIVE_STORAGE_PROVIDER as DemoVideoConfig["storageProvider"]);
+                migrated.videoUrl = await resolvePlayableUrl(migrated);
+                // Auto-migrate to manifest format
+                await writeManifest([migrated]);
+                return [migrated];
+            }
+        } catch {
+            // corrupt legacy file
+        }
+    }
+
+    // 3. Local filesystem fallback for legacy config
+    try {
+        const raw = await fs.readFile(CONFIG_PATH, "utf8");
+        const legacy = JSON.parse(raw) as Record<string, unknown>;
+        const migrated = migrateLegacyEntry(legacy);
+        if (migrated) {
+            await writeManifest([migrated]);
+            return [migrated];
+        }
+    } catch {
+        // no config at all
+    }
+
+    return [];
+}
+
+async function writeManifest(videos: DemoVideoConfig[]): Promise<void> {
+    const manifest: DemoVideoManifest = { videos };
+    const payload = JSON.stringify(manifest, null, 2);
+
     if (ACTIVE_STORAGE_PROVIDER === "s3" && s3Client) {
         await ensureS3Bucket();
-        const payload = JSON.stringify(config, null, 2);
         await s3Client.send(
             new PutObjectCommand({
                 Bucket: S3_BUCKET,
-                Key: DEMO_CONFIG_PATH,
+                Key: DEMO_MANIFEST_PATH,
                 Body: Buffer.from(payload),
                 ContentType: "application/json",
             })
@@ -341,56 +393,53 @@ async function writeConfig(config: DemoVideoConfig): Promise<void> {
 
     if (ACTIVE_STORAGE_PROVIDER === "supabase" && supabaseServer) {
         await ensureDemoBucket();
-        const payload = JSON.stringify(config, null, 2);
         const { error } = await supabaseServer.storage
             .from(DEMO_STORAGE_BUCKET)
-            .upload(DEMO_CONFIG_PATH, Buffer.from(payload), {
+            .upload(DEMO_MANIFEST_PATH, Buffer.from(payload), {
                 contentType: "application/json",
                 upsert: true,
             });
-
         if (error) {
-            throw new Error(error.message || "Failed to persist demo config in storage");
+            throw new Error(error.message || "Failed to persist demo manifest in storage");
         }
-
         return;
     }
 
     await fs.mkdir(PRIVATE_CONFIG_DIR, { recursive: true });
-    await fs.writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
+    await fs.writeFile(path.join(PRIVATE_CONFIG_DIR, "manifest.json"), payload, "utf8");
 }
 
-async function deleteOldUploadedVideos(exceptName: string): Promise<void> {
+async function deleteVideoAsset(entry: DemoVideoConfig): Promise<void> {
+    if ((entry.storageProvider === "s3" || ACTIVE_STORAGE_PROVIDER === "s3") && s3Client && entry.storagePath) {
+        try {
+            await s3Client.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: entry.storagePath }));
+        } catch { /* best effort */ }
+        return;
+    }
+
+    if ((entry.storageProvider === "supabase" || ACTIVE_STORAGE_PROVIDER === "supabase") && supabaseServer && entry.storagePath) {
+        try {
+            await supabaseServer.storage.from(DEMO_STORAGE_BUCKET).remove([entry.storagePath]);
+        } catch { /* best effort */ }
+        return;
+    }
+
+    try {
+        const localName = path.basename(entry.videoUrl);
+        await fs.unlink(path.join(PUBLIC_UPLOAD_DIR, localName));
+    } catch { /* best effort */ }
+}
+
+async function deleteAllVideoAssets(): Promise<void> {
     if (ACTIVE_STORAGE_PROVIDER === "s3" && s3Client) {
-        const exceptPath = `${DEMO_VIDEO_PREFIX}/${exceptName}`;
         try {
             await ensureS3Bucket();
             const listed = await s3Client.send(
-                new ListObjectsV2Command({
-                    Bucket: S3_BUCKET,
-                    Prefix: `${DEMO_VIDEO_PREFIX}/`,
-                    MaxKeys: 100,
-                })
+                new ListObjectsV2Command({ Bucket: S3_BUCKET, Prefix: `${DEMO_VIDEO_PREFIX}/`, MaxKeys: 200 })
             );
-
-            const staleKeys = (listed.Contents || [])
-                .map((entry) => entry.Key)
-                .filter((key): key is string => Boolean(key))
-                .filter((key) => key !== exceptPath && key !== DEMO_CONFIG_PATH);
-
-            await Promise.all(
-                staleKeys.map((key) =>
-                    s3Client.send(
-                        new DeleteObjectCommand({
-                            Bucket: S3_BUCKET,
-                            Key: key,
-                        })
-                    )
-                )
-            );
-        } catch {
-            // Best effort cleanup only.
-        }
+            const keys = (listed.Contents || []).map((e) => e.Key).filter((k): k is string => Boolean(k));
+            await Promise.all(keys.map((key) => s3Client!.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: key }))));
+        } catch { /* best effort */ }
         return;
     }
 
@@ -399,32 +448,17 @@ async function deleteOldUploadedVideos(exceptName: string): Promise<void> {
             await ensureDemoBucket();
             const { data } = await supabaseServer.storage
                 .from(DEMO_STORAGE_BUCKET)
-                .list(DEMO_VIDEO_PREFIX, { limit: 100, sortBy: { column: "name", order: "asc" } });
-
-            const stalePaths = (data || [])
-                .map((entry) => entry.name)
-                .filter((name) => name && name !== exceptName && name !== "current.json")
-                .map((name) => `${DEMO_VIDEO_PREFIX}/${name}`);
-
-            if (stalePaths.length > 0) {
-                await supabaseServer.storage.from(DEMO_STORAGE_BUCKET).remove(stalePaths);
-            }
-        } catch {
-            // Best effort cleanup only.
-        }
+                .list(DEMO_VIDEO_PREFIX, { limit: 200 });
+            const paths = (data || []).map((e) => `${DEMO_VIDEO_PREFIX}/${e.name}`).filter(Boolean);
+            if (paths.length > 0) await supabaseServer.storage.from(DEMO_STORAGE_BUCKET).remove(paths);
+        } catch { /* best effort */ }
         return;
     }
 
     try {
         const files = await fs.readdir(PUBLIC_UPLOAD_DIR);
-        await Promise.all(
-            files
-                .filter((fileName) => fileName !== exceptName)
-                .map((fileName) => fs.unlink(path.join(PUBLIC_UPLOAD_DIR, fileName)).catch(() => undefined))
-        );
-    } catch {
-        // Directory may not exist yet.
-    }
+        await Promise.all(files.map((f) => fs.unlink(path.join(PUBLIC_UPLOAD_DIR, f)).catch(() => undefined)));
+    } catch { /* best effort */ }
 }
 
 function requireSuperAdmin(req: NextRequest): SessionPayload | NextResponse {
@@ -553,37 +587,34 @@ async function handleS3DirectUpload(req: NextRequest, session: SessionPayload): 
             return NextResponse.json({ error: `Video must be ${MAX_VIDEO_MB}MB or smaller` }, { status: 400 });
         }
 
-        const targetName = path.basename(payload.targetPath);
-        await deleteOldUploadedVideos(targetName);
-
         const videoUrl = await buildS3PlaybackUrl(payload.targetPath);
 
-        const config: DemoVideoConfig = {
+        const newEntry: DemoVideoConfig = {
+            id: generateVideoId(),
             source: "upload",
             videoUrl,
             storagePath: payload.targetPath,
             storageProvider: "s3",
             fileName: payload.fileName,
+            title: payload.title || payload.fileName,
             mimeType: payload.mimeType,
             updatedAt: new Date().toISOString(),
             updatedBy: session.email,
         };
 
-        await writeConfig(config);
+        const existing = await readManifest();
+        existing.push(newEntry);
+        await writeManifest(existing);
 
-        return NextResponse.json(config);
+        return NextResponse.json(newEntry);
     }
 
     return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
 }
 
 export async function GET() {
-    const config = await readConfig();
-    if (!config) {
-        return NextResponse.json({ source: "youtube", youtubeVideoId: "oMcy-bTjvJ0" });
-    }
-
-    return NextResponse.json(config);
+    const videos = await readManifest();
+    return NextResponse.json({ videos });
 }
 
 export async function POST(req: NextRequest) {
@@ -670,22 +701,24 @@ export async function POST(req: NextRequest) {
             await fs.writeFile(outputPath, fileBuffer);
         }
 
-        await deleteOldUploadedVideos(targetName);
-
-        const config: DemoVideoConfig = {
+        const newEntry: DemoVideoConfig = {
+            id: generateVideoId(),
             source: "upload",
             videoUrl,
             storagePath: ACTIVE_STORAGE_PROVIDER === "local" ? undefined : targetPath,
             storageProvider: ACTIVE_STORAGE_PROVIDER,
             fileName: uploaded.name,
+            title: (form.get("title") as string) || uploaded.name,
             mimeType: uploaded.type,
             updatedAt: new Date().toISOString(),
             updatedBy: sessionOrResponse.email,
         };
 
-        await writeConfig(config);
+        const existingVideos = await readManifest();
+        existingVideos.push(newEntry);
+        await writeManifest(existingVideos);
 
-        return NextResponse.json(config);
+        return NextResponse.json(newEntry);
     } catch (error) {
         console.error("Demo video upload failed:", error);
         const message = error instanceof Error && error.message ? error.message : "Failed to upload demo video";
@@ -698,55 +731,26 @@ export async function DELETE(req: NextRequest) {
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
     try {
-        const config = await readConfig();
-        if (config) {
-            if ((config.storageProvider === "s3" || ACTIVE_STORAGE_PROVIDER === "s3") && s3Client) {
-                await ensureS3Bucket();
-                if (config.storagePath) {
-                    await s3Client
-                        .send(
-                            new DeleteObjectCommand({
-                                Bucket: S3_BUCKET,
-                                Key: config.storagePath,
-                            })
-                        )
-                        .catch(() => undefined);
-                }
-            } else if (ACTIVE_STORAGE_PROVIDER === "supabase" && supabaseServer) {
-                await ensureDemoBucket();
-                if (config.storagePath) {
-                    await supabaseServer.storage
-                        .from(DEMO_STORAGE_BUCKET)
-                        .remove([config.storagePath])
-                        .catch(() => undefined);
-                }
-            } else {
-                const fileName = path.basename(config.videoUrl);
-                await fs.unlink(path.join(PUBLIC_UPLOAD_DIR, fileName)).catch(() => undefined);
+        const videoId = req.nextUrl.searchParams.get("id");
+
+        if (videoId) {
+            // Delete a specific video by ID
+            const videos = await readManifest();
+            const target = videos.find((v) => v.id === videoId);
+            if (!target) {
+                return NextResponse.json({ error: "Video not found" }, { status: 404 });
             }
+            await deleteVideoAsset(target);
+            const remaining = videos.filter((v) => v.id !== videoId);
+            await writeManifest(remaining);
+            return NextResponse.json({ videos: remaining });
         }
 
-        if (ACTIVE_STORAGE_PROVIDER === "s3" && s3Client) {
-            await s3Client
-                .send(
-                    new DeleteObjectCommand({
-                        Bucket: S3_BUCKET,
-                        Key: DEMO_CONFIG_PATH,
-                    })
-                )
-                .catch(() => undefined);
-        } else if (ACTIVE_STORAGE_PROVIDER === "supabase" && supabaseServer) {
-            await supabaseServer.storage
-                .from(DEMO_STORAGE_BUCKET)
-                .remove([DEMO_CONFIG_PATH])
-                .catch(() => undefined);
-        } else {
-            await fs.unlink(CONFIG_PATH).catch(() => undefined);
-        }
-
-        return NextResponse.json({ source: "youtube", youtubeVideoId: "oMcy-bTjvJ0" });
+        // Reset all — delete every video asset + manifest
+        await deleteAllVideoAssets();
+        return NextResponse.json({ videos: [] });
     } catch (error) {
-        console.error("Demo video reset failed:", error);
-        return NextResponse.json({ error: "Failed to reset demo video" }, { status: 500 });
+        console.error("Demo video delete failed:", error);
+        return NextResponse.json({ error: "Failed to delete demo video" }, { status: 500 });
     }
 }

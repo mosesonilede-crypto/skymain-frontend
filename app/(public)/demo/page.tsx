@@ -1,32 +1,33 @@
 "use client";
 
 /**
- * Demo page - Watch SkyMaintain product demo video
- * Updated: 2026-02-17 - Fixed redirect issue
+ * Demo page - Watch SkyMaintain product demo videos
+ * Updated: 2026-06-30 - Multi-video gallery support
  */
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const DEFAULT_YOUTUBE_VIDEO_ID = "oMcy-bTjvJ0";
 
-type DemoVideoApiResponse =
-    | {
-        source: "upload";
-        videoUrl: string;
-        fileName?: string;
-    }
-    | {
-        source: "youtube";
-        youtubeVideoId: string;
-    };
+type DemoVideoEntry = {
+    id: string;
+    source: "upload";
+    videoUrl: string;
+    fileName?: string;
+    title?: string;
+};
+
+type DemoVideosApiResponse = {
+    videos: DemoVideoEntry[];
+};
 
 export default function DemoPage() {
+    const [videos, setVideos] = useState<DemoVideoEntry[]>([]);
+    const [activeIndex, setActiveIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [videoId, setVideoId] = useState(DEFAULT_YOUTUBE_VIDEO_ID);
-    const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
-    const [uploadedVideoFileName, setUploadedVideoFileName] = useState<string | null>(null);
+    const [videoId] = useState(DEFAULT_YOUTUBE_VIDEO_ID);
 
     useEffect(() => {
         let cancelled = false;
@@ -35,23 +36,13 @@ export default function DemoPage() {
             try {
                 const response = await fetch("/api/admin/demo-video");
                 if (!response.ok) return;
-                const data = (await response.json()) as DemoVideoApiResponse;
+                const data = (await response.json()) as DemoVideosApiResponse;
                 if (cancelled) return;
 
-                if (data.source === "upload") {
-                    setUploadedVideoUrl(data.videoUrl);
-                    setUploadedVideoFileName(data.fileName || null);
-                    return;
-                }
-
-                setUploadedVideoUrl(null);
-                setUploadedVideoFileName(null);
-                setVideoId(data.youtubeVideoId || DEFAULT_YOUTUBE_VIDEO_ID);
+                setVideos(data.videos || []);
             } catch {
                 if (cancelled) return;
-                setUploadedVideoUrl(null);
-                setUploadedVideoFileName(null);
-                setVideoId(DEFAULT_YOUTUBE_VIDEO_ID);
+                setVideos([]);
             }
         }
 
@@ -61,6 +52,13 @@ export default function DemoPage() {
             cancelled = true;
         };
     }, []);
+
+    const handleVideoSelect = useCallback((index: number) => {
+        setActiveIndex(index);
+    }, []);
+
+    const activeVideo = videos.length > 0 ? videos[activeIndex] || videos[0] : null;
+    const hasUploadedVideos = videos.length > 0;
 
     const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
     const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
@@ -92,21 +90,22 @@ export default function DemoPage() {
             {/* Video Section */}
             <section className="mx-auto max-w-5xl px-8 pb-16">
                 <div className="relative overflow-hidden rounded-2xl bg-slate-900 shadow-2xl">
-                    {/* Video Container with 16:9 Aspect Ratio */}
+                    {/* Main Video Player with 16:9 Aspect Ratio */}
                     <div className="relative aspect-video w-full">
-                        {uploadedVideoUrl ? (
+                        {activeVideo ? (
                             <video
-                                src={uploadedVideoUrl}
+                                key={activeVideo.id}
+                                src={activeVideo.videoUrl}
                                 controls
+                                autoPlay
                                 className="absolute inset-0 h-full w-full"
                             />
                         ) : !isPlaying ? (
-                            /* Thumbnail with Play Button */
+                            /* YouTube Thumbnail with Play Button (fallback) */
                             <div
                                 className="absolute inset-0 cursor-pointer group"
                                 onClick={() => setIsPlaying(true)}
                             >
-                                {/* YouTube Thumbnail */}
                                 <Image
                                     src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
                                     alt="SkyMaintain Demo Video"
@@ -119,9 +118,7 @@ export default function DemoPage() {
                                         target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
                                     }}
                                 />
-                                {/* Overlay */}
                                 <div className="absolute inset-0 bg-black/30 transition-colors group-hover:bg-black/40" />
-                                {/* Play Button */}
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/95 shadow-lg transition-transform group-hover:scale-110">
                                         <svg className="ml-1 h-8 w-8 text-slate-900" fill="currentColor" viewBox="0 0 24 24">
@@ -129,13 +126,12 @@ export default function DemoPage() {
                                         </svg>
                                     </div>
                                 </div>
-                                {/* Duration Badge */}
                                 <div className="absolute bottom-4 right-4 rounded bg-black/70 px-2 py-1 text-sm font-medium text-white">
                                     Watch Demo
                                 </div>
                             </div>
                         ) : (
-                            /* YouTube Embed */
+                            /* YouTube Embed (fallback) */
                             <iframe
                                 src={`${embedUrl}&autoplay=1`}
                                 title="SkyMaintain Demo Video"
@@ -147,9 +143,77 @@ export default function DemoPage() {
                     </div>
                 </div>
 
+                {/* Active Video Title */}
+                {activeVideo && (
+                    <div className="mt-4 text-center">
+                        <h2 className="text-lg font-semibold text-slate-900">
+                            {activeVideo.title || activeVideo.fileName || "Demo Video"}
+                        </h2>
+                    </div>
+                )}
+
+                {/* Video Gallery Selector — only shown when multiple videos exist */}
+                {videos.length > 1 && (
+                    <div className="mt-6">
+                        <h3 className="mb-3 text-sm font-semibold text-slate-700 text-center">
+                            More Demo Videos ({videos.length})
+                        </h3>
+                        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                            {videos.map((video, index) => (
+                                <button
+                                    key={video.id}
+                                    type="button"
+                                    onClick={() => handleVideoSelect(index)}
+                                    className={`group relative overflow-hidden rounded-xl border-2 text-left transition-all ${
+                                        index === activeIndex
+                                            ? "border-blue-500 ring-2 ring-blue-200 shadow-md"
+                                            : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                                    }`}
+                                >
+                                    {/* Mini thumbnail — uses video poster or a play overlay */}
+                                    <div className="relative aspect-video w-full bg-slate-900">
+                                        <video
+                                            src={video.videoUrl}
+                                            preload="metadata"
+                                            muted
+                                            className="h-full w-full object-cover"
+                                        />
+                                        {/* Play Overlay */}
+                                        <div className={`absolute inset-0 flex items-center justify-center transition-colors ${
+                                            index === activeIndex ? "bg-blue-500/20" : "bg-black/30 group-hover:bg-black/20"
+                                        }`}>
+                                            {index === activeIndex ? (
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 shadow">
+                                                    <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                </div>
+                                            ) : (
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 shadow group-hover:scale-110 transition-transform">
+                                                    <svg className="ml-0.5 h-4 w-4 text-slate-900" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M8 5v14l11-7z" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Title */}
+                                    <div className="px-3 py-2">
+                                        <p className={`text-xs font-medium truncate ${
+                                            index === activeIndex ? "text-blue-700" : "text-slate-700"
+                                        }`}>
+                                            {video.title || video.fileName || `Video ${index + 1}`}
+                                        </p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Video Actions */}
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-                    {!uploadedVideoUrl && (
+                    {!hasUploadedVideos && (
                         <a
                             href={watchUrl}
                             target="_blank"
@@ -164,7 +228,8 @@ export default function DemoPage() {
                     )}
                     <button
                         onClick={() => {
-                            navigator.clipboard.writeText(uploadedVideoUrl || watchUrl);
+                            const link = activeVideo?.videoUrl || watchUrl;
+                            navigator.clipboard.writeText(link);
                             alert("Link copied to clipboard!");
                         }}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
@@ -175,11 +240,6 @@ export default function DemoPage() {
                         Copy Link
                     </button>
                 </div>
-                {uploadedVideoUrl && uploadedVideoFileName && (
-                    <p className="mt-3 text-center text-xs text-slate-500">
-                        Current uploaded demo: {uploadedVideoFileName}
-                    </p>
-                )}
             </section>
 
             {/* What You'll See Section */}
