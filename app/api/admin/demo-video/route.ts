@@ -17,6 +17,7 @@ type SessionPayload = {
 type DemoVideoConfig = {
     source: "upload";
     videoUrl: string;
+    storagePath?: string;
     fileName: string;
     mimeType: string;
     updatedAt: string;
@@ -34,9 +35,47 @@ const ALLOWED_MIME_TYPES = new Set([
 const DEMO_STORAGE_BUCKET = process.env.SKYMAINTAIN_DEMO_VIDEO_BUCKET || "demo-media";
 const DEMO_VIDEO_PREFIX = "demo-videos";
 const DEMO_CONFIG_PATH = `${DEMO_VIDEO_PREFIX}/current.json`;
+const DEMO_SIGNED_URL_TTL_SECONDS = 60 * 60;
 const PUBLIC_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "demo");
 const PRIVATE_CONFIG_DIR = path.join(process.cwd(), ".runtime-data");
 const CONFIG_PATH = path.join(PRIVATE_CONFIG_DIR, "demo-video.json");
+
+async function ensureDemoBucket(): Promise<void> {
+    if (!supabaseServer) return;
+
+    try {
+        const { data, error } = await supabaseServer.storage.listBuckets();
+        if (!error && data?.some((bucket) => bucket.name === DEMO_STORAGE_BUCKET)) {
+            return;
+        }
+    } catch {
+        // Continue and try create below.
+    }
+
+    const { error: createError } = await supabaseServer.storage.createBucket(DEMO_STORAGE_BUCKET, {
+        public: true,
+        fileSizeLimit: `${MAX_VIDEO_BYTES}`,
+        allowedMimeTypes: [...ALLOWED_MIME_TYPES],
+    });
+
+    if (createError && !/already exists|duplicate/i.test(createError.message || "")) {
+        throw new Error(createError.message || "Failed to initialize demo media bucket");
+    }
+}
+
+async function resolvePlayableUrl(config: DemoVideoConfig): Promise<string> {
+    if (!supabaseServer || !config.storagePath) return config.videoUrl;
+
+    const { data, error } = await supabaseServer.storage
+        .from(DEMO_STORAGE_BUCKET)
+        .createSignedUrl(config.storagePath, DEMO_SIGNED_URL_TTL_SECONDS);
+
+    if (!error && data?.signedUrl) {
+        return data.signedUrl;
+    }
+
+    return config.videoUrl;
+}
 
 function getSession(req: NextRequest): SessionPayload | null {
     const token = req.cookies.get(SESSION_COOKIE)?.value;
@@ -50,6 +89,7 @@ function getSession(req: NextRequest): SessionPayload | null {
 async function readConfig(): Promise<DemoVideoConfig | null> {
     if (supabaseServer) {
         try {
+            await ensureDemoBucket();
             const { data, error } = await supabaseServer.storage
                 .from(DEMO_STORAGE_BUCKET)
                 .download(DEMO_CONFIG_PATH);
@@ -65,7 +105,9 @@ async function readConfig(): Promise<DemoVideoConfig | null> {
                     typeof parsed.updatedAt === "string" &&
                     typeof parsed.updatedBy === "string"
                 ) {
-                    return parsed as DemoVideoConfig;
+                    const resolved = parsed as DemoVideoConfig;
+                    resolved.videoUrl = await resolvePlayableUrl(resolved);
+                    return resolved;
                 }
             }
         } catch {
@@ -94,6 +136,7 @@ async function readConfig(): Promise<DemoVideoConfig | null> {
 
 async function writeConfig(config: DemoVideoConfig): Promise<void> {
     if (supabaseServer) {
+        await ensureDemoBucket();
         const payload = JSON.stringify(config, null, 2);
         const { error } = await supabaseServer.storage
             .from(DEMO_STORAGE_BUCKET)
@@ -116,6 +159,7 @@ async function writeConfig(config: DemoVideoConfig): Promise<void> {
 async function deleteOldUploadedVideos(exceptName: string): Promise<void> {
     if (supabaseServer) {
         try {
+            await ensureDemoBucket();
             const { data } = await supabaseServer.storage
                 .from(DEMO_STORAGE_BUCKET)
                 .list(DEMO_VIDEO_PREFIX, { limit: 100, sortBy: { column: "name", order: "asc" } });
@@ -210,6 +254,7 @@ export async function POST(req: NextRequest) {
         let videoUrl = `/uploads/demo/${targetName}`;
 
         if (supabaseServer) {
+            await ensureDemoBucket();
             const { error: uploadError } = await supabaseServer.storage
                 .from(DEMO_STORAGE_BUCKET)
                 .upload(targetPath, fileBuffer, {
@@ -221,15 +266,15 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: uploadError.message || "Failed to upload demo video" }, { status: 500 });
             }
 
-            const { data: publicData } = supabaseServer.storage
+            const { data: signedData, error: signedError } = await supabaseServer.storage
                 .from(DEMO_STORAGE_BUCKET)
-                .getPublicUrl(targetPath);
+                .createSignedUrl(targetPath, DEMO_SIGNED_URL_TTL_SECONDS);
 
-            if (!publicData?.publicUrl) {
-                return NextResponse.json({ error: "Failed to resolve uploaded video URL" }, { status: 500 });
+            if (signedError || !signedData?.signedUrl) {
+                return NextResponse.json({ error: signedError?.message || "Failed to resolve uploaded video URL" }, { status: 500 });
             }
 
-            videoUrl = publicData.publicUrl;
+            videoUrl = signedData.signedUrl;
         } else {
             await fs.mkdir(PUBLIC_UPLOAD_DIR, { recursive: true });
             const outputPath = path.join(PUBLIC_UPLOAD_DIR, targetName);
@@ -241,6 +286,7 @@ export async function POST(req: NextRequest) {
         const config: DemoVideoConfig = {
             source: "upload",
             videoUrl,
+            storagePath: supabaseServer ? targetPath : undefined,
             fileName: uploaded.name,
             mimeType: uploaded.type,
             updatedAt: new Date().toISOString(),
@@ -262,16 +308,15 @@ export async function DELETE(req: NextRequest) {
 
     try {
         const config = await readConfig();
-        if (config?.videoUrl) {
+        if (config) {
             if (supabaseServer) {
-                const normalizedPath = config.videoUrl.startsWith("http")
-                    ? new URL(config.videoUrl).pathname
-                    : config.videoUrl;
-                const fileName = path.basename(normalizedPath);
-                await supabaseServer.storage
-                    .from(DEMO_STORAGE_BUCKET)
-                    .remove([`${DEMO_VIDEO_PREFIX}/${fileName}`])
-                    .catch(() => undefined);
+                await ensureDemoBucket();
+                if (config.storagePath) {
+                    await supabaseServer.storage
+                        .from(DEMO_STORAGE_BUCKET)
+                        .remove([config.storagePath])
+                        .catch(() => undefined);
+                }
             } else {
                 const fileName = path.basename(config.videoUrl);
                 await fs.unlink(path.join(PUBLIC_UPLOAD_DIR, fileName)).catch(() => undefined);
