@@ -63,7 +63,7 @@ export async function GET(
         const aircraftReg = reg.toUpperCase();
 
         // Return mock data when ACMS integration isn't configured
-        if (error instanceof IntegrationNotConfiguredError || allowMockFallback()) {
+        if (error instanceof IntegrationNotConfiguredError && allowMockFallback()) {
             const mockData = generateMockAlerts(aircraftReg);
             return NextResponse.json({
                 alerts: mockData.alerts,

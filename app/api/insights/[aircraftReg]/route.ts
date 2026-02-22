@@ -74,12 +74,13 @@ export async function GET(
     const { aircraftReg: reg } = await params;
     const aircraftReg = reg.toUpperCase();
     const rand = seededRandom(aircraftReg);
+    const canUseFallback = allowMockFallback();
 
     try {
         const data = await fetchInsights(aircraftReg);
 
-        // Augment live data with analytics if not already present
-        if (!data.analytics) {
+        // Only augment with synthetic analytics when fallback mode is explicitly enabled
+        if (!data.analytics && canUseFallback) {
             data.analytics = {
                 modelStats: {
                     accuracy: Math.round((91 + rand() * 6) * 10) / 10,
@@ -106,7 +107,7 @@ export async function GET(
             headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
         });
     } catch (error) {
-        if (error instanceof IntegrationNotConfiguredError && allowMockFallback()) {
+        if (error instanceof IntegrationNotConfiguredError && canUseFallback) {
             return NextResponse.json(
                 {
                     predictiveAlert: null,
