@@ -45,6 +45,7 @@ type NotificationItem = {
 
 export default function DashboardPage() {
     const { selectedAircraft, setSelectedAircraft, allAircraft } = useAircraft();
+    const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.skymaintain.ai").replace(/\/+$/, "");
     const hasAircraft = Boolean(selectedAircraft);
     const [showAircraftMenu, setShowAircraftMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -66,7 +67,7 @@ export default function DashboardPage() {
                 setIntegrationMessage(null);
                 const [dashResponse, notifResponse] = await Promise.all([
                     fetch(`/api/dashboard/${selectedAircraft.registration}`),
-                    fetch("/bridge/notifications"),
+                    fetch(`${apiBase}/v1/acms/notifications`),
                 ]);
 
                 if (cancelled) return;

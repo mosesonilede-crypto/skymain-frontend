@@ -56,6 +56,7 @@ type InsightsData = {
 
 export default function AIInsightsPage() {
     const { selectedAircraft } = useAircraft();
+    const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.skymaintain.ai").replace(/\/+$/, "");
     const [advancedOpen, setAdvancedOpen] = useState(false);
     const [modelInfoOpen, setModelInfoOpen] = useState(false);
     const [insightsData, setInsightsData] = useState<InsightsData | null>(null);
@@ -67,7 +68,7 @@ export default function AIInsightsPage() {
 
         try {
             setIntegrationMessage(null);
-            const response = await fetch(`/bridge/insights/${selectedAircraft.registration}`);
+            const response = await fetch(`${apiBase}/v1/acms/aircraft/${selectedAircraft.registration}/insights`);
             if (response.status === 503) {
                 const data = await response.json().catch(() => ({}));
                 setIntegrationMessage(

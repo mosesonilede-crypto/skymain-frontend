@@ -372,6 +372,7 @@ function AlertCard({ alert, onViewDetails }: { alert: PredictedAlert; onViewDeta
 
 export default function PredictiveAlertsPage() {
     const { selectedAircraft, allAircraft, setSelectedAircraft } = useAircraft();
+    const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.skymaintain.ai").replace(/\/+$/, "");
     const [alerts, setAlerts] = useState<PredictedAlert[]>([]);
     const [filter, setFilter] = useState<"all" | "critical" | "warning" | "info">("all");
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -396,7 +397,7 @@ export default function PredictiveAlertsPage() {
         setError(null);
 
         try {
-            const response = await fetch(`/bridge/alerts/${selectedAircraft.registration}`);
+            const response = await fetch(`${apiBase}/v1/acms/aircraft/${selectedAircraft.registration}/alerts`);
             if (!response.ok) {
                 throw new Error("Unable to load alerts from the live service.");
             }
@@ -434,7 +435,7 @@ export default function PredictiveAlertsPage() {
         try {
             const results = await Promise.all(allAircraft.map(async (aircraft) => {
                 try {
-                    const response = await fetch(`/bridge/alerts/${aircraft.registration}`);
+                    const response = await fetch(`${apiBase}/v1/acms/aircraft/${aircraft.registration}/alerts`);
                     if (!response.ok) {
                         throw new Error("Alert fetch failed");
                     }
