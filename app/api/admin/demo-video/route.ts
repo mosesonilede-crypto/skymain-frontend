@@ -627,7 +627,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(config);
     } catch (error) {
         console.error("Demo video upload failed:", error);
-        return NextResponse.json({ error: "Failed to upload demo video" }, { status: 500 });
+        const message = error instanceof Error && error.message ? error.message : "Failed to upload demo video";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }
 
