@@ -134,10 +134,26 @@ async function registerAircraftLive(form: RegisterAircraftForm): Promise<void> {
 }
 
 async function addUserLive(form: { name: string; email: string; role: string; status: string }): Promise<void> {
-    // User management API not yet implemented - this is a placeholder
-    // In production, this would call /api/admin/users
-    console.log("Add user:", form);
-    throw new Error("User management is not yet available. Please contact your administrator.");
+    const res = await fetch("/api/admin/users", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(form),
+    });
+
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({} as Record<string, unknown>));
+        if (data.code === "TEAM_MEMBER_LIMIT_REACHED") {
+            const currentCount = typeof data.currentCount === "number" ? data.currentCount : null;
+            const maxTeamMembers = typeof data.maxTeamMembers === "number" ? data.maxTeamMembers : null;
+            throw new Error(
+                currentCount !== null && maxTeamMembers !== null
+                    ? `Team member limit reached for your current plan (${currentCount}/${maxTeamMembers}). Upgrade your plan to add more users.`
+                    : "Team member limit reached for your current plan. Upgrade your plan to add more users."
+            );
+        }
+        throw new Error(typeof data.error === "string" ? data.error : `Failed to add user: ${res.status}`);
+    }
 }
 
 async function updateUserLive(userId: string, updates: Partial<AdminUser>): Promise<void> {
