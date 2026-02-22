@@ -1,7 +1,34 @@
+"use client";
+
+import Link from "next/link";
 import BackToHub from "@/components/app/BackToHub";
 import { INGESTION_CONTRACTS } from "@/lib/ingestion/contracts";
+import { useEntitlements } from "@/lib/useEntitlements";
 
 export default function IngestionContractsPage() {
+    const { entitlements } = useEntitlements();
+    const hasApiAccess = entitlements.features.api_access_level !== "none";
+
+    if (!hasApiAccess) {
+        return (
+            <section className="flex flex-col gap-6">
+                <BackToHub title="Ingestion Contracts" />
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Ingestion Contracts</h1>
+                    <p className="mt-2 text-sm text-slate-600">
+                        API and ingestion access are available on Professional and Enterprise plans.
+                    </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-700">
+                    <div>Ingestion Contracts is locked on your current subscription.</div>
+                    <Link href="/app/subscription-billing" className="mt-3 inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">
+                        Upgrade Plan
+                    </Link>
+                </div>
+            </section>
+        );
+    }
+
     return (
         <section className="flex flex-col gap-6">
             <BackToHub title="Ingestion Contracts" />

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
+import Link from "next/link";
 import BackToHub from "@/components/app/BackToHub";
 import { useAircraft } from "@/lib/AircraftContext";
 import { useEntitlements } from "@/lib/useEntitlements";
@@ -66,6 +67,7 @@ export default function AIInsightsPage() {
     const [hasLoadedInsights, setHasLoadedInsights] = useState(false);
     const { entitlements, loading: entitlementsLoading } = useEntitlements();
     const hasAdvancedInsights = entitlements.features.advanced_ai_insights;
+    const showUpgradeBanner = !entitlementsLoading && !hasAdvancedInsights;
 
     useEffect(() => {
         if (!entitlementsLoading && !hasAdvancedInsights) {
@@ -181,6 +183,14 @@ export default function AIInsightsPage() {
                 <h1 className="text-2xl font-semibold tracking-tight text-slate-900">AI Insights</h1>
                 {integrationMessage ? (
                     <p className="mt-2 text-sm text-slate-600">{integrationMessage}</p>
+                ) : null}
+                {showUpgradeBanner ? (
+                    <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                        <div>Advanced AI Insights is available on Professional and Enterprise plans.</div>
+                        <Link href="/app/subscription-billing" className="mt-2 inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">
+                            Upgrade Plan
+                        </Link>
+                    </div>
                 ) : null}
             </div>
 

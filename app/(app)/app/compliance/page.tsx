@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAircraft } from "@/lib/AircraftContext";
 import { useEntitlements } from "@/lib/useEntitlements";
@@ -327,6 +328,11 @@ export default function RegulatoryCompliancePage() {
                 {!canCreateComplianceTasks ? (
                     <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
                         Compliance task creation requires Professional or Enterprise.
+                        <div className="mt-2">
+                            <Link href="/app/subscription-billing" className="inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">
+                                Upgrade Plan
+                            </Link>
+                        </div>
                     </div>
                 ) : null}
                 {error ? (
