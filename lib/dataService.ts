@@ -217,8 +217,8 @@ export const DEFAULT_MOCK_AIRCRAFT: Aircraft[] = [
  * Fetch aircraft list - will use live API when configured
  */
 export async function fetchAircraftList(): Promise<{ aircraft: Aircraft[]; source: "live" | "mock" }> {
-    const result = await fetchWithFallback<{ aircraft: Aircraft[] }>(
-        "/api/v1/aircraft",
+    const result = await fetchFromInternalApi<{ aircraft: Aircraft[] }>(
+        "/api/aircraft",
         { aircraft: DEFAULT_MOCK_AIRCRAFT }
     );
     return { aircraft: result.data.aircraft || DEFAULT_MOCK_AIRCRAFT, source: result.source };
@@ -229,11 +229,9 @@ export async function fetchAircraftList(): Promise<{ aircraft: Aircraft[]; sourc
  */
 export async function fetchAircraftDetails(registration: string): Promise<{ aircraft: Aircraft | null; source: "live" | "mock" }> {
     const mockAircraft = DEFAULT_MOCK_AIRCRAFT.find(a => a.registration === registration) || null;
-    const result = await fetchWithFallback<{ aircraft: Aircraft | null }>(
-        `/api/v1/aircraft/${registration}`,
-        { aircraft: mockAircraft }
-    );
-    return { aircraft: result.data.aircraft, source: result.source };
+    const list = await fetchAircraftList();
+    const liveAircraft = list.aircraft.find(a => a.registration === registration) || null;
+    return { aircraft: liveAircraft || mockAircraft, source: list.source };
 }
 
 /**
@@ -241,7 +239,6 @@ export async function fetchAircraftDetails(registration: string): Promise<{ airc
  */
 export async function addAircraft(aircraft: Omit<Aircraft, "id">): Promise<{ aircraft: Aircraft | null; success: boolean; error?: string }> {
     const mode = getDataMode();
-    const baseUrl = getApiBaseUrl();
 
     if (mode === "mock") {
         // In mock mode, simulate success but don't persist
@@ -252,16 +249,8 @@ export async function addAircraft(aircraft: Omit<Aircraft, "id">): Promise<{ air
         };
     }
 
-    if (!baseUrl) {
-        return {
-            aircraft: null,
-            success: false,
-            error: "API base URL not configured",
-        };
-    }
-
     try {
-        const response = await fetch(`${baseUrl}/api/v1/aircraft`, {
+        const response = await fetch(`/api/aircraft`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(aircraft),
