@@ -1,16 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
-
-// Figma assets (node 39:9933)
-const imgIconShield = "https://www.figma.com/api/mcp/asset/e9c54529-26d3-44ab-95bb-446402b1b374";
-const imgIconCheck = "https://www.figma.com/api/mcp/asset/182a380c-5596-4a84-a802-57fbd5cbc6a9";
-const imgIconCheckCircle = "https://www.figma.com/api/mcp/asset/c64cb6c3-1469-4f3d-8146-ffadbfa8a6b8";
-const imgIconWarning = "https://www.figma.com/api/mcp/asset/b757244b-48a6-44a5-8f70-400c7c32a907";
-const imgIconXCircle = "https://www.figma.com/api/mcp/asset/39cf5d38-2ace-44c4-ba41-f91975751dbf";
-const imgIconShieldWhite = "https://www.figma.com/api/mcp/asset/be7fb4e0-073e-4e65-a8e6-b4a263258624";
-const imgVector = "https://www.figma.com/api/mcp/asset/fb39c72f-69ba-43a9-9b5a-cd49ea8e7f79";
-const imgVectorLarge = "https://www.figma.com/api/mcp/asset/5bb99f75-3d46-4afc-91d4-a536b320c713";
-const imgIconArrow = "https://www.figma.com/api/mcp/asset/e5d59cbd-733c-472e-a044-eccc42ea1351";
+import { ArrowLeft, Check, CheckCircle2, Shield, TriangleAlert, XCircle } from "lucide-react";
 
 export const metadata = {
     title: "Compliance Statement | SkyMaintain",
@@ -159,14 +148,7 @@ export default async function CompliancePage() {
                                 boxShadow: "0px 10px 15px rgba(0,0,0,0.1), 0px 4px 6px rgba(0,0,0,0.1)",
                             }}
                         >
-                            <Image
-                                src={imgVectorLarge}
-                                alt="SkyMaintain"
-                                width={28}
-                                height={28}
-                                unoptimized
-                                style={{ width: "28px", height: "28px" }}
-                            />
+                            <Shield size={28} color="#ffffff" strokeWidth={2.5} />
                         </div>
                         <div style={{ height: "47.975px" }}>
                             <p
@@ -190,14 +172,7 @@ export default async function CompliancePage() {
                         className="flex items-center transition-colors hover:bg-gray-100"
                         style={{ height: "36px", borderRadius: "8px", paddingLeft: "12px", paddingRight: "12px" }}
                     >
-                        <Image
-                            src={imgIconArrow}
-                            alt=""
-                            width={16}
-                            height={16}
-                            unoptimized
-                            style={{ width: "16px", height: "16px" }}
-                        />
+                        <ArrowLeft size={16} color="#364153" />
                         <span
                             className="text-center"
                             style={{ color: "#364153", fontSize: "14px", lineHeight: "20px", marginLeft: "8px" }}
@@ -222,14 +197,7 @@ export default async function CompliancePage() {
                 <div className="relative w-full" style={{ height: "306.6px" }}>
                     {/* Shield Icon - 80px, centered */}
                     <div className="flex justify-center w-full">
-                        <Image
-                            src={imgIconShield}
-                            alt=""
-                            width={80}
-                            height={80}
-                            unoptimized
-                            style={{ width: "80px", height: "80px" }}
-                        />
+                        <Shield size={80} color="#155dfc" strokeWidth={1.75} />
                     </div>
 
                     {/* Compliance Statement Badge - 24px top margin */}
@@ -325,7 +293,7 @@ export default async function CompliancePage() {
                             }}
                         >
                             <div className="flex items-center gap-3">
-                                <Image src={imgIconCheck} alt="" width={32} height={32} unoptimized style={{ width: "32px", height: "32px" }} />
+                                <Check size={32} color="#00a63e" strokeWidth={2.5} />
                                 <span className="font-bold" style={{ color: "#101828", fontSize: "18px", lineHeight: "28px" }}>
                                     {payload.keyPrinciples[0]}
                                 </span>
@@ -345,7 +313,7 @@ export default async function CompliancePage() {
                             }}
                         >
                             <div className="flex items-center gap-3">
-                                <Image src={imgIconCheck} alt="" width={32} height={32} unoptimized style={{ width: "32px", height: "32px" }} />
+                                <Check size={32} color="#00a63e" strokeWidth={2.5} />
                                 <span className="font-bold" style={{ color: "#101828", fontSize: "18px", lineHeight: "28px" }}>
                                     {payload.keyPrinciples[1]}
                                 </span>
@@ -366,7 +334,7 @@ export default async function CompliancePage() {
                             }}
                         >
                             <div className="flex items-center gap-3">
-                                <Image src={imgIconCheck} alt="" width={32} height={32} unoptimized style={{ width: "32px", height: "32px" }} />
+                                <Check size={32} color="#00a63e" strokeWidth={2.5} />
                                 <span className="font-bold" style={{ color: "#101828", fontSize: "18px", lineHeight: "28px" }}>
                                     {payload.keyPrinciples[2]}
                                 </span>
@@ -386,7 +354,7 @@ export default async function CompliancePage() {
                             }}
                         >
                             <div className="flex items-center gap-3">
-                                <Image src={imgIconCheck} alt="" width={32} height={32} unoptimized style={{ width: "32px", height: "32px" }} />
+                                <Check size={32} color="#00a63e" strokeWidth={2.5} />
                                 <span className="font-bold" style={{ color: "#101828", fontSize: "18px", lineHeight: "28px" }}>
                                     {payload.keyPrinciples[3]}
                                 </span>
@@ -425,14 +393,7 @@ export default async function CompliancePage() {
                         <div className="flex flex-col items-start" style={{ gap: "16px" }}>
                             {payload.regulatoryAlignmentBullets.map((item, idx) => (
                                 <div key={idx} className="flex items-center" style={{ gap: "12px" }}>
-                                    <Image
-                                        src={imgIconCheckCircle}
-                                        alt=""
-                                        width={24}
-                                        height={24}
-                                        unoptimized
-                                        style={{ width: "24px", height: "24px" }}
-                                    />
+                                    <CheckCircle2 size={24} color="#00a63e" strokeWidth={2.25} />
                                     <span style={{ color: "#364153", fontSize: "18px", lineHeight: "28px" }}>
                                         {item}
                                     </span>
@@ -466,14 +427,7 @@ export default async function CompliancePage() {
                             className="absolute flex items-start"
                             style={{ left: "32px", top: "32px", gap: "16px" }}
                         >
-                            <Image
-                                src={imgIconWarning}
-                                alt=""
-                                width={32}
-                                height={32}
-                                unoptimized
-                                style={{ width: "32px", height: "32px" }}
-                            />
+                            <TriangleAlert size={32} color="#d97706" strokeWidth={2.25} />
                             <p
                                 className="font-bold"
                                 style={{ color: "#101828", fontSize: "20px", lineHeight: "28px" }}
@@ -489,14 +443,7 @@ export default async function CompliancePage() {
                         >
                             {payload.importantNoticeBullets.map((item, idx) => (
                                 <div key={idx} className="flex items-center" style={{ gap: "12px" }}>
-                                    <Image
-                                        src={imgIconXCircle}
-                                        alt=""
-                                        width={24}
-                                        height={24}
-                                        unoptimized
-                                        style={{ width: "24px", height: "24px" }}
-                                    />
+                                    <XCircle size={24} color="#dc2626" strokeWidth={2.25} />
                                     <span style={{ color: "#364153", fontSize: "18px", lineHeight: "28px" }}>
                                         {item}
                                     </span>
@@ -521,14 +468,7 @@ export default async function CompliancePage() {
                         className="absolute"
                         style={{ left: "50%", transform: "translateX(-50%)", top: "40px" }}
                     >
-                        <Image
-                            src={imgIconShieldWhite}
-                            alt=""
-                            width={64}
-                            height={64}
-                            unoptimized
-                            style={{ width: "64px", height: "64px" }}
-                        />
+                        <Shield size={64} color="#ffffff" strokeWidth={2} />
                     </div>
 
                     {/* Line 1 */}
@@ -580,14 +520,7 @@ export default async function CompliancePage() {
                             borderRadius: "10px",
                         }}
                     >
-                        <Image
-                            src={imgVector}
-                            alt="SkyMaintain"
-                            width={20}
-                            height={20}
-                            unoptimized
-                            style={{ width: "20px", height: "20px" }}
-                        />
+                        <Shield size={20} color="#ffffff" strokeWidth={2.5} />
                     </div>
                     <span
                         className="font-bold text-center"
