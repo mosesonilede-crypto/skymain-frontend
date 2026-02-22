@@ -296,7 +296,7 @@ export default function RegulatoryCompliancePage() {
         () => [
             { label: "FAA Safety Alerts", href: "https://www.faa.gov/aircraft/safety/alerts" },
             { label: "EASA Safety Management", href: "https://www.easa.europa.eu/en/domains/safety-management" },
-            { label: "ICAO Safety Standards", href: "https://www.icao.int/safety/" },
+            { label: "ICAO Safety Standards", href: "https://www.icao.int/safety-management/standards-and-recommended-practices-sarps" },
         ],
         []
     );
