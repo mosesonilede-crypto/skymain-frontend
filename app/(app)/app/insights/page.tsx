@@ -61,28 +61,73 @@ export default function AIInsightsPage() {
     const [modelInfoOpen, setModelInfoOpen] = useState(false);
     const [insightsData, setInsightsData] = useState<InsightsData | null>(null);
     const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
+    const [isInsightsLoading, setIsInsightsLoading] = useState(false);
+    const [hasLoadedInsights, setHasLoadedInsights] = useState(false);
 
     // Fetch live insights data
     async function fetchInsightsData() {
-        if (!selectedAircraft?.registration) return;
+        if (!selectedAircraft?.registration) {
+            setInsightsData(null);
+            setHasLoadedInsights(false);
+            setIsInsightsLoading(false);
+            return;
+        }
+
+        const registration = selectedAircraft.registration.toUpperCase();
+        const candidates = [
+            `/api/insights/${registration}`,
+            `${apiBase}/v1/acms/aircraft/${registration}/insights`,
+        ];
+
+        const timeoutMs = 8000;
 
         try {
             setIntegrationMessage(null);
-            const response = await fetch(`${apiBase}/v1/acms/aircraft/${selectedAircraft.registration}/insights`);
-            if (response.status === 503) {
-                const data = await response.json().catch(() => ({}));
-                setIntegrationMessage(
-                    data?.error || "AI insights are unavailable until the ACMS integration is configured."
-                );
-                setInsightsData(null);
-                return;
+            setIsInsightsLoading(true);
+
+            for (const url of candidates) {
+                try {
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+                    const response = await fetch(url, { signal: controller.signal });
+                    clearTimeout(timeout);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        setInsightsData(data);
+                        setHasLoadedInsights(true);
+                        setIntegrationMessage(null);
+                        return;
+                    }
+
+                    if (response.status === 404) {
+                        setInsightsData({});
+                        setHasLoadedInsights(true);
+                        setIntegrationMessage("No AI insights are available yet for this aircraft.");
+                        return;
+                    }
+
+                    if (response.status === 502 || response.status === 503) {
+                        const data = await response.json().catch(() => ({}));
+                        setIntegrationMessage(
+                            data?.error || "Analytics data is temporarily unavailable."
+                        );
+                    }
+                } catch {
+                    // Try next endpoint candidate
+                }
             }
-            if (response.ok) {
-                const data = await response.json();
-                setInsightsData(data);
-            }
+
+            setInsightsData({});
+            setHasLoadedInsights(true);
+            setIntegrationMessage("Analytics data is temporarily unavailable. Please refresh shortly.");
         } catch (error) {
             console.error("Error fetching insights:", error);
+            setInsightsData({});
+            setHasLoadedInsights(true);
+            setIntegrationMessage("Analytics data is temporarily unavailable. Please refresh shortly.");
+        } finally {
+            setIsInsightsLoading(false);
         }
     }
 
@@ -210,10 +255,14 @@ export default function AIInsightsPage() {
 
                 {advancedOpen && insightsData?.analytics ? (
                     <AdvancedAnalytics analytics={insightsData.analytics} />
-                ) : advancedOpen ? (
+                ) : advancedOpen && isInsightsLoading ? (
                     <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500 text-center">
                         <LoadingSpinner />
                         <span className="ml-2">Loading analytics data…</span>
+                    </div>
+                ) : advancedOpen && hasLoadedInsights ? (
+                    <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500 text-center">
+                        Analytics data is currently unavailable for this aircraft.
                     </div>
                 ) : null}
             </div>

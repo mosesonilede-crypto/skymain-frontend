@@ -124,11 +124,17 @@ export async function GET(
 
             return NextResponse.json(
                 {
+                    predictiveAlert: null,
+                    systemMetrics: [],
+                    analytics: null,
+                    live_unavailable: true,
                     error: "ACMS connector request failed",
                     integration: error.integration,
                     upstream_status: error.status,
                 },
-                { status: 502 }
+                {
+                    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
+                }
             );
         }
 
@@ -166,11 +172,17 @@ export async function GET(
         console.error("Error fetching insights:", error);
         return NextResponse.json(
             {
+                predictiveAlert: null,
+                systemMetrics: [],
+                analytics: null,
+                live_unavailable: true,
                 error: error instanceof IntegrationNotConfiguredError
                     ? "ACMS connector is not configured"
                     : "Failed to fetch ACMS insights",
             },
-            { status: 503 }
+            {
+                headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
+            }
         );
     }
 }
