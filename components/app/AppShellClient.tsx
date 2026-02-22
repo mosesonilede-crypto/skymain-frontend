@@ -135,18 +135,36 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     }, [entitlementsLoading, entitlements.tier]);
 
     const usageSummary = useMemo(() => {
-        if (entitlementsLoading) return "Usage: loading...";
+        if (entitlementsLoading) {
+            return {
+                text: "Usage: loading...",
+                aircraftOverLimit: false,
+                teamOverLimit: false,
+                hasOverLimit: false,
+            };
+        }
 
         const aircraftLimit = entitlements.limits.max_aircraft;
         const teamLimit = entitlements.limits.max_team_members;
 
-        const aircraft = aircraftLimit == null ? `${allAircraft.length}/∞` : `${allAircraft.length}/${aircraftLimit}`;
+        const aircraftUsed = allAircraft.length;
+        const teamUsed = teamMembersUsed;
+
+        const aircraftOverLimit = aircraftLimit != null && aircraftUsed > aircraftLimit;
+        const teamOverLimit = teamLimit != null && typeof teamUsed === "number" && teamUsed > teamLimit;
+
+        const aircraft = aircraftLimit == null ? `${aircraftUsed}/∞` : `${aircraftUsed}/${aircraftLimit}`;
         const team = teamLimit == null
-            ? `${teamMembersUsed ?? "?"}/∞`
-            : `${teamMembersUsed ?? "?"}/${teamLimit}`;
+            ? `${teamUsed ?? "?"}/∞`
+            : `${teamUsed ?? "?"}/${teamLimit}`;
         const storage = entitlements.limits.max_storage_gb == null ? "∞" : `${entitlements.limits.max_storage_gb}GB`;
 
-        return `Usage: Aircraft ${aircraft} • Team ${team} • Storage ${storage}`;
+        return {
+            text: `Usage: Aircraft ${aircraft} • Team ${team} • Storage ${storage}`,
+            aircraftOverLimit,
+            teamOverLimit,
+            hasOverLimit: aircraftOverLimit || teamOverLimit,
+        };
     }, [
         entitlementsLoading,
         allAircraft.length,
@@ -287,9 +305,21 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                                             <div className="mt-1 inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
                                                 Current Plan: {planLabel}
                                             </div>
-                                            <div className="mt-1 text-[10px] leading-4 text-slate-500">
-                                                {usageSummary}
+                                            <div className={`mt-1 text-[10px] leading-4 ${usageSummary.hasOverLimit ? "text-red-600" : "text-slate-500"}`}>
+                                                {usageSummary.text}
                                             </div>
+                                            {usageSummary.hasOverLimit ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={(event) => {
+                                                        event.preventDefault();
+                                                        router.push("/app/subscription-billing");
+                                                    }}
+                                                    className="mt-1 inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                >
+                                                    Over limit · Upgrade
+                                                </button>
+                                            ) : null}
                                         </div>
                                     </Link>
                                     <button
