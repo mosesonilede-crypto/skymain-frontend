@@ -4,6 +4,58 @@ import { createAircraft, fetchFleet } from "@/lib/integrations/cmms";
 import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
 import { allowMockFallback } from "@/lib/runtimeFlags";
 import { DEFAULT_MOCK_AIRCRAFT } from "@/lib/dataService";
+import { getEntitlementsForTier, normalizeTier } from "@/lib/entitlements";
+
+type BillingPlanResponse = {
+    currentPlanLabel?: string;
+};
+
+async function resolveMaxAircraftLimit(request: NextRequest): Promise<number | null> {
+    try {
+        const billingUrl = new URL("/api/billing", request.url);
+        const response = await fetch(billingUrl.toString(), {
+            method: "GET",
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+            signal: AbortSignal.timeout(6000),
+        });
+
+        if (!response.ok) return null;
+
+        const payload = (await response.json()) as BillingPlanResponse;
+        const tier = normalizeTier(payload.currentPlanLabel);
+        return getEntitlementsForTier(tier).limits.max_aircraft;
+    } catch {
+        return null;
+    }
+}
+
+async function getCurrentAircraftCount(): Promise<number | null> {
+    try {
+        const data = await fetchFleet();
+        if (Array.isArray(data.aircraft)) {
+            return data.aircraft.length;
+        }
+    } catch {
+        // Fall through to Supabase count fallback.
+    }
+
+    if (supabaseServer) {
+        try {
+            const { count, error } = await supabaseServer
+                .from("aircraft")
+                .select("id", { count: "exact", head: true });
+
+            if (!error && typeof count === "number") {
+                return count;
+            }
+        } catch {
+            return null;
+        }
+    }
+
+    return null;
+}
 
 export async function GET() {
     // Try CMMS integration first
@@ -72,6 +124,22 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     try {
+        const maxAircraft = await resolveMaxAircraftLimit(request);
+        if (typeof maxAircraft === "number") {
+            const currentAircraftCount = await getCurrentAircraftCount();
+            if (typeof currentAircraftCount === "number" && currentAircraftCount >= maxAircraft) {
+                return NextResponse.json(
+                    {
+                        error: `Aircraft limit reached for current plan (${currentAircraftCount}/${maxAircraft}). Upgrade to add more aircraft.`,
+                        code: "AIRCRAFT_LIMIT_REACHED",
+                        currentCount: currentAircraftCount,
+                        maxAircraft,
+                    },
+                    { status: 403 }
+                );
+            }
+        }
+
         let body: Record<string, unknown>;
         try {
             body = await request.json();
