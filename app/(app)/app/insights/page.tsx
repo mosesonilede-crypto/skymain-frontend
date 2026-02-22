@@ -63,6 +63,37 @@ export default function AIInsightsPage() {
     const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
     const [isInsightsLoading, setIsInsightsLoading] = useState(false);
     const [hasLoadedInsights, setHasLoadedInsights] = useState(false);
+    const [hasAdvancedInsights, setHasAdvancedInsights] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function resolvePlanAccess() {
+            try {
+                const response = await fetch("/api/billing", {
+                    method: "GET",
+                    headers: { Accept: "application/json" },
+                });
+                if (!response.ok) return;
+                const data = await response.json() as { currentPlanLabel?: string };
+                const plan = (data.currentPlanLabel || "").toLowerCase();
+                const allowed = plan === "professional" || plan === "enterprise";
+                if (!cancelled) {
+                    setHasAdvancedInsights(allowed);
+                    if (!allowed) {
+                        setIntegrationMessage("Advanced AI Insights are available on Professional and Enterprise plans.");
+                    }
+                }
+            } catch {
+                // Preserve current behavior when billing lookup is unavailable.
+            }
+        }
+
+        void resolvePlanAccess();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     // Fetch live insights data
     async function fetchInsightsData() {
@@ -70,6 +101,13 @@ export default function AIInsightsPage() {
             setInsightsData(null);
             setHasLoadedInsights(false);
             setIsInsightsLoading(false);
+            return;
+        }
+
+        if (!hasAdvancedInsights) {
+            setIsInsightsLoading(false);
+            setHasLoadedInsights(true);
+            setInsightsData({});
             return;
         }
 
@@ -134,7 +172,7 @@ export default function AIInsightsPage() {
     /* eslint-disable react-hooks/exhaustive-deps */
     useEffect(() => {
         void fetchInsightsData();
-    }, [selectedAircraft?.registration]);
+    }, [selectedAircraft?.registration, hasAdvancedInsights]);
     /* eslint-enable react-hooks/exhaustive-deps */
 
     const predictiveAlert: PredictiveAlert = useMemo(
@@ -262,7 +300,9 @@ export default function AIInsightsPage() {
                     </div>
                 ) : advancedOpen && hasLoadedInsights ? (
                     <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-500 text-center">
-                        Analytics data is currently unavailable for this aircraft.
+                        {hasAdvancedInsights
+                            ? "Analytics data is currently unavailable for this aircraft."
+                            : "Upgrade to Professional or Enterprise to access Advanced AI Analytics."}
                     </div>
                 ) : null}
             </div>
