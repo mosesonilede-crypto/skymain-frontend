@@ -37,6 +37,7 @@ import AIMechanicPanel from "@/components/ai/AIMechanicPanel";
 import { useAuth } from "@/lib/AuthContext";
 import { isAdminRole, resolveSessionRole } from "@/lib/auth/roles";
 import { useSessionTimeout, SessionTimeoutWarning, clearSessionData } from "@/lib/SessionTimeout";
+import { useEntitlements } from "@/lib/useEntitlements";
 
 const ALL_NAV_ITEMS = [
     { href: "/app/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
@@ -92,6 +93,7 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { logout, user } = useAuth();
+    const { entitlements } = useEntitlements();
     const contentRef = useRef<HTMLDivElement>(null);
 
     // Handle manual logout with session cleanup
@@ -101,18 +103,64 @@ export default function AppShellClient({ children }: AppShellClientProps) {
         router.push("/");
     }, [logout, router]);
     const navItems = useMemo(() => {
+        const hasAdvancedInsights = entitlements.features.advanced_ai_insights;
+        const hasCustomCompliance = entitlements.features.custom_compliance_reports;
+        const hasApiAccess = entitlements.features.api_access_level !== "none";
+
+        const featureRules: Record<string, { allowed: boolean; lockedReason: string }> = {
+            "/app/insights": {
+                allowed: hasAdvancedInsights,
+                lockedReason: "Advanced AI Insights requires Professional or Enterprise.",
+            },
+            "/app/reports": {
+                allowed: hasCustomCompliance,
+                lockedReason: "Custom reports require Professional or Enterprise.",
+            },
+            "/app/compliance": {
+                allowed: hasCustomCompliance,
+                lockedReason: "Regulatory tasking requires Professional or Enterprise.",
+            },
+            "/app/ingestion-contracts": {
+                allowed: hasApiAccess,
+                lockedReason: "API/ingestion access requires Professional or Enterprise.",
+            },
+        };
+
         const resolvedRole = resolveSessionRole({
             rawRole: user?.role || roleHints.role,
             licenseCode: roleHints.licenseCode,
             email: user?.email || roleHints.email,
         });
         const canAccessAdmin = isAdminRole(resolvedRole);
-        const baseItems = ALL_NAV_ITEMS.filter((item) => !item.adminOnly || canAccessAdmin);
+        const baseItems = ALL_NAV_ITEMS
+            .filter((item) => !item.adminOnly || canAccessAdmin)
+            .map((item) => {
+                const href = item.href || "";
+                const rule = featureRules[href];
+                if (!rule) return item;
+
+                return {
+                    ...item,
+                    disabled: !rule.allowed,
+                    disabledReason: !rule.allowed ? rule.lockedReason : undefined,
+                    badgeLabel: rule.allowed ? "Included" : "Locked",
+                };
+            });
         return [
             ...baseItems,
             { label: "Logout", icon: <LogOut className="h-5 w-5" />, onClick: handleLogout },
         ];
-    }, [user?.role, user?.email, roleHints.role, roleHints.licenseCode, roleHints.email, handleLogout]);
+    }, [
+        entitlements.features.advanced_ai_insights,
+        entitlements.features.custom_compliance_reports,
+        entitlements.features.api_access_level,
+        user?.role,
+        user?.email,
+        roleHints.role,
+        roleHints.licenseCode,
+        roleHints.email,
+        handleLogout,
+    ]);
 
     // Session timeout management
     const { isWarningVisible, remainingSeconds, extendSession } = useSessionTimeout();
