@@ -78,11 +78,15 @@ export async function GET(
 
             return NextResponse.json(
                 {
-                    error: "ACMS connector request failed",
+                    alerts: [],
+                    lastUpdated: null,
+                    live_unavailable: true,
                     integration: error.integration,
                     upstream_status: error.status,
                 },
-                { status: 502 }
+                {
+                    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
+                }
             );
         }
 
@@ -101,11 +105,16 @@ export async function GET(
         console.error("Error fetching alerts:", error);
         return NextResponse.json(
             {
+                alerts: [],
+                lastUpdated: null,
+                live_unavailable: true,
                 error: error instanceof IntegrationNotConfiguredError
                     ? "ACMS connector is not configured"
                     : "Failed to fetch ACMS alerts",
             },
-            { status: 503 }
+            {
+                headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
+            }
         );
     }
 }
