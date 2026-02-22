@@ -38,6 +38,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { isAdminRole, resolveSessionRole } from "@/lib/auth/roles";
 import { useSessionTimeout, SessionTimeoutWarning, clearSessionData } from "@/lib/SessionTimeout";
 import { useEntitlements } from "@/lib/useEntitlements";
+import { useAircraft } from "@/lib/AircraftContext";
 
 const ALL_NAV_ITEMS = [
     { href: "/app/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
@@ -94,8 +95,37 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { logout, user } = useAuth();
+    const { allAircraft } = useAircraft();
     const { entitlements, loading: entitlementsLoading } = useEntitlements();
+    const [teamMembersUsed, setTeamMembersUsed] = useState<number | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadTeamUsage() {
+            try {
+                const response = await fetch("/api/billing", {
+                    method: "GET",
+                    headers: { Accept: "application/json" },
+                    cache: "no-store",
+                });
+                if (!response.ok) return;
+
+                const payload = (await response.json()) as { teamMembers?: number };
+                if (!cancelled && typeof payload.teamMembers === "number") {
+                    setTeamMembersUsed(payload.teamMembers);
+                }
+            } catch {
+                // Keep fallback display when unavailable.
+            }
+        }
+
+        void loadTeamUsage();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const planLabel = useMemo(() => {
         if (entitlementsLoading) return "Loading plan...";
@@ -107,13 +137,20 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const usageSummary = useMemo(() => {
         if (entitlementsLoading) return "Usage: loading...";
 
-        const aircraft = entitlements.limits.max_aircraft == null ? "∞" : String(entitlements.limits.max_aircraft);
-        const team = entitlements.limits.max_team_members == null ? "∞" : String(entitlements.limits.max_team_members);
+        const aircraftLimit = entitlements.limits.max_aircraft;
+        const teamLimit = entitlements.limits.max_team_members;
+
+        const aircraft = aircraftLimit == null ? `${allAircraft.length}/∞` : `${allAircraft.length}/${aircraftLimit}`;
+        const team = teamLimit == null
+            ? `${teamMembersUsed ?? "?"}/∞`
+            : `${teamMembersUsed ?? "?"}/${teamLimit}`;
         const storage = entitlements.limits.max_storage_gb == null ? "∞" : `${entitlements.limits.max_storage_gb}GB`;
 
         return `Usage: Aircraft ${aircraft} • Team ${team} • Storage ${storage}`;
     }, [
         entitlementsLoading,
+        allAircraft.length,
+        teamMembersUsed,
         entitlements.limits.max_aircraft,
         entitlements.limits.max_team_members,
         entitlements.limits.max_storage_gb,
