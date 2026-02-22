@@ -103,6 +103,26 @@ async function apiGetContact(signal?: AbortSignal): Promise<ContactDoc> {
         return structuredClone(mockStore);
     }
 
+    // Try local API endpoint first
+    try {
+        const localRes = await fetch("/api/contact", {
+            method: "GET",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+            signal,
+        });
+
+        if (localRes.ok) {
+            const localJson = (await localRes.json()) as ApiEnvelope<ContactDoc>;
+            if (localJson?.ok && localJson?.data) {
+                if (mode === "hybrid") mockStore = structuredClone(localJson.data);
+                return localJson.data;
+            }
+        }
+    } catch {
+        // Fall through to backend endpoint
+    }
+
     const base = getApiBaseUrl();
     if (!base) {
         if (mode === "hybrid") {

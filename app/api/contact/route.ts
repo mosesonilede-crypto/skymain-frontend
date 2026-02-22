@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/rateLimit";
 
+type ContactCard = {
+    title: string;
+    description: string;
+    email: string;
+};
+
+type ContactDoc = {
+    badge: string;
+    headline: string;
+    subhead: string;
+    cards: ContactCard[];
+    cta_band: {
+        headline: string;
+        primary: { label: string; href: string };
+        secondary: { label: string; href: string };
+    };
+};
+
 type ContactFormPayload = {
     intent: string;
     name: string;
@@ -14,6 +32,46 @@ type ContactFormPayload = {
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@skymaintain.ai';
 const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'contact@skymaintain.ai';
 const PARTNERSHIPS_EMAIL = process.env.PARTNERSHIPS_EMAIL || 'partnerships@skymaintain.ai';
+
+const CONTACT_DOC: ContactDoc = {
+    badge: "Contact Us",
+    headline: "Contact SkyMaintain",
+    subhead: "We'd love to hear from you.",
+    cards: [
+        {
+            title: "General Inquiries",
+            description: "Questions about SkyMaintain or general information",
+            email: CONTACT_EMAIL,
+        },
+        {
+            title: "Support",
+            description: "Technical support and customer assistance",
+            email: SUPPORT_EMAIL,
+        },
+        {
+            title: "Business & Partnerships",
+            description: "Partnership opportunities and business inquiries",
+            email: PARTNERSHIPS_EMAIL,
+        },
+    ],
+    cta_band: {
+        headline: "Ready to get started?",
+        primary: { label: "Request a Demo", href: "/contact?intent=demo" },
+        secondary: { label: "Contact Us", href: "/contact?intent=general" },
+    },
+};
+
+export async function GET() {
+    return NextResponse.json(
+        { ok: true, data: CONTACT_DOC },
+        {
+            status: 200,
+            headers: {
+                "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+            },
+        }
+    );
+}
 
 function getRecipientEmail(intent: string): string {
     switch (intent) {
