@@ -117,15 +117,7 @@ async function loadCompliance(): Promise<{ payload: CompliancePayload; source: "
         : "hybrid";
 
     if (mode === "mock") return { payload: mockCompliance(), source: "mock" };
-    if (!baseUrl) {
-        if (mode === "hybrid") return { payload: mockCompliance(), source: "mock" };
-        throw new Error("NEXT_PUBLIC_API_BASE_URL is required in live mode");
-    }
-
-    if (mode === "live") {
-        const payload = await fetchComplianceLive(baseUrl);
-        return { payload, source: "live" };
-    }
+    if (!baseUrl) return { payload: mockCompliance(), source: "mock" };
 
     try {
         const payload = await fetchComplianceLive(baseUrl);
