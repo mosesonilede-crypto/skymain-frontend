@@ -14,7 +14,6 @@ const nextConfig = {
   // Compression and caching
   compress: true,
   // Optimize production builds
-  optimizeFonts: true,
   productionBrowserSourceMaps: false,
   // Response headers for better caching
   async headers() {

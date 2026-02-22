@@ -108,7 +108,7 @@ export default function DashboardPage() {
         return () => {
             cancelled = true;
         };
-    }, [selectedAircraft?.registration]);
+    }, [selectedAircraft?.registration, apiBase]);
 
     // Close dropdowns when clicking outside
     useEffect(() => {

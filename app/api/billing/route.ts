@@ -56,11 +56,19 @@ function isSuperAdminSession(req: NextRequest): boolean {
 }
 
 function forceEnterprise(payload: SubscriptionBillingPayload, pricing: PlanPricing): SubscriptionBillingPayload {
-    const plans = payload.plans.map((plan) => ({
-        ...plan,
-        isCurrent: plan.id === "enterprise",
-        badge: plan.id === "enterprise" ? "Current Plan" : plan.badge === "Current Plan" ? undefined : plan.badge,
-    }));
+    const plans: Plan[] = payload.plans.map((plan): Plan => {
+        const badge: Plan["badge"] = plan.id === "enterprise"
+            ? "Current Plan"
+            : plan.badge === "Current Plan"
+                ? undefined
+                : plan.badge;
+
+        return {
+            ...plan,
+            isCurrent: plan.id === "enterprise",
+            badge,
+        };
+    });
 
     return {
         ...payload,

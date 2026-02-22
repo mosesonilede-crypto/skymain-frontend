@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
@@ -11,7 +11,7 @@ export const runtime = "nodejs";
  *
  * Falls back to Supabase profile lookup if backend is unavailable.
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
     if (!backendUrl) {

@@ -14,18 +14,17 @@ const DEMO_VIDEO_STORAGE_KEY = "skymaintain.demoVideoId";
 
 export default function DemoPage() {
     const [isPlaying, setIsPlaying] = useState(false);
-    const [videoId, setVideoId] = useState(DEFAULT_YOUTUBE_VIDEO_ID);
+    const [videoId, setVideoId] = useState(() => {
+        if (typeof window === "undefined") return DEFAULT_YOUTUBE_VIDEO_ID;
+        try {
+            return window.localStorage.getItem(DEMO_VIDEO_STORAGE_KEY) || DEFAULT_YOUTUBE_VIDEO_ID;
+        } catch {
+            return DEFAULT_YOUTUBE_VIDEO_ID;
+        }
+    });
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        try {
-            const stored = window.localStorage.getItem(DEMO_VIDEO_STORAGE_KEY);
-            if (stored) {
-                setVideoId(stored);
-            }
-        } catch {
-            // Ignore
-        }
 
         // Listen for storage changes (when super admin updates the video)
         const handleStorage = (event: StorageEvent) => {

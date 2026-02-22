@@ -1,9 +1,28 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useReducer, useCallback } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { getServerTrialStatus, getTrialStatus, type ServerTrialStatus } from "@/lib/trial";
+
+type TrialState = {
+    trialStatus: ServerTrialStatus | null;
+    trialChecked: boolean;
+};
+
+type TrialAction =
+    | { type: "checked" }
+    | { type: "set_status"; payload: ServerTrialStatus | null };
+
+function trialReducer(state: TrialState, action: TrialAction): TrialState {
+    if (action.type === "checked") {
+        return { ...state, trialChecked: true };
+    }
+    if (action.type === "set_status") {
+        return { trialStatus: action.payload, trialChecked: true };
+    }
+    return state;
+}
 
 function normalizeRole(role?: string) {
     return String(role || "")
@@ -25,55 +44,58 @@ export function ProtectedRoute({
 }) {
     const router = useRouter();
     const { isAuthenticated, isLoading, user } = useAuth();
-    const [trialStatus, setTrialStatus] = useState<ServerTrialStatus | null>(null);
-    const [trialChecked, setTrialChecked] = useState(false);
+    const [trialState, dispatchTrial] = useReducer(trialReducer, {
+        trialStatus: null,
+        trialChecked: false,
+    });
+    const { trialStatus, trialChecked } = trialState;
 
     const isRoleAllowed =
         !requiredRoles ||
         requiredRoles.length === 0 ||
         requiredRoles.map((role) => normalizeRole(role)).includes(normalizeRole(user?.role));
 
-    // Super admins bypass trial check
     const isSuperAdmin = normalizeRole(user?.role) === "super_admin";
 
     const checkTrialStatus = useCallback(async () => {
         if (skipTrialCheck || isSuperAdmin) {
-            setTrialChecked(true);
+            dispatchTrial({ type: "checked" });
             return;
         }
 
-        // First try server-side check
         const serverStatus = await getServerTrialStatus();
         if (serverStatus) {
-            setTrialStatus(serverStatus);
-            setTrialChecked(true);
+            dispatchTrial({ type: "set_status", payload: serverStatus });
             return;
         }
 
-        // Fallback to local check
         const localStatus = getTrialStatus();
         if (localStatus) {
-            setTrialStatus({
-                status: localStatus.expired ? "expired" : "trial",
-                daysRemaining: localStatus.daysRemaining,
-                hasActiveSubscription: false,
+            dispatchTrial({
+                type: "set_status",
+                payload: {
+                    status: localStatus.expired ? "expired" : "trial",
+                    daysRemaining: localStatus.daysRemaining,
+                    hasActiveSubscription: false,
+                },
             });
         } else {
-            // No trial info - assume they're in trial (will be set when they sign in)
-            setTrialStatus({
-                status: "trial",
-                daysRemaining: 14,
-                hasActiveSubscription: false,
+            dispatchTrial({
+                type: "set_status",
+                payload: {
+                    status: "trial",
+                    daysRemaining: 14,
+                    hasActiveSubscription: false,
+                },
             });
         }
-        setTrialChecked(true);
     }, [skipTrialCheck, isSuperAdmin]);
 
     useEffect(() => {
         if (!isLoading && isAuthenticated) {
-            checkTrialStatus();
+            void checkTrialStatus();
         } else if (!isLoading && !isAuthenticated) {
-            setTrialChecked(true);
+            dispatchTrial({ type: "checked" });
         }
     }, [isLoading, isAuthenticated, checkTrialStatus]);
 
@@ -86,7 +108,6 @@ export function ProtectedRoute({
             router.replace(redirectTo);
             return;
         }
-        // Check if trial has expired and user doesn't have active subscription
         if (
             trialChecked &&
             isAuthenticated &&
@@ -99,7 +120,7 @@ export function ProtectedRoute({
         }
     }, [isAuthenticated, isLoading, isRoleAllowed, redirectTo, router, trialChecked, trialStatus, isSuperAdmin]);
 
-    if (isLoading || !trialChecked) {
+    if (isLoading || (isAuthenticated && !trialChecked)) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
@@ -118,7 +139,6 @@ export function ProtectedRoute({
         return null;
     }
 
-    // If trial expired and no subscription, don't render children
     if (
         trialStatus &&
         trialStatus.status === "expired" &&

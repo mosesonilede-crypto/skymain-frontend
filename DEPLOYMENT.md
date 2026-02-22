@@ -1,5 +1,7 @@
 # Deployment Setup Guide
 
+For a copy/paste-ready variable list by environment, see `docs/VERCEL_ENV_MATRIX.md`.
+
 ## Architecture
 - **Frontend**: Next.js deployed to Vercel via GitHub Actions
 - **Backend**: Python FastAPI on Namecheap
@@ -25,7 +27,7 @@ Your repository is configured to automatically deploy to Vercel on pushes to `ma
      - `VERCEL_TOKEN` - Your Vercel personal access token
      - `VERCEL_ORG_ID` - Your Vercel organization ID
      - `VERCEL_PROJECT_ID` - Your Vercel project ID
-     - `NEXT_PUBLIC_BACKEND_URL` - Your Namecheap backend API URL (e.g., `https://api.yourdomain.com`)
+   - `NEXT_PUBLIC_API_BASE_URL` - Your backend API URL (e.g., `https://api.yourdomain.com`)
 
 ### Setup Steps
 
@@ -78,9 +80,37 @@ Your repository is configured to automatically deploy to Vercel on pushes to `ma
 
 ### Environment Variables
 
-- **`NEXT_PUBLIC_BACKEND_URL`**: Must point to your Namecheap backend
-  - Used by frontend to make API calls
-  - Example: `https://api.yourdomain.com` or `https://your-ip:8000`
+- **`NEXT_PUBLIC_API_BASE_URL`**: Backend base URL used by frontend and API routes
+   - Example: `https://api.yourdomain.com`
+- **`NEXT_PUBLIC_DATA_MODE`**: `live`, `hybrid`, or `mock`
+   - Recommended for production: `hybrid` until all backend dependencies are live
+- **`NEXT_PUBLIC_ALLOW_MOCK_FALLBACK`**: `true` or `false`
+   - Used only with hybrid/mock behavior
+
+### Vercel Production Checklist
+
+Set these in **Vercel → Project Settings → Environment Variables**:
+
+**Required to avoid runtime/setup failures**
+- `NEXT_PUBLIC_API_BASE_URL`
+- `NEXT_PUBLIC_SITE_URL`
+- `TWO_FA_SECRET` (32+ characters)
+
+**Required for production integration readiness (validation gate)**
+- `SKYMAINTAIN_CMMS_BASE_URL`
+- `SKYMAINTAIN_ERP_BASE_URL`
+- `SKYMAINTAIN_FLIGHT_OPS_BASE_URL`
+- `SKYMAINTAIN_ACMS_BASE_URL`
+- `SKYMAINTAIN_MANUALS_BASE_URL`
+- `SKYMAINTAIN_INTEGRATION_API_KEY`
+- `SKYMAINTAIN_INTEGRATION_TIMEOUT_MS`
+
+**Recommended for live email**
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
 
 ### Stripe Billing Environment Variables
 
@@ -110,7 +140,7 @@ The frontend has these API routes (in `/app/api/`):
 - `/api/insights/[aircraftReg]`
 - `/api/compliance/[aircraftReg]`
 
-These are **Vercel serverless functions** that can be called by the frontend. If you want them to call your Python backend, update them to proxy requests to `NEXT_PUBLIC_BACKEND_URL`.
+These are **Vercel serverless functions** that can be called by the frontend. If you want them to call your Python backend, update them to proxy requests to `NEXT_PUBLIC_API_BASE_URL`.
 
 ### Monitoring
 
@@ -132,7 +162,7 @@ These are **Vercel serverless functions** that can be called by the frontend. If
 - Verify SSL/TLS settings in Cloudflare
 
 **API calls failing**
-- Check `NEXT_PUBLIC_BACKEND_URL` is set correctly
+- Check `NEXT_PUBLIC_API_BASE_URL` is set correctly
 - Verify Namecheap backend is running
 - Check CORS headers if backend is on different domain
 - Use browser DevTools to see API response errors

@@ -114,7 +114,7 @@ async function loadCompliance(): Promise<{ payload: CompliancePayload; source: "
     const rawMode = getEnv("NEXT_PUBLIC_DATA_MODE", "").toLowerCase();
     const mode = (rawMode === "mock" || rawMode === "live" || rawMode === "hybrid")
         ? rawMode
-        : "live";
+        : "hybrid";
 
     if (mode === "mock") return { payload: mockCompliance(), source: "mock" };
     if (!baseUrl) {

@@ -7,8 +7,6 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useAuth, type UserRole } from "@/lib/AuthContext";
 import { resolveSessionRole } from "@/lib/auth/roles";
 
-import { CONTACT_SUPPORT } from "@/lib/routes";
-
 const imgVector22 = "https://www.figma.com/api/mcp/asset/e5b2a959-7f57-42ab-94cc-9040775c2796";
 const imgIcon23 = "https://www.figma.com/api/mcp/asset/b7a54d66-e02b-4057-b1f4-54610111e27a";
 const imgIcon24 = "https://www.figma.com/api/mcp/asset/adb461ed-3581-4528-8ba6-73a2072cf2c7";

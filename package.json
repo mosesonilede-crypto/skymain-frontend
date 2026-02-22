@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run typecheck && next build",
     "start": "next start",
     "lint": "eslint",
-    "audit-safety-test": "node scripts/audit-safety-tests.mjs"
+    "typecheck": "tsc --noEmit",
+    "audit-safety-test": "node scripts/audit-safety-tests.mjs",
+    "check:env": "node scripts/check-env.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
