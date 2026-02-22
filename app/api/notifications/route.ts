@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchNotifications } from "@/lib/integrations/acms";
-import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { IntegrationNotConfiguredError, IntegrationRequestError } from "@/lib/integrations/errors";
 import { allowMockFallback } from "@/lib/runtimeFlags";
 
 export async function GET() {
@@ -10,6 +10,17 @@ export async function GET() {
             headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
         });
     } catch (error) {
+        if (error instanceof IntegrationRequestError) {
+            return NextResponse.json(
+                {
+                    error: "ACMS connector request failed",
+                    integration: error.integration,
+                    upstream_status: error.status,
+                },
+                { status: 502 }
+            );
+        }
+
         if (error instanceof IntegrationNotConfiguredError && allowMockFallback()) {
             return NextResponse.json({ notifications: [], fallback: true }, {
                 headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
@@ -18,7 +29,11 @@ export async function GET() {
 
         console.error("Error fetching notifications:", error);
         return NextResponse.json(
-            { error: "ACMS connector is not configured" },
+            {
+                error: error instanceof IntegrationNotConfiguredError
+                    ? "ACMS connector is not configured"
+                    : "Failed to fetch ACMS notifications",
+            },
             { status: 503 }
         );
     }

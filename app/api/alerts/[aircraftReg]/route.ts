@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchAlerts } from "@/lib/integrations/acms";
-import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { IntegrationNotConfiguredError, IntegrationRequestError } from "@/lib/integrations/errors";
 import { allowMockFallback } from "@/lib/runtimeFlags";
 
 // Generate mock alerts data when ACMS isn't configured
@@ -62,6 +62,17 @@ export async function GET(
         const { aircraftReg: reg } = await params;
         const aircraftReg = reg.toUpperCase();
 
+        if (error instanceof IntegrationRequestError) {
+            return NextResponse.json(
+                {
+                    error: "ACMS connector request failed",
+                    integration: error.integration,
+                    upstream_status: error.status,
+                },
+                { status: 502 }
+            );
+        }
+
         // Return mock data when ACMS integration isn't configured
         if (error instanceof IntegrationNotConfiguredError && allowMockFallback()) {
             const mockData = generateMockAlerts(aircraftReg);
@@ -76,7 +87,11 @@ export async function GET(
 
         console.error("Error fetching alerts:", error);
         return NextResponse.json(
-            { error: "ACMS connector is not configured" },
+            {
+                error: error instanceof IntegrationNotConfiguredError
+                    ? "ACMS connector is not configured"
+                    : "Failed to fetch ACMS alerts",
+            },
             { status: 503 }
         );
     }

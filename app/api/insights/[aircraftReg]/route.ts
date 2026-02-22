@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchInsights } from "@/lib/integrations/acms";
-import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { IntegrationNotConfiguredError, IntegrationRequestError } from "@/lib/integrations/errors";
 import { allowMockFallback } from "@/lib/runtimeFlags";
 
 /** Deterministic pseudo-random seeded by aircraft registration for stable mock data. */
@@ -107,6 +107,17 @@ export async function GET(
             headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
         });
     } catch (error) {
+        if (error instanceof IntegrationRequestError) {
+            return NextResponse.json(
+                {
+                    error: "ACMS connector request failed",
+                    integration: error.integration,
+                    upstream_status: error.status,
+                },
+                { status: 502 }
+            );
+        }
+
         if (error instanceof IntegrationNotConfiguredError && canUseFallback) {
             return NextResponse.json(
                 {
@@ -140,7 +151,11 @@ export async function GET(
 
         console.error("Error fetching insights:", error);
         return NextResponse.json(
-            { error: "ACMS connector is not configured" },
+            {
+                error: error instanceof IntegrationNotConfiguredError
+                    ? "ACMS connector is not configured"
+                    : "Failed to fetch ACMS insights",
+            },
             { status: 503 }
         );
     }
