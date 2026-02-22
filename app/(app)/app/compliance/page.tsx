@@ -285,7 +285,7 @@ export default function RegulatoryCompliancePage() {
                 links: [
                     { label: "Airworthiness Directives Portal", href: "https://www.easa.europa.eu/en/document-library?type=airworthiness_directives" },
                     { label: "AD Document Library", href: "https://www.easa.europa.eu/en/domains/aircraft-products/airworthiness-directives-ad" },
-                    { label: "Safety Publications", href: "https://www.easa.europa.eu/eaer/library" },
+                    { label: "Safety Publications", href: "https://ad.easa.europa.eu/" },
                 ],
             },
         ],
