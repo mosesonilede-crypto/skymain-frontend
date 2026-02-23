@@ -400,10 +400,23 @@ export async function GET(req: NextRequest) {
                 })
         );
 
+        // Count actual aircraft in the database
+        let totalAircraft = 0;
+        try {
+            const { count, error: countError } = await supabaseServer
+                .from("aircraft")
+                .select("id", { count: "exact", head: true });
+            if (!countError && typeof count === "number") {
+                totalAircraft = count;
+            }
+        } catch {
+            // Aircraft count is best-effort
+        }
+
         return NextResponse.json(
             {
                 kpis: {
-                    totalAircraft: 0,
+                    totalAircraft,
                     activeUsers: users.length,
                     maintenanceRecords: 0,
                     complianceRatePct: 0,

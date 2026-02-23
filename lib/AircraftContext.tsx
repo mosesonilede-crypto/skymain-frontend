@@ -8,6 +8,7 @@ import {
     updateAircraft as updateAircraftApi,
     deleteAircraft as deleteAircraftApi,
 } from "./dataService";
+import { supabase } from "./supabaseClient";
 
 // Re-export Aircraft type for backwards compatibility
 export type { Aircraft } from "./dataService";
@@ -62,22 +63,72 @@ export function AircraftProvider({ children }: { children: ReactNode }) {
     const [error, setError] = useState<string | null>(null);
     const [initialized, setInitialized] = useState(false);
 
+    // Direct Supabase fallback — reads from the aircraft table using the browser
+    // client when the API route returns no results (handles missing service-role key,
+    // column-name mismatches, or other server-side issues).
+    const fetchAircraftDirectFromSupabase = useCallback(async (): Promise<Aircraft[]> => {
+        if (!supabase) return [];
+        try {
+            const { data, error } = await supabase
+                .from("aircraft")
+                .select("*");
+
+            if (error || !data) return [];
+
+            return data.map((row: Record<string, unknown>) => ({
+                id: String(row.id ?? ""),
+                registration: String(row.registration_number ?? ""),
+                model: `${row.manufacturer || ""} ${row.model || ""}`.trim(),
+                manufacturer: row.manufacturer ? String(row.manufacturer) : undefined,
+                serialNumber: row.serial_number ? String(row.serial_number) : undefined,
+                yearOfManufacture: typeof row.year_of_manufacture === "number" ? row.year_of_manufacture : undefined,
+                operator: row.operator ? String(row.operator) : undefined,
+                baseLocation: row.current_location ? String(row.current_location) : undefined,
+                totalFlightHours: typeof row.total_flight_hours === "number" ? row.total_flight_hours : undefined,
+                totalCycles: typeof row.cycle_count === "number" ? row.cycle_count : undefined,
+                status: (row.status as Aircraft["status"]) ?? undefined,
+            }));
+        } catch {
+            return [];
+        }
+    }, []);
+
     // Fetch aircraft list on mount
     const refreshAircraft = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
-            const result = await fetchAircraftList();
-            setAllAircraft(result.aircraft);
-            setDataSource(result.source);
+            let aircraftList: Aircraft[] = [];
+            let source: "live" | "mock" = "live";
+
+            // 1. Try the API route first
+            try {
+                const result = await fetchAircraftList();
+                aircraftList = result.aircraft;
+                source = result.source;
+            } catch (apiErr) {
+                console.warn("API aircraft fetch failed, trying direct Supabase:", apiErr);
+            }
+
+            // 2. If API returned empty results, fall back to direct Supabase read
+            if (aircraftList.length === 0) {
+                const directAircraft = await fetchAircraftDirectFromSupabase();
+                if (directAircraft.length > 0) {
+                    aircraftList = directAircraft;
+                    source = "live";
+                }
+            }
+
+            setAllAircraft(aircraftList);
+            setDataSource(source);
 
             // If current selection is no longer valid, select first aircraft
-            const currentValid = result.aircraft.find(
+            const currentValid = aircraftList.find(
                 a => a.registration === selectedAircraft?.registration
             );
-            if (!currentValid && result.aircraft.length > 0) {
-                setSelectedAircraftState(result.aircraft[0]);
-                localStorage.setItem("SELECTED_AIRCRAFT", JSON.stringify(result.aircraft[0]));
+            if (!currentValid && aircraftList.length > 0) {
+                setSelectedAircraftState(aircraftList[0]);
+                localStorage.setItem("SELECTED_AIRCRAFT", JSON.stringify(aircraftList[0]));
             }
         } catch (err) {
             console.error("Failed to fetch aircraft:", err);
@@ -87,7 +138,7 @@ export function AircraftProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedAircraft?.registration]);
+    }, [selectedAircraft?.registration, fetchAircraftDirectFromSupabase]);
 
     // Initialize on mount
     useEffect(() => {

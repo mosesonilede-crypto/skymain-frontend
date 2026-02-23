@@ -75,10 +75,14 @@ export async function GET() {
     // Fallback: read from Supabase aircraft table
     if (supabaseServer) {
         try {
+            // Query without ordering on created_at (column may not exist in all schemas)
             const { data, error } = await supabaseServer
                 .from("aircraft")
-                .select("*")
-                .order("created_at", { ascending: false });
+                .select("*");
+
+            if (error) {
+                console.error("Supabase aircraft SELECT error:", error.message, error.details);
+            }
 
             if (!error && data) {
                 const aircraft = data.map((row: Record<string, unknown>) => ({
@@ -86,7 +90,7 @@ export async function GET() {
                     registration: row.registration_number,
                     tailNumber: row.tail_number,
                     serialNumber: row.serial_number,
-                    model: `${row.manufacturer} ${row.model}`,
+                    model: `${row.manufacturer || ""} ${row.model || ""}`.trim(),
                     manufacturer: row.manufacturer,
                     yearOfManufacture: row.year_of_manufacture,
                     operator: row.operator,
@@ -100,12 +104,14 @@ export async function GET() {
                 }));
                 return NextResponse.json(
                     { aircraft, source: "live", lastUpdated: new Date().toISOString() },
-                    { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+                    { headers: { "Cache-Control": "no-store" } }
                 );
             }
         } catch (dbError) {
             console.error("Supabase aircraft fetch error:", dbError);
         }
+    } else {
+        console.warn("supabaseServer is null — SUPABASE_SERVICE_ROLE_KEY may not be set");
     }
 
     // Final fallback: mock data
@@ -116,9 +122,10 @@ export async function GET() {
         );
     }
 
+    console.warn("GET /api/aircraft — no data source returned aircraft. Returning empty array.");
     return NextResponse.json(
         { aircraft: [], source: "live", lastUpdated: new Date().toISOString() },
-        { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+        { headers: { "Cache-Control": "no-store" } }
     );
 }
 

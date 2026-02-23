@@ -221,7 +221,8 @@ export async function fetchAircraftList(): Promise<{ aircraft: Aircraft[]; sourc
         "/api/aircraft",
         { aircraft: DEFAULT_MOCK_AIRCRAFT }
     );
-    return { aircraft: result.data.aircraft || DEFAULT_MOCK_AIRCRAFT, source: result.source };
+    const aircraft = result.data.aircraft;
+    return { aircraft: Array.isArray(aircraft) ? aircraft : [], source: result.source };
 }
 
 /**
