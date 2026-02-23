@@ -211,6 +211,12 @@ export default function SuperAdminPage() {
     const [selectedUser, setSelectedUser] = useState<PlatformUser | null>(null);
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
+    // Role editing
+    const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+    const [roleEditUser, setRoleEditUser] = useState<PlatformUser | null>(null);
+    const [roleEditNewRole, setRoleEditNewRole] = useState<string>("");
+    const [roleEditSaving, setRoleEditSaving] = useState(false);
+
     // Access code management
     const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
     const [codeFormData, setCodeFormData] = useState({
@@ -528,6 +534,62 @@ export default function SuperAdminPage() {
             showNotification("error", error instanceof Error ? error.message : "Failed to create access code");
         } finally {
             setCreatingCode(false);
+        }
+    }
+
+    // ── Role editing ──────────────────────────────────────────
+    const ASSIGNABLE_ROLES: { value: string; label: string }[] = [
+        { value: "admin", label: "Admin" },
+        { value: "fleet_manager", label: "Fleet Manager" },
+        { value: "maintenance_engineer", label: "Maintenance Engineer" },
+        { value: "maintenance_manager", label: "Maintenance Manager" },
+        { value: "technician", label: "Technician" },
+        { value: "supervisor", label: "Supervisor" },
+        { value: "safety_qa", label: "Safety / QA" },
+        { value: "user", label: "Viewer" },
+    ];
+
+    function openRoleEditor(user: PlatformUser) {
+        setRoleEditUser(user);
+        // Map the display role back to a raw value for the select
+        const mapped = ASSIGNABLE_ROLES.find(r => r.label === user.role);
+        setRoleEditNewRole(mapped?.value || "fleet_manager");
+        setIsRoleModalOpen(true);
+    }
+
+    async function handleUpdateRole() {
+        if (!roleEditUser || !roleEditNewRole) return;
+        setRoleEditSaving(true);
+        try {
+            const res = await fetch("/api/admin/users/role", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ userId: roleEditUser.id, newRole: roleEditNewRole }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to update role");
+            }
+
+            // Update the user in local state
+            const displayLabel = ASSIGNABLE_ROLES.find(r => r.value === roleEditNewRole)?.label || "Viewer";
+            setUsers(prev => prev.map(u =>
+                u.id === roleEditUser.id ? { ...u, role: displayLabel as UserRole } : u
+            ));
+
+            // Also update the selected user if the view modal is open for the same user
+            if (selectedUser?.id === roleEditUser.id) {
+                setSelectedUser(prev => prev ? { ...prev, role: displayLabel as UserRole } : null);
+            }
+
+            setIsRoleModalOpen(false);
+            setRoleEditUser(null);
+            showNotification("success", `Role updated to ${displayLabel} for ${roleEditUser.name}`);
+        } catch (error) {
+            showNotification("error", error instanceof Error ? error.message : "Failed to update role");
+        } finally {
+            setRoleEditSaving(false);
         }
     }
 
@@ -1158,13 +1220,22 @@ export default function SuperAdminPage() {
                                                             : "Never"}
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { setSelectedUser(user); setIsUserModalOpen(true); }}
-                                                            className="text-sm font-medium text-slate-700 hover:text-slate-900"
-                                                        >
-                                                            View
-                                                        </button>
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { setSelectedUser(user); setIsUserModalOpen(true); }}
+                                                                className="text-sm font-medium text-slate-700 hover:text-slate-900"
+                                                            >
+                                                                View
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openRoleEditor(user)}
+                                                                className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                                                            >
+                                                                Edit Role
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
@@ -2032,6 +2103,89 @@ export default function SuperAdminPage() {
                 </div>
             )}
 
+            {/* Role Edit Modal */}
+            {isRoleModalOpen && roleEditUser && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4"
+                    onClick={(e) => e.target === e.currentTarget && setIsRoleModalOpen(false)}
+                >
+                    <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-xl">
+                        <div className="flex items-center justify-between border-b border-slate-200 p-5">
+                            <h2 className="text-lg font-semibold text-slate-900">Edit User Role</h2>
+                            <button
+                                type="button"
+                                onClick={() => setIsRoleModalOpen(false)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                            >
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-5">
+                            {/* User info */}
+                            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-semibold text-slate-600">
+                                    {roleEditUser.name.split(" ").map(n => n[0]).join("")}
+                                </div>
+                                <div>
+                                    <div className="text-sm font-semibold text-slate-900">{roleEditUser.name}</div>
+                                    <div className="text-xs text-slate-500">{roleEditUser.email}</div>
+                                    <div className="text-xs text-slate-500">{roleEditUser.organization}</div>
+                                </div>
+                            </div>
+
+                            {/* Current role */}
+                            <div>
+                                <div className="text-xs font-semibold text-slate-500 uppercase">Current Role</div>
+                                <div className="mt-1">
+                                    <Pill label={roleEditUser.role} tone="slate" />
+                                </div>
+                            </div>
+
+                            {/* New role selector */}
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Assign New Role</label>
+                                <select
+                                    value={roleEditNewRole}
+                                    onChange={(e) => setRoleEditNewRole(e.target.value)}
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                >
+                                    {ASSIGNABLE_ROLES.map((r) => (
+                                        <option key={r.value} value={r.value}>{r.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Warning */}
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                                <strong>Important:</strong> Changing this user&apos;s role will take effect the next time they sign in.
+                                The user will gain or lose permissions associated with the new role.
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 border-t border-slate-200 p-5">
+                            <button
+                                type="button"
+                                onClick={() => setIsRoleModalOpen(false)}
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleUpdateRole}
+                                disabled={roleEditSaving}
+                                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {roleEditSaving ? "Saving..." : "Update Role"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* View User Modal */}
             {isUserModalOpen && selectedUser && (
                 <div
@@ -2131,7 +2285,17 @@ export default function SuperAdminPage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-end border-t border-slate-200 p-5">
+                        <div className="flex items-center justify-between border-t border-slate-200 p-5">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsUserModalOpen(false);
+                                    openRoleEditor(selectedUser);
+                                }}
+                                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                            >
+                                Edit Role
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setIsUserModalOpen(false)}
