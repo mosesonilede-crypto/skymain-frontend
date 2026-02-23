@@ -22,7 +22,7 @@ export async function issueLicense(params: {
     billingInterval: BillingInterval;
     stripeCustomerId?: string | null;
     stripeSubscriptionId?: string | null;
-    orgName?: string | null;
+    orgName: string;
     issuedBy?: string;
 }): Promise<{ success: boolean; license?: LicenseRecord; error?: string }> {
     if (!supabaseServer) {
@@ -38,6 +38,23 @@ export async function issueLicense(params: {
         orgName,
         issuedBy = "system",
     } = params;
+
+    if (!orgName || !orgName.trim()) {
+        return { success: false, error: "Organisation name is required to issue a license" };
+    }
+
+    // Check if there's already an active license for this organisation
+    const { data: existingOrgLicense } = await supabaseServer
+        .from("subscription_licenses")
+        .select("*")
+        .eq("org_name", orgName.trim())
+        .eq("status", "active")
+        .maybeSingle();
+
+    if (existingOrgLicense) {
+        // This org already has an active license — return it (single-org enforcement)
+        return { success: true, license: existingOrgLicense as LicenseRecord };
+    }
 
     // Check if there's already an active license for this subscription
     if (stripeSubscriptionId) {
@@ -98,6 +115,7 @@ export async function issueLicense(params: {
         email,
         stripe_customer_id: stripeCustomerId || null,
         stripe_subscription_id: stripeSubscriptionId || null,
+        org_name: orgName.trim(),
         plan,
         billing_interval: billingInterval,
         status: "active" as const,
@@ -106,7 +124,6 @@ export async function issueLicense(params: {
         expires_at: expiresAt.toISOString(),
         created_by: issuedBy,
         metadata: {
-            org_name: orgName || null,
             issued_via: "stripe_webhook",
         },
     };
@@ -219,8 +236,8 @@ export async function suspendLicense(params: {
     return { success: true };
 }
 
-// ── Validate a license key (full DB check) ─────────────────────────
-export async function validateLicense(licenseKey: string): Promise<{
+// ── Validate a license key (full DB check + org binding) ────────────
+export async function validateLicense(licenseKey: string, orgName?: string): Promise<{
     valid: boolean;
     license?: LicenseRecord;
     error?: string;
@@ -275,6 +292,19 @@ export async function validateLicense(licenseKey: string): Promise<{
         };
     }
 
+    // Step 5: Organisation binding check
+    if (orgName && license.org_name) {
+        const boundOrg = license.org_name.trim().toLowerCase();
+        const requestOrg = orgName.trim().toLowerCase();
+        if (boundOrg !== requestOrg) {
+            return {
+                valid: false,
+                license: license as LicenseRecord,
+                error: "This license key is bound to a different organisation",
+            };
+        }
+    }
+
     return { valid: true, license: license as LicenseRecord };
 }
 
@@ -291,6 +321,31 @@ export async function getLicenseByEmail(email: string): Promise<{
         .from("subscription_licenses")
         .select("*")
         .eq("email", email)
+        .eq("status", "active")
+        .order("issued_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        return { license: null, error: error.message };
+    }
+
+    return { license: data as LicenseRecord | null };
+}
+
+// ── Get the active license for an organisation ─────────────────────
+export async function getLicenseByOrg(orgName: string): Promise<{
+    license: LicenseRecord | null;
+    error?: string;
+}> {
+    if (!supabaseServer) {
+        return { license: null, error: "Supabase not configured" };
+    }
+
+    const { data, error } = await supabaseServer
+        .from("subscription_licenses")
+        .select("*")
+        .eq("org_name", orgName.trim())
         .eq("status", "active")
         .order("issued_at", { ascending: false })
         .limit(1)

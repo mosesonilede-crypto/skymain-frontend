@@ -112,6 +112,7 @@ export type LicenseRecord = {
     email: string;
     stripe_customer_id: string | null;
     stripe_subscription_id: string | null;
+    org_name: string;
     plan: LicensePlan;
     billing_interval: BillingInterval;
     status: "active" | "suspended" | "expired" | "revoked";

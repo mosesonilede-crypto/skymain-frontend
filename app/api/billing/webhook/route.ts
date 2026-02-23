@@ -232,7 +232,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
                 billingInterval: interval,
                 stripeCustomerId: customerId,
                 stripeSubscriptionId: subscriptionId,
-                orgName: session.metadata?.orgName || null,
+                orgName: session.metadata?.orgName || email,
                 issuedBy: "stripe_checkout",
             });
 

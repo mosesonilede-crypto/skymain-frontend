@@ -72,6 +72,7 @@ export async function GET(req: NextRequest) {
             plan: license.plan,
             billingInterval: license.billing_interval,
             status: license.status,
+            orgName: license.org_name,
             issuedAt: license.issued_at,
             expiresAt: license.expires_at,
             renewedAt: license.renewed_at,
@@ -117,6 +118,13 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        if (!orgName || typeof orgName !== "string" || !orgName.trim()) {
+            return NextResponse.json(
+                { error: "orgName is required — each license is bound to one organisation" },
+                { status: 400 }
+            );
+        }
+
         const validPlans: LicensePlan[] = ["starter", "professional", "enterprise"];
         const validIntervals: BillingInterval[] = ["monthly", "yearly"];
 
@@ -137,7 +145,7 @@ export async function POST(req: NextRequest) {
             email,
             plan,
             billingInterval,
-            orgName,
+            orgName: orgName.trim(),
             issuedBy: session.email,
         });
 

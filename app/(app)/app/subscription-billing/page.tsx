@@ -219,6 +219,7 @@ export default function SubscriptionBillingPage() {
     const [licenseStatus, setLicenseStatus] = useState<string | null>(null);
     const [licenseExpires, setLicenseExpires] = useState<string | null>(null);
     const [licenseBillingInterval, setLicenseBillingInterval] = useState<string | null>(null);
+    const [licenseOrgName, setLicenseOrgName] = useState<string | null>(null);
     const [licenseCopied, setLicenseCopied] = useState(false);
 
     const [cycle, setCycle] = useState<BillingCycle>("Annual");
@@ -281,6 +282,7 @@ export default function SubscriptionBillingPage() {
                     setLicenseStatus(data.status);
                     setLicenseExpires(data.expiresAt);
                     setLicenseBillingInterval(data.billingInterval);
+                    setLicenseOrgName(data.orgName || null);
                 }
             } catch {
                 // License fetch is non-critical
@@ -456,6 +458,9 @@ export default function SubscriptionBillingPage() {
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
+                        {licenseOrgName && (
+                            <span>Organisation: <span className="font-semibold text-slate-700">{licenseOrgName}</span></span>
+                        )}
                         {licensePlan && (
                             <span>Plan: <span className="font-semibold text-slate-700">{licensePlan.charAt(0).toUpperCase() + licensePlan.slice(1)}</span></span>
                         )}
