@@ -213,6 +213,14 @@ export default function SubscriptionBillingPage() {
     const [error, setError] = useState<string>("");
     const [successMessage, setSuccessMessage] = useState<string>("");
 
+    // License state
+    const [licenseKey, setLicenseKey] = useState<string | null>(null);
+    const [licensePlan, setLicensePlan] = useState<string | null>(null);
+    const [licenseStatus, setLicenseStatus] = useState<string | null>(null);
+    const [licenseExpires, setLicenseExpires] = useState<string | null>(null);
+    const [licenseBillingInterval, setLicenseBillingInterval] = useState<string | null>(null);
+    const [licenseCopied, setLicenseCopied] = useState(false);
+
     const [cycle, setCycle] = useState<BillingCycle>("Annual");
 
     // Handle checkout success/cancel from URL params
@@ -253,6 +261,33 @@ export default function SubscriptionBillingPage() {
         return () => {
             cancelled = true;
         };
+    }, []);
+
+    // Fetch license on load
+    useEffect(() => {
+        let cancelled = false;
+        async function fetchLicense() {
+            try {
+                const res = await fetch("/api/license", {
+                    method: "GET",
+                    headers: { Accept: "application/json" },
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (cancelled) return;
+                if (data.hasLicense) {
+                    setLicenseKey(data.licenseKey);
+                    setLicensePlan(data.plan);
+                    setLicenseStatus(data.status);
+                    setLicenseExpires(data.expiresAt);
+                    setLicenseBillingInterval(data.billingInterval);
+                }
+            } catch {
+                // License fetch is non-critical
+            }
+        }
+        fetchLicense();
+        return () => { cancelled = true; };
     }, []);
 
     const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -381,6 +416,65 @@ export default function SubscriptionBillingPage() {
                     tone="green"
                 />
             </div>
+
+            {/* License Key Card */}
+            {licenseKey ? (
+                <div className="mt-6 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <div className="text-sm font-semibold text-slate-900">Your License Key</div>
+                            <div className="mt-1 text-sm text-slate-600">
+                                Use this code when signing in to activate your {licensePlan ? licensePlan.charAt(0).toUpperCase() + licensePlan.slice(1) : ""} plan features
+                            </div>
+                        </div>
+                        <span className={[
+                            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                            licenseStatus === "active"
+                                ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border border-amber-200 bg-amber-50 text-amber-700",
+                        ].join(" ")}>
+                            {licenseStatus === "active" ? "✓ Active" : licenseStatus || "Unknown"}
+                        </span>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <code className="rounded-xl border border-emerald-300 bg-white px-4 py-2.5 font-mono text-lg font-bold tracking-wider text-emerald-800 select-all">
+                            {licenseKey}
+                        </code>
+                        <button
+                            type="button"
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                            onClick={() => {
+                                navigator.clipboard.writeText(licenseKey).then(() => {
+                                    setLicenseCopied(true);
+                                    setTimeout(() => setLicenseCopied(false), 2000);
+                                });
+                            }}
+                        >
+                            {licenseCopied ? "Copied!" : "Copy"}
+                        </button>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
+                        {licensePlan && (
+                            <span>Plan: <span className="font-semibold text-slate-700">{licensePlan.charAt(0).toUpperCase() + licensePlan.slice(1)}</span></span>
+                        )}
+                        {licenseBillingInterval && (
+                            <span>Renews: <span className="font-semibold text-slate-700">{licenseBillingInterval === "yearly" ? "Annually" : "Monthly"}</span></span>
+                        )}
+                        {licenseExpires && (
+                            <span>Valid until: <span className="font-semibold text-slate-700">{new Date(licenseExpires).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span></span>
+                        )}
+                    </div>
+                </div>
+            ) : payload.status === "Active" ? (
+                <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                    <div className="text-sm font-semibold text-amber-900">License Key</div>
+                    <div className="mt-1 text-sm text-amber-800">
+                        Your license key is being generated. Check your email or refresh this page in a few moments.
+                    </div>
+                </div>
+            ) : null}
 
             <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">

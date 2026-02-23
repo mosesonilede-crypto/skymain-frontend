@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe, STRIPE_PRICES } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { sendWelcomeEmail } from "@/lib/email";
+import { sendLicenseEmail } from "@/lib/licenseEmail";
+import { issueLicense, renewLicense, suspendLicense } from "@/lib/licenseService";
+import type { LicensePlan, BillingInterval } from "@/lib/license";
 import Stripe from "stripe";
 
 export const runtime = "nodejs";
@@ -217,6 +220,40 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
             console.warn("Failed to send welcome email:", emailError);
             // Don't fail the webhook if email fails
         }
+
+        // Generate and send license key
+        try {
+            const licensePlan: LicensePlan = (planFromStripe?.toLowerCase() || "starter") as LicensePlan;
+            const interval = session.metadata?.interval as BillingInterval || "monthly";
+
+            const licenseResult = await issueLicense({
+                email,
+                plan: licensePlan,
+                billingInterval: interval,
+                stripeCustomerId: customerId,
+                stripeSubscriptionId: subscriptionId,
+                orgName: session.metadata?.orgName || null,
+                issuedBy: "stripe_checkout",
+            });
+
+            if (licenseResult.success && licenseResult.license) {
+                await sendLicenseEmail({
+                    email,
+                    name: session.customer_details?.name || undefined,
+                    orgName: session.metadata?.orgName || undefined,
+                    licenseKey: licenseResult.license.license_key,
+                    plan: licensePlan,
+                    billingInterval: interval,
+                    expiresAt: licenseResult.license.expires_at,
+                });
+                console.info("License key generated and emailed");
+            } else {
+                console.warn("License generation failed:", licenseResult.error);
+            }
+        } catch (licenseError) {
+            console.warn("License generation/email failed:", licenseError);
+            // Don't fail the webhook if license generation fails
+        }
     }
 }
 
@@ -252,6 +289,18 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
         subscriptionStatus: "canceled",
         subscriptionPlan: resolvePlanFromPrice(subscription.items.data[0]?.price?.id),
     });
+
+    // Suspend the license
+    try {
+        await suspendLicense({
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscription.id,
+            reason: "subscription_canceled",
+        });
+        console.info("License suspended due to cancellation");
+    } catch (err) {
+        console.warn("Failed to suspend license on cancellation:", err);
+    }
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
@@ -264,6 +313,19 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         stripeCustomerId: customerId,
         subscriptionStatus: "active",
     });
+
+    // Renew the license expiry
+    try {
+        const rawSub = (invoice as unknown as Record<string, unknown>).subscription;
+        const subId = typeof rawSub === "string" ? rawSub : undefined;
+        await renewLicense({
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subId,
+        });
+        console.info("License renewed on invoice paid");
+    } catch (err) {
+        console.warn("Failed to renew license on invoice paid:", err);
+    }
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
@@ -276,4 +338,15 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
         stripeCustomerId: customerId,
         subscriptionStatus: "past_due",
     });
+
+    // Suspend the license on payment failure
+    try {
+        await suspendLicense({
+            stripeCustomerId: customerId,
+            reason: "payment_failed",
+        });
+        console.info("License suspended due to payment failure");
+    } catch (err) {
+        console.warn("Failed to suspend license on payment failure:", err);
+    }
 }
