@@ -105,7 +105,7 @@ function generateAnnouncementEmail(
                     <!-- Header -->
                     <tr>
                         <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 32px 40px; text-align: center;">
-                            <img src="https://skymaintain.ai/logo-white.png" alt="SkyMaintain" style="height: 40px; margin-bottom: 16px;" onerror="this.style.display='none'">
+                            <img src="${process.env.NEXT_PUBLIC_SITE_URL || 'https://app.skymaintain.ai'}/brand/SkyMaintain_logo.png" alt="SkyMaintain" width="160" style="display: block; margin: 0 auto 16px auto; height: auto; max-height: 44px;" />
                             <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">SkyMaintain</h1>
                         </td>
                     </tr>
