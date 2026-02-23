@@ -103,12 +103,16 @@ export async function GET(
         if (componentError) console.error("component_life query error:", componentError);
         if (systemError) console.error("system_inspections query error:", systemError);
 
+        // live = true means Supabase is connected and tables are queryable,
+        // even if they have no rows yet for this aircraft.
+        const connected = !componentError && !systemError;
+
         return NextResponse.json(
             {
                 components,
                 upcoming,
                 systems,
-                live: components.length > 0 || systems.length > 0,
+                live: connected,
             },
             { headers: { "Cache-Control": "no-store" } }
         );

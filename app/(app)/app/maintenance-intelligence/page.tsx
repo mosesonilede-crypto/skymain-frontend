@@ -145,7 +145,8 @@ export default function MaintenanceIntelligencePage() {
                     <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900">
                         {selectedAircraft?.registration || "--"} • {selectedAircraft?.model || "--"}
                         {isLoading && <span className="ml-2 text-xs text-slate-500">Loading…</span>}
-                        {!isLoading && !isLive && <span className="ml-2 text-xs text-amber-600">(No live data — add component_life and system_inspections tables)</span>}
+                        {!isLoading && !isLive && <span className="ml-2 text-xs text-amber-600">(Unable to connect to maintenance data source)</span>}
+                        {!isLoading && isLive && COMPONENTS.length === 0 && SYSTEMS.length === 0 && <span className="ml-2 text-xs text-slate-500">(No data yet for this aircraft)</span>}
                     </div>
                 </div>
             </div>
