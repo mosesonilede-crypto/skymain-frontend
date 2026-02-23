@@ -1,8 +1,9 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useAircraft } from "@/lib/AircraftContext";
 
 type UploadedDoc = {
     filename: string;
@@ -24,16 +25,18 @@ type DocsData = {
 };
 
 export default function DocumentationPage() {
-    const aircraftReg = "N123AB";
+    const { selectedAircraft } = useAircraft();
+    const aircraftReg = selectedAircraft?.registration || "--";
     const MANUAL_STORAGE_KEY = "skymaintain.uploadedManuals";
     const DOC_DRAFT_KEY = "skymaintain.documentationDraft";
 
     const [docsData, setDocsData] = useState<DocsData | null>(null);
 
     // Fetch live docs data
-    async function fetchDocsData() {
+    const fetchDocsData = useCallback(async () => {
+        if (!selectedAircraft?.registration) return;
         try {
-            const response = await fetch(`/api/docs`);
+            const response = await fetch(`/api/docs?reg=${encodeURIComponent(selectedAircraft.registration)}`);
             if (response.ok) {
                 const data = await response.json();
                 setDocsData(data);
@@ -41,29 +44,14 @@ export default function DocumentationPage() {
         } catch (error) {
             console.error("Error fetching docs:", error);
         }
-    }
+    }, [selectedAircraft?.registration]);
 
     useEffect(() => {
         fetchDocsData();
-    }, []);
+    }, [fetchDocsData]);
 
     const discrepancyReports: Discrepancy[] = useMemo(
-        () => docsData?.discrepancies || [
-            {
-                title: "Hydraulic fluid leak detected on left main landing gear",
-                date: "1/19/2025",
-                summary:
-                    "Replaced faulty O-ring seal and replenished hydraulic fluid to specified level. Performed leak check - no leaks observed.",
-                status: "Resolved",
-            },
-            {
-                title: "Unusual vibration in engine #2 during high power settings",
-                date: "1/21/2025",
-                summary:
-                    "Inspected engine mounts and performed borescope inspection. Pending detailed analysis.",
-                status: "In Progress",
-            },
-        ],
+        () => docsData?.discrepancies || [],
         [docsData]
     );
 
@@ -88,26 +76,7 @@ export default function DocumentationPage() {
     const [docSaveConfirm, setDocSaveConfirm] = useState(false);
 
     const uploadedDocs: UploadedDoc[] = useMemo(() => {
-        const base = docsData?.uploadedDocs || [
-            {
-                filename: "Engine_Inspection_Report_2025.pdf",
-                date: "1/19/2025",
-                size: "2.4 MB",
-                category: "Inspection Reports",
-            },
-            {
-                filename: "Hydraulic_System_Maintenance.pdf",
-                date: "1/17/2025",
-                size: "1.8 MB",
-                category: "Maintenance Records",
-            },
-            {
-                filename: "A-Check_Compliance_Certificate.pdf",
-                date: "1/14/2025",
-                size: "856 KB",
-                category: "Compliance",
-            },
-        ];
+        const base = docsData?.uploadedDocs || [];
 
         const merged = [...localUploads, ...base].filter(
             (doc) => doc && doc.filename

@@ -46,6 +46,23 @@ type AnalyticsData = {
     costSavings: { month: string; monthlySavings: number; cumulativeSavings: number }[];
 };
 
+type ModelInfo = {
+    version?: string;
+    architecture?: string;
+    modelId?: string;
+    dataset?: string;
+    aircraftTypes?: string;
+    trainingSamples?: string;
+    featureCount?: string;
+    accuracy?: string;
+    precision?: string;
+    recall?: string;
+    lastRetrained?: string;
+    nextScheduled?: string;
+    validation?: string;
+    auditTrail?: string;
+};
+
 type InsightsData = {
     predictiveAlert?: {
         severity: "High" | "Medium" | "Low";
@@ -54,6 +71,7 @@ type InsightsData = {
         recommendation: string;
     };
     analytics?: AnalyticsData;
+    modelInfo?: ModelInfo;
 };
 
 export default function AIInsightsPage() {
@@ -155,7 +173,7 @@ export default function AIInsightsPage() {
     }, [selectedAircraft?.registration, hasAdvancedInsights]);
     /* eslint-enable react-hooks/exhaustive-deps */
 
-    const predictiveAlert: PredictiveAlert = useMemo(
+    const predictiveAlert: PredictiveAlert | null = useMemo(
         () => insightsData?.predictiveAlert ? {
             severity: insightsData.predictiveAlert.severity === "High" ? "Critical" : "Warning",
             title: insightsData.predictiveAlert.type,
@@ -164,15 +182,7 @@ export default function AIInsightsPage() {
             timeframe: "2-3 months",
             dataSources: "AI Predictive Engine, Sensor Data, Historical Analysis",
             recommendedAction: insightsData.predictiveAlert.recommendation,
-        } : {
-            severity: "Critical",
-            title: "Hydraulic System - Left Main Gear",
-            probabilityPct: 78,
-            summary: "Seal failure likely within 200 flight hours",
-            timeframe: "2-3 months",
-            dataSources: "Pressure sensors, Visual inspection, Historical data",
-            recommendedAction: "Schedule hydraulic seal replacement during next maintenance window",
-        },
+        } : null,
         [insightsData]
     );
 
@@ -229,11 +239,14 @@ export default function AIInsightsPage() {
                         <WarnIcon />
                         AI-Generated Predictive Alerts
                     </span>
-                    <span className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
-                        1 Critical
-                    </span>
+                    {predictiveAlert && (
+                        <span className="inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200">
+                            1 {predictiveAlert.severity}
+                        </span>
+                    )}
                 </div>
 
+                {predictiveAlert ? (
                 <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50/60 p-5">
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="text-sm font-semibold text-slate-900">{predictiveAlert.title}</div>
@@ -265,6 +278,11 @@ export default function AIInsightsPage() {
                         <div className="mt-2 text-sm text-slate-900">{predictiveAlert.recommendedAction}</div>
                     </div>
                 </div>
+                ) : (
+                <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500">
+                    No predictive alerts at this time. The AI engine will generate alerts as sensor and maintenance data accumulates.
+                </div>
+                )}
 
                 <button
                     type="button"
@@ -346,9 +364,9 @@ export default function AIInsightsPage() {
                                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Model Identity</h3>
                                 <div className="grid grid-cols-2 gap-3">
                                     <ModelInfoField label="Model Name" value="SkyMaintain Predictive" />
-                                    <ModelInfoField label="Version" value="v2.1.0" />
-                                    <ModelInfoField label="Architecture" value="Ensemble (XGBoost + LSTM)" />
-                                    <ModelInfoField label="Model ID" value="sm-pred-v2.1-prod" />
+                                    <ModelInfoField label="Version" value={insightsData?.modelInfo?.version ?? "--"} />
+                                    <ModelInfoField label="Architecture" value={insightsData?.modelInfo?.architecture ?? "--"} />
+                                    <ModelInfoField label="Model ID" value={insightsData?.modelInfo?.modelId ?? "--"} />
                                 </div>
                             </div>
 
@@ -356,10 +374,10 @@ export default function AIInsightsPage() {
                             <div>
                                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Training Data</h3>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <ModelInfoField label="Dataset" value="15 years maintenance records" />
-                                    <ModelInfoField label="Aircraft Types" value="A320, B737, A330, B777" />
-                                    <ModelInfoField label="Training Samples" value="2.4M flight cycles" />
-                                    <ModelInfoField label="Feature Count" value="847 engineered features" />
+                                    <ModelInfoField label="Dataset" value={insightsData?.modelInfo?.dataset ?? "--"} />
+                                    <ModelInfoField label="Aircraft Types" value={insightsData?.modelInfo?.aircraftTypes ?? "--"} />
+                                    <ModelInfoField label="Training Samples" value={insightsData?.modelInfo?.trainingSamples ?? "--"} />
+                                    <ModelInfoField label="Feature Count" value={insightsData?.modelInfo?.featureCount ?? "--"} />
                                 </div>
                             </div>
 
@@ -368,15 +386,15 @@ export default function AIInsightsPage() {
                                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Performance Metrics</h3>
                                 <div className="grid grid-cols-3 gap-3">
                                     <div className="rounded-xl bg-emerald-50 p-3 text-center ring-1 ring-emerald-200">
-                                        <div className="text-lg font-bold text-emerald-700">94.2%</div>
+                                        <div className="text-lg font-bold text-emerald-700">{insightsData?.modelInfo?.accuracy ?? "--"}</div>
                                         <div className="text-[11px] text-emerald-600 font-medium">Accuracy</div>
                                     </div>
                                     <div className="rounded-xl bg-blue-50 p-3 text-center ring-1 ring-blue-200">
-                                        <div className="text-lg font-bold text-blue-700">91.8%</div>
+                                        <div className="text-lg font-bold text-blue-700">{insightsData?.modelInfo?.precision ?? "--"}</div>
                                         <div className="text-[11px] text-blue-600 font-medium">Precision</div>
                                     </div>
                                     <div className="rounded-xl bg-violet-50 p-3 text-center ring-1 ring-violet-200">
-                                        <div className="text-lg font-bold text-violet-700">89.5%</div>
+                                        <div className="text-lg font-bold text-violet-700">{insightsData?.modelInfo?.recall ?? "--"}</div>
                                         <div className="text-[11px] text-violet-600 font-medium">Recall</div>
                                     </div>
                                 </div>
@@ -386,10 +404,10 @@ export default function AIInsightsPage() {
                             <div>
                                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Regulatory &amp; Audit</h3>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <ModelInfoField label="Last Retrained" value="January 15, 2026" />
-                                    <ModelInfoField label="Next Scheduled" value="April 15, 2026" />
-                                    <ModelInfoField label="Validation" value="EASA ML-2024 compliant" />
-                                    <ModelInfoField label="Audit Trail" value="SHA-256 signed" />
+                                    <ModelInfoField label="Last Retrained" value={insightsData?.modelInfo?.lastRetrained ?? "--"} />
+                                    <ModelInfoField label="Next Scheduled" value={insightsData?.modelInfo?.nextScheduled ?? "--"} />
+                                    <ModelInfoField label="Validation" value={insightsData?.modelInfo?.validation ?? "--"} />
+                                    <ModelInfoField label="Audit Trail" value={insightsData?.modelInfo?.auditTrail ?? "--"} />
                                 </div>
                             </div>
 

@@ -59,17 +59,15 @@ export default function ReportsAnalyticsPage() {
     const aircraftOverview: KV[] = useMemo(
         () => reportsData?.aircraftOverview?.map((item) => ({
             k: item.label + ":",
-            v: item.label.includes("Health") || item.label.includes("Hours") || item.label.includes("Cycles")
-                ? item.value
-                : item.value
+            v: item.value
         })) ?? [
                 { k: "Registration:", v: aircraftReg },
                 { k: "Model:", v: model },
-                { k: "Health Status:", v: <Pill tone="success">95%</Pill> },
-                { k: "Flight Hours:", v: "Loading..." },
-                { k: "Total Cycles:", v: "Loading..." },
+                { k: "Health Status:", v: isLoading ? "Loading..." : <Pill tone="neutral">--</Pill> },
+                { k: "Flight Hours:", v: isLoading ? "Loading..." : "--" },
+                { k: "Total Cycles:", v: isLoading ? "Loading..." : "--" },
             ],
-        [reportsData, aircraftReg, model]
+        [reportsData, aircraftReg, model, isLoading]
     );
 
     const maintenanceSummary: KV[] = useMemo(
@@ -88,15 +86,7 @@ export default function ReportsAnalyticsPage() {
     );
 
     const systemHealth: HealthTile[] = useMemo(
-        () => reportsData?.systemHealth ?? [
-            { label: "Engine", value: 94 },
-            { label: "Landing Gear", value: 96 },
-            { label: "Hydraulic", value: 88 },
-            { label: "Fuel System", value: 97 },
-            { label: "Avionics", value: 100 },
-            { label: "Electrical", value: 93 },
-            { label: "APU", value: 91 },
-        ],
+        () => reportsData?.systemHealth ?? [],
         [reportsData]
     );
 
@@ -147,6 +137,7 @@ export default function ReportsAnalyticsPage() {
             </div>
 
             <Panel title="System Health Breakdown">
+                {systemHealth.length > 0 ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {systemHealth.map((t) => (
                         <HealthCard key={t.label} label={t.label} value={t.value} />
@@ -154,6 +145,11 @@ export default function ReportsAnalyticsPage() {
 
                     <div className="hidden lg:block" />
                 </div>
+                ) : (
+                <div className="text-center text-sm text-slate-500 py-6">
+                    {isLoading ? "Loading system health data..." : "No system health data available. Connect your CMMS integration to populate this section."}
+                </div>
+                )}
             </Panel>
 
             <footer className="mt-auto border-t border-slate-200 pt-6 text-center text-xs text-slate-500">

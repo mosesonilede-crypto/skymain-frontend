@@ -2,107 +2,42 @@
 
 import BackToHub from "@/components/app/BackToHub";
 import { useAircraft } from "@/lib/AircraftContext";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import type { PolicyStampedAdvisory } from "@/lib/policy/advisory";
 
-const COMPONENTS = [
-    {
-        name: "Left Engine",
-        serial: "CFM56-7B-LE-2219",
-        hours: 11230,
-        cycles: 8420,
-        limitHours: 20000,
-        limitCycles: 15000,
-    },
-    {
-        name: "Right Engine",
-        serial: "CFM56-7B-RE-2219",
-        hours: 10940,
-        cycles: 8295,
-        limitHours: 20000,
-        limitCycles: 15000,
-    },
-    {
-        name: "APU",
-        serial: "APS3200-2141",
-        hours: 6240,
-        cycles: 4020,
-        limitHours: 10000,
-        limitCycles: 8000,
-    },
-    {
-        name: "Landing Gear",
-        serial: "LG-737NG-8821",
-        hours: 14200,
-        cycles: 9100,
-        limitHours: 18000,
-        limitCycles: 12000,
-    },
-];
+type MIComponent = {
+    name: string;
+    serial: string;
+    hours: number;
+    cycles: number;
+    limitHours: number;
+    limitCycles: number;
+};
 
-const UPCOMING = [
-    {
-        component: "Left Engine",
-        dueInHours: 8770,
-        dueInCycles: 6580,
-        status: "On Track",
-    },
-    {
-        component: "APU",
-        dueInHours: 3760,
-        dueInCycles: 3980,
-        status: "Monitor",
-    },
-    {
-        component: "Landing Gear",
-        dueInHours: 3800,
-        dueInCycles: 2900,
-        status: "Plan Visit",
-    },
-];
+type MIUpcoming = {
+    component: string;
+    dueInHours: number;
+    dueInCycles: number;
+    status: string;
+};
 
-const SYSTEMS = [
-    {
-        name: "Hydraulic System",
-        intervalHours: 6000,
-        intervalCycles: 4500,
-        lastInspection: "2025-09-18",
-        nextInspection: "2026-03-18",
-        dueInHours: 1240,
-        dueInCycles: 980,
-        status: "Schedule",
-    },
-    {
-        name: "Electrical Power System",
-        intervalHours: 8000,
-        intervalCycles: 6200,
-        lastInspection: "2025-08-02",
-        nextInspection: "2026-06-02",
-        dueInHours: 3120,
-        dueInCycles: 2480,
-        status: "On Track",
-    },
-    {
-        name: "Flight Controls",
-        intervalHours: 7000,
-        intervalCycles: 5200,
-        lastInspection: "2025-10-05",
-        nextInspection: "2026-04-05",
-        dueInHours: 1540,
-        dueInCycles: 1210,
-        status: "Monitor",
-    },
-    {
-        name: "Fuel System",
-        intervalHours: 9000,
-        intervalCycles: 7000,
-        lastInspection: "2025-07-12",
-        nextInspection: "2026-07-12",
-        dueInHours: 3820,
-        dueInCycles: 3010,
-        status: "On Track",
-    },
-];
+type MISystem = {
+    name: string;
+    intervalHours: number;
+    intervalCycles: number;
+    lastInspection: string;
+    nextInspection: string;
+    dueInHours: number;
+    dueInCycles: number;
+    status: string;
+};
+
+type MIPayload = {
+    components: MIComponent[];
+    upcoming: MIUpcoming[];
+    systems: MISystem[];
+    live: boolean;
+};
 
 function percentRemaining(current: number, limit: number) {
     if (!limit) return 0;
@@ -125,6 +60,37 @@ export default function MaintenanceIntelligencePage() {
         "NO_ACTION" | "MONITOR" | "SCHEDULE" | "COMPLY" | "WORK_ORDER"
     >("MONITOR");
     const [decisionStatus, setDecisionStatus] = useState<"idle" | "saving" | "error" | "success">("idle");
+
+    // Live data state
+    const [COMPONENTS, setCOMPONENTS] = useState<MIComponent[]>([]);
+    const [UPCOMING, setUPCOMING] = useState<MIUpcoming[]>([]);
+    const [SYSTEMS, setSYSTEMS] = useState<MISystem[]>([]);
+    const [isLive, setIsLive] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Fetch maintenance intelligence data from API
+    const fetchMIData = useCallback(async () => {
+        if (!selectedAircraft?.registration) return;
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/maintenance-intelligence/${selectedAircraft.registration}`);
+            if (res.ok) {
+                const data = (await res.json()) as MIPayload;
+                setCOMPONENTS(data.components || []);
+                setUPCOMING(data.upcoming || []);
+                setSYSTEMS(data.systems || []);
+                setIsLive(data.live ?? false);
+            }
+        } catch (error) {
+            console.error("Error fetching maintenance intelligence:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [selectedAircraft?.registration]);
+
+    useEffect(() => {
+        fetchMIData();
+    }, [fetchMIData]);
 
     const advisory: PolicyStampedAdvisory = useMemo(
         () => ({
@@ -177,7 +143,9 @@ export default function MaintenanceIntelligencePage() {
                         <div className="text-xs text-slate-500">Active monitoring scope</div>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900">
-                        {selectedAircraft?.registration || "N123AB"} • {selectedAircraft?.model || "Boeing 737-800"}
+                        {selectedAircraft?.registration || "--"} • {selectedAircraft?.model || "--"}
+                        {isLoading && <span className="ml-2 text-xs text-slate-500">Loading…</span>}
+                        {!isLoading && !isLive && <span className="ml-2 text-xs text-amber-600">(No live data — add component_life and system_inspections tables)</span>}
                     </div>
                 </div>
             </div>

@@ -28,12 +28,47 @@ import {
     Clock,
 } from "lucide-react";
 import { useAircraft } from "@/lib/AircraftContext";
+import { useAuth } from "@/lib/AuthContext";
 import BackToHub from "@/components/app/BackToHub";
 
 type DashboardSnapshot = {
     aircraft?: {
+        tailNumber?: string;
+        model?: string;
+        operator?: string;
         serialNumber?: string;
+        status?: string;
+        health?: string;
+        location?: string;
+        totalFlightHours?: number;
+        totalCycles?: number;
+        lastMaintenance?: string;
     };
+    kpis?: {
+        critical?: { count: number; items: string[] };
+        scheduled?: { count: number; items: string[] };
+        good?: { count: number; items: string[] };
+    };
+    systemHealth?: { system: string; status: string; efficiency: number }[];
+    scheduledMaintenance?: { name: string; next: string; days: string; remaining: string }[];
+    recentTasks?: {
+        name: string;
+        status: string;
+        date: string;
+        cost: string;
+        duration: string;
+        description: string;
+        technician: string;
+        parts?: { name: string; cost: string }[];
+    }[];
+    criticalAlerts?: {
+        title: string;
+        probability: string;
+        summary: string;
+        timeframe: string;
+        action: string;
+    }[];
+    fallback?: boolean;
 };
 
 type NotificationItem = {
@@ -45,6 +80,7 @@ type NotificationItem = {
 
 export default function DashboardPage() {
     const { selectedAircraft, setSelectedAircraft, allAircraft } = useAircraft();
+    const { user } = useAuth();
     const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.skymaintain.ai").replace(/\/+$/, "");
     const hasAircraft = Boolean(selectedAircraft);
     const [showAircraftMenu, setShowAircraftMenu] = useState(false);
@@ -199,7 +235,7 @@ export default function DashboardPage() {
                             <div className="flex items-center gap-2 pr-3 border-r border-[#e5e7eb]">
                                 <Building2 className="h-4 w-4 text-slate-700" />
                                 <div className="text-[14px] text-[#0a0a0a]">
-                                    SkyWings Fleet
+                                    {dashboardData?.aircraft?.operator || user?.orgName || "Fleet"}
                                     <div className="text-[12px] text-[#6a7282]">License: Active</div>
                                 </div>
                             </div>
@@ -335,7 +371,7 @@ export default function DashboardPage() {
                             </div>
                             <span className="rounded-[8px] bg-[#ffe2e2] px-2 py-1 text-[12px] text-[#c10007]">Critical</span>
                         </div>
-                        <div className="mt-3 text-[24px] text-[#0a0a0a]">0</div>
+                        <div className="mt-3 text-[24px] text-[#0a0a0a]">{dashboardData?.kpis?.critical?.count ?? 0}</div>
                         <div className="text-[14px] text-[#4a5565]">Active Alerts</div>
                     </div>
 
@@ -346,7 +382,7 @@ export default function DashboardPage() {
                             </div>
                             <span className="rounded-[8px] bg-[#fef9c2] px-2 py-1 text-[12px] text-[#a65f00]">Scheduled</span>
                         </div>
-                        <div className="mt-3 text-[24px] text-[#0a0a0a]">0</div>
+                        <div className="mt-3 text-[24px] text-[#0a0a0a]">{dashboardData?.kpis?.scheduled?.count ?? 0}</div>
                         <div className="text-[14px] text-[#4a5565]">Upcoming Tasks</div>
                     </div>
 
@@ -355,9 +391,11 @@ export default function DashboardPage() {
                             <div className="rounded-[10px] bg-[#f0fdf4] p-2">
                                 <ShieldCheck className="h-5 w-5 text-[#008236]" />
                             </div>
-                            <span className="rounded-[8px] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#008236]">Good</span>
+                            <span className="rounded-[8px] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#008236]">
+                                {Number(dashboardData?.aircraft?.health?.replace('%', '') || 0) >= 80 ? "Good" : dashboardData?.aircraft?.health ? "Attention" : "—"}
+                            </span>
                         </div>
-                        <div className="mt-3 text-[24px] text-[#0a0a0a]">95%</div>
+                        <div className="mt-3 text-[24px] text-[#0a0a0a]">{dashboardData?.aircraft?.health || "--"}</div>
                         <div className="text-[14px] text-[#4a5565]">Aircraft Health</div>
                     </div>
                 </div>
@@ -410,12 +448,12 @@ export default function DashboardPage() {
                                         <Activity className="h-4 w-4 text-emerald-600" />
                                         Overall Health Status
                                     </div>
-                                    <div className="text-[#00a63e]">95%</div>
+                                    <div className="text-[#00a63e]">{dashboardData?.aircraft?.health || "--"}</div>
                                 </div>
                                 <div className="mt-3 h-3 rounded-full bg-[#e5e7eb]">
-                                    <div className="h-3 w-full rounded-full bg-[#00a63e]" />
+                                    <div className="h-3 rounded-full bg-[#00a63e]" style={{ width: dashboardData?.aircraft?.health || "0%" }} />
                                 </div>
-                                <div className="mt-2 text-[12px] text-[#4a5565]">Excellent condition - all systems nominal</div>
+                                <div className="mt-2 text-[12px] text-[#4a5565]">{dashboardData ? "Live data from fleet integration" : "Waiting for data…"}</div>
                             </div>
 
                             <div className="mt-6 grid grid-cols-2 gap-4">
@@ -424,28 +462,28 @@ export default function DashboardPage() {
                                         <MapPin className="h-4 w-4 text-slate-500" />
                                         Location
                                     </div>
-                                    <div className="mt-2 text-[14px] text-[#0a0a0a]">JFK International Airport</div>
+                                    <div className="mt-2 text-[14px] text-[#0a0a0a]">{dashboardData?.aircraft?.location || "--"}</div>
                                 </div>
                                 <div className="rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] p-3">
                                     <div className="flex items-center gap-2 text-[12px] text-[#4a5565]">
                                         <Gauge className="h-4 w-4 text-slate-500" />
                                         Status
                                     </div>
-                                    <div className="mt-2 text-[14px] text-[#0a0a0a]">On Ground</div>
+                                    <div className="mt-2 text-[14px] text-[#0a0a0a]">{dashboardData?.aircraft?.status || "--"}</div>
                                 </div>
                                 <div className="rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] p-3">
                                     <div className="flex items-center gap-2 text-[12px] text-[#4a5565]">
                                         <Clock className="h-4 w-4 text-slate-500" />
                                         Total Hours
                                     </div>
-                                    <div className="mt-2 text-[14px] text-[#0a0a0a]">24,680 hrs</div>
+                                    <div className="mt-2 text-[14px] text-[#0a0a0a]">{dashboardData?.aircraft?.totalFlightHours != null ? `${dashboardData.aircraft.totalFlightHours.toLocaleString()} hrs` : "--"}</div>
                                 </div>
                                 <div className="rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] p-3">
                                     <div className="flex items-center gap-2 text-[12px] text-[#4a5565]">
                                         <RotateCw className="h-4 w-4 text-slate-500" />
                                         Total Cycles
                                     </div>
-                                    <div className="mt-2 text-[14px] text-[#0a0a0a]">12,450</div>
+                                    <div className="mt-2 text-[14px] text-[#0a0a0a]">{dashboardData?.aircraft?.totalCycles != null ? dashboardData.aircraft.totalCycles.toLocaleString() : "--"}</div>
                                 </div>
                             </div>
 
@@ -454,24 +492,21 @@ export default function DashboardPage() {
                                     <Settings className="h-4 w-4 text-slate-600" />
                                     Engine Health
                                 </div>
-                                <div className="mt-4 grid grid-cols-2 gap-4 text-[14px]">
-                                    <div>
-                                        <div className="text-[#4a5565]">Health Score:</div>
-                                        <div className="text-[#00a63e]">94%</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-[#4a5565]">Status:</div>
-                                        <span className="rounded-[8px] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#008236]">Normal</span>
-                                    </div>
-                                    <div>
-                                        <div className="text-[#4a5565]">Temperature:</div>
-                                        <div className="text-[#0a0a0a]">450°C</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-[#4a5565]">Oil Pressure:</div>
-                                        <div className="text-[#0a0a0a]">45 PSI</div>
-                                    </div>
-                                </div>
+                                {(() => {
+                                    const engineSys = dashboardData?.systemHealth?.find((s) => s.system?.toLowerCase().includes("engine"));
+                                    return (
+                                        <div className="mt-4 grid grid-cols-2 gap-4 text-[14px]">
+                                            <div>
+                                                <div className="text-[#4a5565]">Health Score:</div>
+                                                <div className="text-[#00a63e]">{engineSys ? `${engineSys.efficiency}%` : "--"}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-[#4a5565]">Status:</div>
+                                                <span className="rounded-[8px] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#008236]">{engineSys?.status || "--"}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             <div className="mt-6 rounded-[10px] border border-[#bedbff] bg-[#eff6ff] p-4">
@@ -479,23 +514,30 @@ export default function DashboardPage() {
                                     <Calendar className="h-4 w-4 text-[#1c398e]" />
                                     Upcoming Maintenance
                                 </div>
-                                <div className="mt-2 text-[14px] text-[#0a0a0a]">March 15, 2026</div>
-                                <div className="text-[12px] text-[#4a5565]">A-Check due in 50 days</div>
+                                <div className="mt-2 text-[14px] text-[#0a0a0a]">{dashboardData?.aircraft?.lastMaintenance || "--"}</div>
+                                <div className="text-[12px] text-[#4a5565]">{dashboardData?.kpis?.scheduled?.items?.[0] || "No upcoming maintenance scheduled"}</div>
                             </div>
                         </div>
 
                         <div className="rounded-[14px] border border-black/10 bg-white p-6">
                             <div className="text-[20px] text-[#0a0a0a]">System Health</div>
                             <div className="mt-6 space-y-4">
-                                {[
-                                    { label: "Engine", value: "94%", status: "OPERATIONAL" },
-                                    { label: "Landing Gear", value: "96%", status: "OPERATIONAL" },
-                                    { label: "Hydraulic System", value: "88%", status: "OPERATIONAL" },
-                                    { label: "Fuel System", value: "97%", status: "OPERATIONAL" },
-                                    { label: "Avionics", value: "100%", status: "OPERATIONAL" },
-                                    { label: "Electrical System", value: "93%", status: "OPERATIONAL" },
-                                    { label: "APU", value: "91%", status: "OPERATIONAL" },
-                                ].map((row) => (
+                                {(dashboardData?.systemHealth && dashboardData.systemHealth.length > 0
+                                    ? dashboardData.systemHealth.map((s) => ({
+                                        label: s.system,
+                                        value: `${s.efficiency}%`,
+                                        status: s.status?.toUpperCase() || "OPERATIONAL",
+                                    }))
+                                    : [
+                                        { label: "Engine", value: "--", status: "—" },
+                                        { label: "Landing Gear", value: "--", status: "—" },
+                                        { label: "Hydraulic System", value: "--", status: "—" },
+                                        { label: "Fuel System", value: "--", status: "—" },
+                                        { label: "Avionics", value: "--", status: "—" },
+                                        { label: "Electrical System", value: "--", status: "—" },
+                                        { label: "APU", value: "--", status: "—" },
+                                    ]
+                                ).map((row) => (
                                     <div key={row.label}>
                                         <div className="flex items-center justify-between text-[14px]">
                                             <div className="flex items-center gap-2">
@@ -533,22 +575,30 @@ export default function DashboardPage() {
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5 text-[#e7000b]" />
                                 <span className="text-[14px] text-[#0a0a0a]">Critical Alerts</span>
-                                <span className="rounded-[8px] bg-[#e7000b] px-2 py-1 text-[12px] text-white">1</span>
+                                <span className="rounded-[8px] bg-[#e7000b] px-2 py-1 text-[12px] text-white">{dashboardData?.kpis?.critical?.count ?? 0}</span>
                             </div>
-                            <div className="mt-3 rounded-[10px] border border-[#ffc9c9] bg-[#fef2f2] p-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="text-[14px] text-[#0a0a0a]">Hydraulic System - Left Main Gear</div>
-                                    <span className="rounded-[8px] bg-[#e7000b] px-2 py-1 text-[12px] text-white">78%</span>
+                            {dashboardData?.criticalAlerts && dashboardData.criticalAlerts.length > 0 ? (
+                                dashboardData.criticalAlerts.map((alert, idx) => (
+                                    <div key={idx} className="mt-3 rounded-[10px] border border-[#ffc9c9] bg-[#fef2f2] p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-[14px] text-[#0a0a0a]">{alert.title}</div>
+                                            <span className="rounded-[8px] bg-[#e7000b] px-2 py-1 text-[12px] text-white">{alert.probability}</span>
+                                        </div>
+                                        <div className="mt-2 text-[12px] text-[#364153]">{alert.summary}</div>
+                                        <div className="mt-2 flex items-center gap-2 text-[12px] text-[#4a5565]">
+                                            <Clock className="h-3 w-3 text-slate-500" />
+                                            Timeframe: {alert.timeframe}
+                                        </div>
+                                        <div className="mt-3 rounded-[4px] bg-white p-2 text-[12px] text-[#0a0a0a]">
+                                            <strong>Action:</strong> {alert.action}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="mt-3 rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] p-4 text-[13px] text-[#4a5565]">
+                                    No critical alerts at this time.
                                 </div>
-                                <div className="mt-2 text-[12px] text-[#364153]">Seal failure likely within 200 flight hours</div>
-                                <div className="mt-2 flex items-center gap-2 text-[12px] text-[#4a5565]">
-                                    <Clock className="h-3 w-3 text-slate-500" />
-                                    Timeframe: 2-3 months
-                                </div>
-                                <div className="mt-3 rounded-[4px] bg-white p-2 text-[12px] text-[#0a0a0a]">
-                                    <strong>Action:</strong> Schedule hydraulic seal replacement during next maintenance window
-                                </div>
-                            </div>
+                            )}
                         </div>
 
                         <div className="mt-6">
@@ -557,29 +607,31 @@ export default function DashboardPage() {
                                 <span className="text-[14px] text-[#0a0a0a]">Upcoming Scheduled Maintenance</span>
                             </div>
                             <div className="mt-3 space-y-3">
-                                {[
-                                    { name: "A-CHECK", next: "3/14/2026", days: "50 days", remaining: "425 hours / 180 cycles remaining" },
-                                    { name: "B-CHECK", next: "8/19/2026", days: "208 days", remaining: "1850 hours / 720 cycles remaining" },
-                                    { name: "C-CHECK", next: "5/14/2027", days: "476 days", remaining: "4200 hours / 1650 cycles remaining" },
-                                ].map((item) => (
-                                    <div key={item.name} className="rounded-[10px] border border-[#bedbff] bg-[#eff6ff] p-3">
-                                        <div className="flex items-center justify-between">
-                                            <div className="text-[14px] text-[#0a0a0a]">{item.name}</div>
-                                            <span className="rounded-[8px] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#008236]">Current</span>
-                                        </div>
-                                        <div className="mt-2 grid grid-cols-2 gap-4 text-[12px] text-[#4a5565]">
-                                            <div>
-                                                <div>Next Due:</div>
-                                                <div className="text-[#0a0a0a]">{item.next}</div>
+                                {dashboardData?.scheduledMaintenance && dashboardData.scheduledMaintenance.length > 0 ? (
+                                    dashboardData.scheduledMaintenance.map((item) => (
+                                        <div key={item.name} className="rounded-[10px] border border-[#bedbff] bg-[#eff6ff] p-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-[14px] text-[#0a0a0a]">{item.name}</div>
+                                                <span className="rounded-[8px] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#008236]">Current</span>
                                             </div>
-                                            <div>
-                                                <div>Days Until Due:</div>
-                                                <div className="text-[#0a0a0a]">{item.days}</div>
+                                            <div className="mt-2 grid grid-cols-2 gap-4 text-[12px] text-[#4a5565]">
+                                                <div>
+                                                    <div>Next Due:</div>
+                                                    <div className="text-[#0a0a0a]">{item.next}</div>
+                                                </div>
+                                                <div>
+                                                    <div>Days Until Due:</div>
+                                                    <div className="text-[#0a0a0a]">{item.days}</div>
+                                                </div>
                                             </div>
+                                            <div className="mt-2 text-[12px] text-[#4a5565]">{item.remaining}</div>
                                         </div>
-                                        <div className="mt-2 text-[12px] text-[#4a5565]">{item.remaining}</div>
+                                    ))
+                                ) : (
+                                    <div className="rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] p-3 text-[13px] text-[#4a5565]">
+                                        No upcoming scheduled maintenance. Connect your CMMS integration for live maintenance schedules.
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
 
@@ -589,62 +641,45 @@ export default function DashboardPage() {
                                 <span className="text-[14px] text-[#0a0a0a]">Recent Maintenance Tasks</span>
                             </div>
                             <div className="mt-3 space-y-3">
-                                <div className="rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] p-3">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[14px] text-[#0a0a0a]">A-Check Inspection</span>
-                                                <span className="rounded-[8px] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#008236]">Completed</span>
+                                {dashboardData?.recentTasks && dashboardData.recentTasks.length > 0 ? (
+                                    dashboardData.recentTasks.map((task, idx) => (
+                                        <div key={idx} className="rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] p-3">
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[14px] text-[#0a0a0a]">{task.name}</span>
+                                                        <span className="rounded-[8px] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#008236]">{task.status}</span>
+                                                    </div>
+                                                    <div className="text-[12px] text-[#4a5565]">{task.date}</div>
+                                                </div>
+                                                <div className="text-right text-[12px] text-[#4a5565]">
+                                                    <div className="text-[#0a0a0a]">{task.cost}</div>
+                                                    {task.duration}
+                                                </div>
                                             </div>
-                                            <div className="text-[12px] text-[#4a5565]">12/9/2025</div>
-                                        </div>
-                                        <div className="text-right text-[12px] text-[#4a5565]">
-                                            <div className="text-[#0a0a0a]">$8,500</div>
-                                            18h
-                                        </div>
-                                    </div>
-                                    <div className="mt-2 text-[12px] text-[#364153]">
-                                        Complete A-Check including visual inspection, lubrication, and minor repairs
-                                    </div>
-                                    <div className="mt-2 flex items-center gap-2 text-[12px] text-[#4a5565]">
-                                        <User className="h-3 w-3 text-slate-500" />
-                                        By: John Anderson
-                                    </div>
-                                    <div className="mt-3 border-t border-[#e5e7eb] pt-2 text-[12px] text-[#4a5565]">
-                                        Parts Replaced:
-                                        <div className="mt-1 flex items-center justify-between text-[#0a0a0a]">
-                                            • Brake Pad Assembly (x4)
-                                            <span className="text-[#4a5565]">$1200</span>
-                                        </div>
-                                        <div className="mt-1 flex items-center justify-between text-[#0a0a0a]">
-                                            • Oil Filter (x2)
-                                            <span className="text-[#4a5565]">$85</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] p-3">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[14px] text-[#0a0a0a]">Avionics Software Update</span>
-                                                <span className="rounded-[8px] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#008236]">Completed</span>
+                                            <div className="mt-2 text-[12px] text-[#364153]">{task.description}</div>
+                                            <div className="mt-2 flex items-center gap-2 text-[12px] text-[#4a5565]">
+                                                <User className="h-3 w-3 text-slate-500" />
+                                                By: {task.technician}
                                             </div>
-                                            <div className="text-[12px] text-[#4a5565]">11/4/2025</div>
+                                            {task.parts && task.parts.length > 0 && (
+                                                <div className="mt-3 border-t border-[#e5e7eb] pt-2 text-[12px] text-[#4a5565]">
+                                                    Parts Replaced:
+                                                    {task.parts.map((part, pIdx) => (
+                                                        <div key={pIdx} className="mt-1 flex items-center justify-between text-[#0a0a0a]">
+                                                            • {part.name}
+                                                            <span className="text-[#4a5565]">{part.cost}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="text-right text-[12px] text-[#4a5565]">
-                                            <div className="text-[#0a0a0a]">$1,200</div>
-                                            4h
-                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="rounded-[10px] border border-[#e5e7eb] bg-[#f9fafb] p-3 text-[13px] text-[#4a5565]">
+                                        No recent maintenance tasks available. Connect your CMMS integration to view task history.
                                     </div>
-                                    <div className="mt-2 text-[12px] text-[#364153]">
-                                        Critical avionics software update for FMS and TCAS systems
-                                    </div>
-                                    <div className="mt-2 flex items-center gap-2 text-[12px] text-[#4a5565]">
-                                        <User className="h-3 w-3 text-slate-500" />
-                                        By: Sarah Williams
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </div>
 
@@ -654,14 +689,14 @@ export default function DashboardPage() {
                                     <ListChecks className="h-4 w-4 text-blue-600" />
                                     Total Tasks
                                 </div>
-                                <div className="mt-2 text-[24px] text-[#0a0a0a]">2</div>
+                                <div className="mt-2 text-[24px] text-[#0a0a0a]">{dashboardData?.recentTasks?.length ?? 0}</div>
                             </div>
                             <div className="rounded-[10px] border border-[#b9f8cf] bg-gradient-to-r from-[#f0fdf4] to-[#dcfce7] p-3">
                                 <div className="flex items-center gap-2 text-[12px] text-[#4a5565]">
                                     <DollarSign className="h-4 w-4 text-emerald-600" />
                                     Total Cost
                                 </div>
-                                <div className="mt-2 text-[24px] text-[#0a0a0a]">$9,700</div>
+                                <div className="mt-2 text-[24px] text-[#0a0a0a]">--</div>
                             </div>
                         </div>
                     </div>

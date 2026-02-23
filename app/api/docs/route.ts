@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 type UploadedDoc = {
     filename: string;
@@ -19,73 +20,69 @@ type DocumentationPayload = {
     discrepancies: Discrepancy[];
 };
 
-function generateMockDocumentationData(): DocumentationPayload {
-    return {
-        uploadedDocs: [
-            {
-                filename: "Engine_Inspection_Report_2025.pdf",
-                date: "1/19/2025",
-                size: "2.4 MB",
-                category: "Inspection Reports",
-            },
-            {
-                filename: "Hydraulic_System_Maintenance.pdf",
-                date: "1/17/2025",
-                size: "1.8 MB",
-                category: "Maintenance Records",
-            },
-            {
-                filename: "A-Check_Compliance_Certificate.pdf",
-                date: "1/14/2025",
-                size: "856 KB",
-                category: "Compliance",
-            },
-            {
-                filename: "Landing_Gear_Service_Log.pdf",
-                date: "1/10/2025",
-                size: "2.1 MB",
-                category: "Maintenance Records",
-            },
-            {
-                filename: "Avionics_System_Test_Report.pdf",
-                date: "1/8/2025",
-                size: "1.5 MB",
-                category: "Inspection Reports",
-            },
-        ],
-        discrepancies: [
-            {
-                title: "Hydraulic fluid leak detected on left main landing gear",
-                date: "1/19/2025",
-                summary:
-                    "Replaced faulty O-ring seal and replenished hydraulic fluid to specified level. Performed leak check - no leaks observed.",
-                status: "Resolved",
-            },
-            {
-                title: "Unusual vibration in engine #2 during high power settings",
-                date: "1/21/2025",
-                summary:
-                    "Inspected engine mounts and performed borescope inspection. Pending detailed analysis.",
-                status: "In Progress",
-            },
-            {
-                title: "Landing gear warning light intermittent",
-                date: "1/5/2025",
-                summary:
-                    "Cleaned landing gear sensor contacts and verified electrical connections. Issue resolved after maintenance.",
-                status: "Resolved",
-            },
-        ],
-    };
-}
-
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        const docsData = generateMockDocumentationData();
+        const reg = request.nextUrl.searchParams.get("reg") || "";
 
-        return NextResponse.json(docsData, {
+        const uploadedDocs: UploadedDoc[] = [];
+        const discrepancies: Discrepancy[] = [];
+
+        if (supabaseServer && reg) {
+            // Fetch uploaded documents from Supabase storage listing
+            try {
+                const { data: files } = await supabaseServer.storage
+                    .from("documents")
+                    .list(reg, { limit: 50, sortBy: { column: "created_at", order: "desc" } });
+
+                if (files) {
+                    for (const f of files) {
+                        uploadedDocs.push({
+                            filename: f.name,
+                            date: f.created_at
+                                ? new Date(f.created_at).toLocaleDateString()
+                                : "--",
+                            size: f.metadata?.size
+                                ? formatFileSize(Number(f.metadata.size))
+                                : "--",
+                            category: "Maintenance Records",
+                        });
+                    }
+                }
+            } catch {
+                // Storage bucket may not exist yet — return empty
+            }
+
+            // Fetch discrepancies from discrepancy_reports table
+            try {
+                const { data: rows } = await supabaseServer
+                    .from("discrepancy_reports")
+                    .select("title, created_at, summary, status")
+                    .eq("aircraft_registration", reg)
+                    .order("created_at", { ascending: false })
+                    .limit(20);
+
+                if (rows) {
+                    for (const r of rows) {
+                        discrepancies.push({
+                            title: r.title ?? "Untitled",
+                            date: r.created_at
+                                ? new Date(r.created_at).toLocaleDateString()
+                                : "--",
+                            summary: r.summary ?? "",
+                            status: r.status === "resolved" ? "Resolved" : "In Progress",
+                        });
+                    }
+                }
+            } catch {
+                // Table may not exist yet — return empty
+            }
+        }
+
+        const payload: DocumentationPayload = { uploadedDocs, discrepancies };
+
+        return NextResponse.json(payload, {
             headers: {
-                "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200",
+                "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
             },
         });
     } catch (error) {
@@ -95,4 +92,13 @@ export async function GET() {
             { status: 500 }
         );
     }
+}
+
+function formatFileSize(bytes: number): string {
+    if (!Number.isFinite(bytes) || bytes <= 0) return "0 KB";
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(0)} KB`;
+    const mb = kb / 1024;
+    return `${mb.toFixed(1)} MB`;
 }
