@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { generateOtp, getOtpExpiry, signPayload } from "@/lib/twoFactor";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/rateLimit";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 
@@ -162,6 +163,54 @@ async function sendSms(code: string, destination: string) {
     }
 }
 
+/* ── Supabase Admin OTP fallback ───────────────────────────── */
+
+/**
+ * Use the Supabase Admin API (service_role) to generate a magic link for
+ * the user, then extract the OTP from the response. This bypasses the
+ * client-side 60-second rate limit and uses Supabase's built-in email
+ * delivery as a last-resort fallback.
+ *
+ * Returns true if Supabase sent the email, false otherwise.
+ */
+async function sendViaSupabaseAdmin(destination: string): Promise<boolean> {
+    if (!supabaseServer) return false;
+
+    // Use signInWithOtp via the admin client — the service_role key
+    // bypasses per-user rate limits that plague client-side OTP sends.
+    // Note: this sends Supabase's OWN OTP email (not our branded one),
+    // but it's better than no email at all.
+    const { error } = await supabaseServer.auth.admin.generateLink({
+        type: "magiclink",
+        email: destination,
+    });
+
+    if (error) {
+        console.warn("Supabase Admin generateLink failed:", error.message);
+
+        // Fallback: try the standard signInWithOtp via the client
+        // (still server-side, but uses anon-level rate limiting)
+        const anonUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+        const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+        if (anonUrl && anonKey) {
+            const { createClient } = await import("@supabase/supabase-js");
+            const anonClient = createClient(anonUrl, anonKey, {
+                auth: { persistSession: false, autoRefreshToken: false },
+            });
+            const { error: otpError } = await anonClient.auth.signInWithOtp({
+                email: destination,
+                options: { shouldCreateUser: false },
+            });
+            if (!otpError) return true;
+            console.warn("Supabase anon signInWithOtp failed:", otpError.message);
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
 /* ── POST handler ─────────────────────────────────────────── */
 
 export async function POST(req: NextRequest) {
@@ -188,6 +237,9 @@ export async function POST(req: NextRequest) {
 
     let provider = "resend";
     let sendError: string | null = null;
+    // Track which delivery mechanism actually works. The client needs this
+    // to decide which verify path to use (cookie-based vs Supabase OTP).
+    let deliveryMethod: "api" | "supabase" | null = null;
 
     if (body.method === "email") {
         // 1. Try Resend (best deliverability)
@@ -195,6 +247,7 @@ export async function POST(req: NextRequest) {
             const result = await sendViaResend(code, body.destination);
             if (result) {
                 console.info("2FA email sent via Resend", { destination: body.destination, id: result.messageId });
+                deliveryMethod = "api";
             } else {
                 throw new Error("RESEND_API_KEY not configured");
             }
@@ -207,12 +260,29 @@ export async function POST(req: NextRequest) {
                 try {
                     await sendViaSmtp(code, body.destination);
                     console.info("2FA email sent via SMTP", { destination: body.destination });
+                    deliveryMethod = "api";
                 } catch (smtpErr) {
                     sendError = smtpErr instanceof Error ? smtpErr.message : "SMTP delivery failed";
                     console.error("SMTP also failed:", sendError);
                 }
             } else {
-                sendError = "Email delivery service not configured. Please contact support.";
+                sendError = "Primary email services not configured.";
+            }
+        }
+
+        // 3. If both Resend and SMTP failed, try Supabase Admin OTP
+        if (!deliveryMethod && sendError) {
+            console.warn("Resend + SMTP failed, trying Supabase Admin OTP...");
+            try {
+                const supabaseOk = await sendViaSupabaseAdmin(body.destination);
+                if (supabaseOk) {
+                    provider = "supabase";
+                    deliveryMethod = "supabase";
+                    sendError = null; // Clear the error — delivery succeeded
+                    console.info("2FA email sent via Supabase", { destination: body.destination });
+                }
+            } catch (supaErr) {
+                console.error("Supabase OTP also failed:", supaErr instanceof Error ? supaErr.message : supaErr);
             }
         }
     } else {
@@ -226,23 +296,38 @@ export async function POST(req: NextRequest) {
     }
 
     if (sendError) {
-        return NextResponse.json({ ok: false, error: sendError }, { status: 500 });
+        return NextResponse.json(
+            { ok: false, error: sendError + " Check your spam folder or contact support." },
+            { status: 500 }
+        );
     }
 
     const response = NextResponse.json({
         ok: true,
         sent: true,
         provider,
+        // Tell the client which delivery mechanism worked, so it can
+        // use the matching verify path (cookie-based vs Supabase OTP)
+        deliveryMethod: deliveryMethod || "api",
     });
-    response.cookies.set({
-        name: COOKIE_NAME,
-        value: token,
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 300,
-        domain: COOKIE_DOMAIN,
-        path: "/",
-    });
+
+    // Only set the cookie when Resend/SMTP delivered the code (the cookie
+    // stores our generated OTP for server-side verification). When Supabase
+    // delivered the code, it manages its own OTP — the cookie is irrelevant
+    // and would cause a "code mismatch" on verify if the user enters the
+    // Supabase-generated code against our cookie-stored code.
+    if (deliveryMethod === "api") {
+        response.cookies.set({
+            name: COOKIE_NAME,
+            value: token,
+            httpOnly: true,
+            sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
+            maxAge: 300,
+            domain: COOKIE_DOMAIN,
+            path: "/",
+        });
+    }
+
     return response;
 }

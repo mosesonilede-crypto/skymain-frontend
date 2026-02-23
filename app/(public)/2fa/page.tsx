@@ -148,7 +148,10 @@ export default function TwoFactorPage() {
 
         setSending(true);
         try {
-            // Primary: Use our API route (Resend-powered, best deliverability)
+            // The API route tries Resend → SMTP → Supabase Admin OTP server-side.
+            // We do NOT independently call supabase.auth.signInWithOtp on the client
+            // because that causes duplicate sends and triggers Supabase's 60-second
+            // per-user rate limit, which is the root cause of "code not delivered".
             const res = await fetch("/api/2fa/send", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -161,31 +164,27 @@ export default function TwoFactorPage() {
             if (signal?.aborted) return; // superseded by a newer send
 
             if (res.ok && data?.sent) {
-                sendMechanismRef.current = "api";
-                if (mountedRef.current) setSendStatus("Verification code sent. Check your inbox.");
+                // The server tells us which mechanism delivered the code.
+                // "api" = Resend/SMTP (code in sm2fa cookie → verify via /api/2fa/verify)
+                // "supabase" = Supabase Auth OTP (verify via supabase.auth.verifyOtp)
+                sendMechanismRef.current = data.deliveryMethod === "supabase" ? "supabase" : "api";
+                if (mountedRef.current) {
+                    setSendStatus(
+                        data.deliveryMethod === "supabase"
+                            ? "Verification code sent via Supabase. Check your inbox (and spam folder)."
+                            : "Verification code sent. Check your inbox."
+                    );
+                }
                 return;
             }
 
-            console.warn("API send failed, trying Supabase OTP:", data?.error);
-
-            // Fallback: Use Supabase Auth OTP
-            if (supabase) {
-                const { error: otpError } = await supabase.auth.signInWithOtp({
-                    email: destination,
-                    options: { shouldCreateUser: false },
-                });
-
-                if (signal?.aborted) return;
-
-                if (!otpError) {
-                    sendMechanismRef.current = "supabase";
-                    if (mountedRef.current) setSendStatus("Verification code sent. Check your inbox.");
-                    return;
-                }
-                console.warn("Supabase OTP also failed:", otpError.message);
+            // All three server-side mechanisms failed
+            if (mountedRef.current) {
+                setSendError(
+                    data?.error ||
+                    "Failed to send verification code. Please check your spam folder or try again."
+                );
             }
-
-            if (mountedRef.current) setSendError(data?.error || "Failed to send verification code. Please try again.");
         } catch (sendErrorCaught) {
             if (signal?.aborted) return; // ignore errors from cancelled requests
             if (mountedRef.current) setSendError(sendErrorCaught instanceof Error ? sendErrorCaught.message : "Failed to send code.");
