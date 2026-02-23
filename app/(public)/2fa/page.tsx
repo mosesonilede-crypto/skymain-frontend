@@ -47,7 +47,7 @@ function HelpCenterFab() {
 
 export default function TwoFactorPage() {
     const router = useRouter();
-    const { user, login } = useAuth();
+    const { user, login, isAuthenticated } = useAuth();
 
     const [method, setMethod] = React.useState<"email" | "authenticator">("email");
     const [email, setEmail] = React.useState("");
@@ -59,6 +59,31 @@ export default function TwoFactorPage() {
     const [code, setCode] = React.useState("");
     const [submitting, setSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+
+    // --- Bug-fix refs ---
+    // Ref-based submission guard (prevents double-click race)
+    const submittingRef = React.useRef(false);
+    // Track which send mechanism delivered the OTP so verify uses the right one
+    const sendMechanismRef = React.useRef<"api" | "supabase" | null>(null);
+    // AbortController to cancel in-flight sendOtp calls when a new one starts
+    const sendAbortRef = React.useRef<AbortController | null>(null);
+    // Mounted guard to suppress state updates after navigation
+    const mountedRef = React.useRef(true);
+    // Flag: when true, the useEffect below will navigate to /app/welcome
+    const [readyToNavigate, setReadyToNavigate] = React.useState(false);
+
+    React.useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
+
+    // Navigate to /app/welcome ONLY after AuthContext has committed the user
+    React.useEffect(() => {
+        if (readyToNavigate && isAuthenticated) {
+            router.push("/app/welcome");
+        }
+    }, [readyToNavigate, isAuthenticated, router]);
+
     React.useEffect(() => {
         if (user?.email) {
             setEmail(user.email);
@@ -108,9 +133,10 @@ export default function TwoFactorPage() {
         }
     }
 
-    async function sendOtp({ showError }: { showError?: boolean } = {}) {
+    async function sendOtp({ showError, signal }: { showError?: boolean; signal?: AbortSignal } = {}) {
         setSendError(null);
         setSendStatus(null);
+        sendMechanismRef.current = null;
         const destination = email.trim();
 
         if (!destination && method !== "authenticator") {
@@ -128,11 +154,15 @@ export default function TwoFactorPage() {
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify({ method: "email", destination }),
+                signal,
             });
             const data = await res.json().catch(() => ({}));
 
+            if (signal?.aborted) return; // superseded by a newer send
+
             if (res.ok && data?.sent) {
-                setSendStatus("Verification code sent. Check your inbox.");
+                sendMechanismRef.current = "api";
+                if (mountedRef.current) setSendStatus("Verification code sent. Check your inbox.");
                 return;
             }
 
@@ -145,44 +175,66 @@ export default function TwoFactorPage() {
                     options: { shouldCreateUser: false },
                 });
 
+                if (signal?.aborted) return;
+
                 if (!otpError) {
-                    setSendStatus("Verification code sent. Check your inbox.");
+                    sendMechanismRef.current = "supabase";
+                    if (mountedRef.current) setSendStatus("Verification code sent. Check your inbox.");
                     return;
                 }
                 console.warn("Supabase OTP also failed:", otpError.message);
             }
 
-            setSendError(data?.error || "Failed to send verification code. Please try again.");
+            if (mountedRef.current) setSendError(data?.error || "Failed to send verification code. Please try again.");
         } catch (sendErrorCaught) {
-            setSendError(sendErrorCaught instanceof Error ? sendErrorCaught.message : "Failed to send code.");
+            if (signal?.aborted) return; // ignore errors from cancelled requests
+            if (mountedRef.current) setSendError(sendErrorCaught instanceof Error ? sendErrorCaught.message : "Failed to send code.");
         } finally {
-            setSending(false);
+            if (mountedRef.current) setSending(false);
         }
     }
 
     React.useEffect(() => {
         if (method === "authenticator") return;
         if (!email.trim()) return;
-        sendOtp();
+
+        // Cancel any in-flight send before starting a new one
+        // (prevents the cookie-overwrite race condition)
+        sendAbortRef.current?.abort();
+        const ac = new AbortController();
+        sendAbortRef.current = ac;
+
+        sendOtp({ signal: ac.signal });
+
+        return () => { ac.abort(); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [method, email]);
 
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
+
+        // Ref-based guard: prevents double-click race (React state batching
+        // can't guarantee the button is disabled before the second click fires)
+        if (submittingRef.current) return;
+        submittingRef.current = true;
+
         setError(null);
 
         const normalized = code.replace(/\D/g, "").slice(0, 6);
         if (normalized.length !== 6) {
             setError("Enter the 6-digit verification code.");
+            submittingRef.current = false;
             return;
         }
 
         setSubmitting(true);
         try {
             let verified = false;
+            const mechanism = sendMechanismRef.current; // which system sent the OTP
 
             // Primary: Verify via API route cookie (matches Resend-sent code)
-            {
+            // Only attempt if the OTP was sent via the API (or mechanism unknown)
+            if (mechanism !== "supabase") {
                 const res = await fetch("/api/2fa/verify", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -197,12 +249,14 @@ export default function TwoFactorPage() {
                 if (res.ok && data?.ok) {
                     verified = true;
                 } else {
-                    console.warn("API verify failed, trying Supabase OTP:", data?.error);
+                    console.warn("API verify failed:", data?.error);
                 }
             }
 
-            // Fallback: Verify via Supabase OTP (if code was sent via Supabase)
-            if (!verified && supabase && method !== "authenticator") {
+            // Fallback: Verify via Supabase OTP — only if code was sent via Supabase
+            // (avoids calling verifyOtp with a Resend code, which always fails and
+            //  can cause Supabase client-side auth state churn)
+            if (!verified && supabase && method !== "authenticator" && (mechanism === "supabase" || mechanism === null)) {
                 const { error: verifyError } = await supabase.auth.verifyOtp({
                     email: email.trim(),
                     token: normalized,
@@ -216,7 +270,7 @@ export default function TwoFactorPage() {
             }
 
             if (!verified) {
-                setError("Invalid verification code. Please check and try again.");
+                if (mountedRef.current) setError("Invalid verification code. Please check and try again.");
                 return;
             }
 
@@ -273,23 +327,27 @@ export default function TwoFactorPage() {
             }
 
             if (!authUser) {
-                setError("Unable to resolve your session. Please sign in again.");
+                if (mountedRef.current) setError("Unable to resolve your session. Please sign in again.");
                 return;
             }
 
             const loginSuccess = await login(authUser);
             if (!loginSuccess) {
-                setError("Failed to create session. Please try again.");
+                if (mountedRef.current) setError("Failed to create session. Please try again.");
                 return;
             }
 
-            // Chronology: 2FA -> welcome (post-login landing)
-            router.push("/app/welcome");
+            // Instead of router.push immediately (which can race with setUser
+            // inside login()), signal a useEffect to navigate AFTER React has
+            // committed the auth state. This prevents ProtectedRoute from
+            // seeing isAuthenticated=false and redirecting to /signin.
+            if (mountedRef.current) setReadyToNavigate(true);
         } catch (verifyError) {
-            setError(verifyError instanceof Error ? verifyError.message : "Verification failed.");
+            if (mountedRef.current) setError(verifyError instanceof Error ? verifyError.message : "Verification failed.");
             return;
         } finally {
-            setSubmitting(false);
+            submittingRef.current = false;
+            if (mountedRef.current) setSubmitting(false);
         }
     }
 
@@ -366,7 +424,13 @@ export default function TwoFactorPage() {
                             {method !== "authenticator" ? (
                                 <button
                                     type="button"
-                                    onClick={() => sendOtp({ showError: true })}
+                                    onClick={() => {
+                                        // Cancel any in-flight send before resending
+                                        sendAbortRef.current?.abort();
+                                        const ac = new AbortController();
+                                        sendAbortRef.current = ac;
+                                        sendOtp({ showError: true, signal: ac.signal });
+                                    }}
                                     disabled={sending}
                                     className="rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useReducer, useCallback } from "react";
+import { useEffect, useReducer, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { getServerTrialStatus, getTrialStatus, type ServerTrialStatus } from "@/lib/trial";
 
@@ -99,8 +99,35 @@ export function ProtectedRoute({
         }
     }, [isLoading, isAuthenticated, checkTrialStatus]);
 
+    // Grace-period ref: when the component mounts, we wait a short tick
+    // before acting on !isAuthenticated. This prevents a race condition
+    // where login()'s setUser hasn't committed yet when the new route
+    // renders for the first time (e.g., navigating from /2fa → /app/welcome).
+    const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     useEffect(() => {
+        // Clear pending redirect whenever auth state changes
+        if (redirectTimerRef.current) {
+            clearTimeout(redirectTimerRef.current);
+            redirectTimerRef.current = null;
+        }
+
         if (!isLoading && !isAuthenticated) {
+            // Before redirecting, double-check localStorage. The login()
+            // function always writes here synchronously, even if the React
+            // state update hasn't propagated yet.
+            const stored = typeof window !== "undefined" ? localStorage.getItem("SKYMAINTAIN_USER") : null;
+            if (stored) {
+                // Auth state is likely in transit — give React one more
+                // render cycle to commit the pending setUser.
+                redirectTimerRef.current = setTimeout(() => {
+                    // Re-read from context isn't possible inside setTimeout,
+                    // but if the component re-renders with isAuthenticated=true
+                    // the effect will re-run and clear this timer above.
+                    router.replace(redirectTo);
+                }, 150);
+                return;
+            }
             router.replace(redirectTo);
             return;
         }
@@ -118,6 +145,13 @@ export function ProtectedRoute({
         ) {
             router.replace("/app/subscription-expired");
         }
+
+        return () => {
+            if (redirectTimerRef.current) {
+                clearTimeout(redirectTimerRef.current);
+                redirectTimerRef.current = null;
+            }
+        };
     }, [isAuthenticated, isLoading, isRoleAllowed, redirectTo, router, trialChecked, trialStatus, isSuperAdmin]);
 
     if (isLoading || (isAuthenticated && !trialChecked)) {
