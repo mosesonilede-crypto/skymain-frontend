@@ -29,6 +29,7 @@ import {
     Wrench,
     ChevronUp,
     CreditCard,
+    Upload,
 } from "lucide-react";
 import AppSidebarNav from "@/components/app/AppSidebarNav";
 import SidebarProfilePanel from "@/components/app/SidebarProfilePanel";
@@ -50,6 +51,7 @@ const ALL_NAV_ITEMS = [
     { href: "/app/reports", label: "Reports", icon: <FileBarChart2 className="h-5 w-5" /> },
     { href: "/app/compliance", label: "Regulatory Compliance", icon: <ShieldCheck className="h-5 w-5" />, tall: true },
     { href: "/app/insights", label: "AI Insights", icon: <Brain className="h-5 w-5" /> },
+    { href: "/app/data-import", label: "Data Import", icon: <Upload className="h-5 w-5" />, adminOnly: true },
     { href: "/app/subscription-billing", label: "Billing", icon: <CreditCard className="h-5 w-5" /> },
     { href: "/app/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
     { href: "/app/admin-panel", label: "Admin Panel", icon: <Shield className="h-5 w-5" />, adminOnly: true },
