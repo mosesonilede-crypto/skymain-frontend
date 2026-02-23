@@ -110,9 +110,9 @@ const DEFAULT_REFERENCES = [
     {
         title: "ICAO Annex 8 - Airworthiness of Aircraft",
         source: "International Civil Aviation Organization (icao.int)",
-        url: "https://www.icao.int/safety/airnavigation/OPS/Pages/ICAO-Annexes.aspx",
+        url: "https://elibrary.icao.int/product/302602",
         effectiveDate: "2022-11-03",
-        retrievedDate: "2026-02-04",
+        retrievedDate: "2026-02-22",
     },
     {
         title: "Transport Canada CARS 571 - Maintenance Standards",

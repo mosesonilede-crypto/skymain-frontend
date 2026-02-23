@@ -158,7 +158,7 @@ export default function SidebarProfilePanel({
         // Validate file type and size
         if (!file.type.startsWith("image/")) return;
         if (file.size > 2 * 1024 * 1024) {
-            alert("Image must be under 2MB");
+            // File too large - silently reject
             return;
         }
 

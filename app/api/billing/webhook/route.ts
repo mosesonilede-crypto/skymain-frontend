@@ -136,7 +136,8 @@ export async function POST(req: NextRequest) {
             }
 
             default:
-                console.log(`Unhandled event type: ${event.type}`);
+                // Unhandled event types are silently ignored in production
+                break;
         }
 
         return NextResponse.json({ received: true });
@@ -151,14 +152,7 @@ export async function POST(req: NextRequest) {
 
 // Handler functions - integrate with your database/backend
 async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
-    console.log("✅ Checkout completed:", {
-        sessionId: session.id,
-        customerId: session.customer,
-        customerEmail: session.customer_email,
-        subscriptionId: session.subscription,
-        plan: session.metadata?.plan,
-        interval: session.metadata?.interval,
-    });
+    // Checkout completed — upsert profile
 
     if (!supabaseServer) return;
     const stripe = getStripe();
@@ -218,7 +212,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
                 orgName: session.metadata?.orgName || undefined,
                 subscriptionType,
             });
-            console.log("✅ Welcome email sent to:", email);
+            console.info("Welcome email sent successfully");
         } catch (emailError) {
             console.warn("Failed to send welcome email:", emailError);
             // Don't fail the webhook if email fails
@@ -227,13 +221,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
 }
 
 async function handleSubscriptionChange(subscription: Stripe.Subscription) {
-    const subData = subscription as unknown as { current_period_end: number };
-    console.log("📝 Subscription updated:", {
-        subscriptionId: subscription.id,
-        customerId: subscription.customer,
-        status: subscription.status,
-        currentPeriodEnd: new Date(subData.current_period_end * 1000).toISOString(),
-    });
+    // Subscription updated — sync status
 
     const customerId = typeof subscription.customer === "string" ? subscription.customer : null;
     if (!customerId) return;
@@ -253,10 +241,7 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
 }
 
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
-    console.log("❌ Subscription canceled:", {
-        subscriptionId: subscription.id,
-        customerId: subscription.customer,
-    });
+    // Subscription canceled — mark as canceled
 
     const customerId = typeof subscription.customer === "string" ? subscription.customer : null;
     if (!customerId) return;
@@ -270,12 +255,7 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
-    console.log("💰 Invoice paid:", {
-        invoiceId: invoice.id,
-        customerId: invoice.customer,
-        amountPaid: invoice.amount_paid / 100,
-        currency: invoice.currency,
-    });
+    // Invoice paid — mark as active
 
     const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
     if (!customerId) return;
@@ -287,11 +267,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
-    console.log("⚠️ Payment failed:", {
-        invoiceId: invoice.id,
-        customerId: invoice.customer,
-        attemptCount: invoice.attempt_count,
-    });
+    // Payment failed — mark as past_due
 
     const customerId = typeof invoice.customer === "string" ? invoice.customer : null;
     if (!customerId) return;

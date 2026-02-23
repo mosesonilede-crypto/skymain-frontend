@@ -85,6 +85,7 @@ export default function DocumentationPage() {
     const [localUploads, setLocalUploads] = useState<UploadedDoc[]>([]);
     const [uploading, setUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [docSaveConfirm, setDocSaveConfirm] = useState(false);
 
     const uploadedDocs: UploadedDoc[] = useMemo(() => {
         const base = docsData?.uploadedDocs || [
@@ -215,7 +216,8 @@ export default function DocumentationPage() {
 
     function handleSubmitDocumentation() {
         saveDocumentationToReservoir();
-        alert("Documentation saved for AI predictive analysis.");
+        setDocSaveConfirm(true);
+        setTimeout(() => setDocSaveConfirm(false), 3000);
     }
 
     function resetMaintenanceForm() {
@@ -329,13 +331,16 @@ export default function DocumentationPage() {
                                 onChange={setMaintenanceDate}
                             />
 
-                            <div className="mt-2 flex flex-wrap gap-3">
+                            <div className="mt-2 flex flex-wrap items-center gap-3">
                                 <PrimaryButton
                                     onClick={handleSubmitDocumentation}
                                 >
                                     Submit Documentation
                                 </PrimaryButton>
                                 <SecondaryButton onClick={resetMaintenanceForm}>Reset Form</SecondaryButton>
+                                {docSaveConfirm && (
+                                    <span className="text-sm font-medium text-green-600">Saved for AI analysis</span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -480,9 +485,9 @@ export default function DocumentationPage() {
 
                             <div className="mt-2 flex flex-wrap gap-3">
                                 <PrimaryButton
-                                    onClick={() =>
-                                        alert("Submit Discrepancy Report (wire to backend + audit log)")
-                                    }
+                                    onClick={() => {
+                                        // TODO: Wire to backend discrepancy report API + audit log
+                                    }}
                                 >
                                     Submit Discrepancy Report
                                 </PrimaryButton>
@@ -734,7 +739,9 @@ function UploadedDocRow({ doc }: { doc: UploadedDoc }) {
                 <button
                     type="button"
                     className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
-                    onClick={() => alert(`Open ${doc.filename} (wire to viewer)`)}
+                    onClick={() => {
+                        // TODO: Wire to document viewer
+                    }}
                 >
                     View
                 </button>

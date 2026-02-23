@@ -229,8 +229,11 @@ export default function DemoPage() {
                     <button
                         onClick={() => {
                             const link = activeVideo?.videoUrl || watchUrl;
-                            navigator.clipboard.writeText(link);
-                            alert("Link copied to clipboard!");
+                            navigator.clipboard.writeText(link).then(() => {
+                                const btn = document.activeElement as HTMLButtonElement;
+                                const orig = btn?.textContent;
+                                if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = orig || "Copy Link"; }, 2000); }
+                            });
                         }}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                     >

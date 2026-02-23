@@ -115,6 +115,6 @@ if (typeof window === "undefined") {
     }
 
     if (result.valid && result.warnings.length === 0) {
-        console.log("✅ Environment validation passed");
+        console.info("Environment validation passed");
     }
 }

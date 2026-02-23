@@ -117,17 +117,12 @@ async function sendEmail(
             html: htmlBody,
         });
 
-        console.log(`✉️ Email sent to ${to}: ${subject}`);
+        console.info("Contact form email sent successfully");
         return;
     }
 
-    // Fallback: Log to console in development/when SMTP not configured
-    console.log(`\n✉️  CONTACT FORM (SMTP not configured - logged only)`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`To: ${to}`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Reply-To: ${replyTo}`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    // Fallback: warn when SMTP not configured
+    console.warn("CONTACT FORM: SMTP not configured — message not delivered");
 }
 
 export async function POST(request: NextRequest) {

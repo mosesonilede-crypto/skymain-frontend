@@ -156,13 +156,11 @@ export default function DashboardPage() {
     }, []);
 
     const handlePrintReport = () => {
-        console.log("Printing report for aircraft:", selectedAircraft?.registration);
         window.print();
     };
 
     const handlePrivacyMode = () => {
         setPrivacyMode(!privacyMode);
-        console.log("Privacy mode toggled:", !privacyMode);
     };
 
     return (

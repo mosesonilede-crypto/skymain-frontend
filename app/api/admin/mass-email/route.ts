@@ -105,7 +105,7 @@ function generateAnnouncementEmail(
                     <!-- Header -->
                     <tr>
                         <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 32px 40px; text-align: center;">
-                            <img src="https://skymaintain.com/logo-white.png" alt="SkyMaintain" style="height: 40px; margin-bottom: 16px;" onerror="this.style.display='none'">
+                            <img src="https://skymaintain.ai/logo-white.png" alt="SkyMaintain" style="height: 40px; margin-bottom: 16px;" onerror="this.style.display='none'">
                             <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">SkyMaintain</h1>
                         </td>
                     </tr>
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
                 }));
             } else {
                 // Fallback to Auth users
-                console.log("Falling back to Auth users for mass email");
+                console.warn("Falling back to Auth users for mass email");
                 const authUsers = await listAllAuthUsers();
 
                 // Filter by audience if needed
@@ -397,7 +397,7 @@ export async function GET(request: NextRequest) {
                 count = profileCount;
             } else {
                 // Fallback to Auth users
-                console.log("Falling back to Auth users for count");
+                console.warn("Falling back to Auth users for count");
                 const authUsers = await listAllAuthUsers();
 
                 if (targetAudience === "all") {

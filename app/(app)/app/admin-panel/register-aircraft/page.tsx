@@ -159,7 +159,7 @@ async function addUserLive(form: { name: string; email: string; role: string; st
 async function updateUserLive(userId: string, updates: Partial<AdminUser>): Promise<void> {
     // User management API not yet implemented - this is a placeholder
     // In production, this would call /api/admin/users/:id
-    console.log("Update user:", userId, updates);
+    void userId; void updates;
     throw new Error("User management is not yet available. Please contact your administrator.");
 }
 
