@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { startIngestionLog, logIngestion } from "@/lib/ingestion/log";
 
 // ─── CSV helpers ────────────────────────────────────────────────
 function parseCSV(text: string): Record<string, string>[] {
@@ -140,6 +141,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Upsert to handle duplicates gracefully
+        const { entry: logEntry, finish } = startIngestionLog(orgName, "csv_import", table, {
+            record_count: mapped.length,
+            initiated_by: formData.get("user_email") as string || "admin",
+        });
+
         let upsertResult;
         if (table === "component_life") {
             upsertResult = await sb
@@ -156,11 +162,20 @@ export async function POST(request: NextRequest) {
 
         if (upsertResult.error) {
             console.error(`Data import error for ${table}:`, upsertResult.error);
+            logEntry.records_failed = mapped.length;
+            logEntry.error_details = [{ error: upsertResult.error.message }];
+            finish();
+            logIngestion(logEntry).catch(() => {});
             return NextResponse.json(
                 { error: `Database error: ${upsertResult.error.message}` },
                 { status: 500 }
             );
         }
+
+        logEntry.records_created = table === "discrepancy_reports" ? mapped.length : 0;
+        logEntry.records_updated = table !== "discrepancy_reports" ? mapped.length : 0;
+        finish();
+        logIngestion(logEntry).catch(() => {});
 
         return NextResponse.json({
             success: true,
