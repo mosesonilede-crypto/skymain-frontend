@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyPayload } from "@/lib/twoFactor";
-import { getLicenseByEmail, getLicenseHistory, issueLicense } from "@/lib/licenseService";
+import { getLicenseByEmail, getLicenseByKey, getLicenseHistory, issueLicense } from "@/lib/licenseService";
 import type { LicensePlan, BillingInterval } from "@/lib/license";
 
 export const runtime = "nodejs";
@@ -59,7 +59,14 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error }, { status: 500 });
         }
 
-        if (!license) {
+        // Fallback: if no license found by email, try session's licenseCode
+        const resolvedLicense = license ?? (
+            session.licenseCode
+                ? (await getLicenseByKey(session.licenseCode)).license
+                : null
+        );
+
+        if (!resolvedLicense) {
             return NextResponse.json({
                 hasLicense: false,
                 message: "No active license found. Subscribe to a plan to receive your license key.",
@@ -68,14 +75,14 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({
             hasLicense: true,
-            licenseKey: license.license_key,
-            plan: license.plan,
-            billingInterval: license.billing_interval,
-            status: license.status,
-            orgName: license.org_name,
-            issuedAt: license.issued_at,
-            expiresAt: license.expires_at,
-            renewedAt: license.renewed_at,
+            licenseKey: resolvedLicense.license_key,
+            plan: resolvedLicense.plan,
+            billingInterval: resolvedLicense.billing_interval,
+            status: resolvedLicense.status,
+            orgName: resolvedLicense.org_name,
+            issuedAt: resolvedLicense.issued_at,
+            expiresAt: resolvedLicense.expires_at,
+            renewedAt: resolvedLicense.renewed_at,
         });
     } catch (error) {
         console.error("License fetch error:", error);

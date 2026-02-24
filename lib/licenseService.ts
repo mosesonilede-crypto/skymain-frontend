@@ -333,6 +333,29 @@ export async function getLicenseByEmail(email: string): Promise<{
     return { license: data as LicenseRecord | null };
 }
 
+// ── Get active license by license key ──────────────────────────────
+export async function getLicenseByKey(licenseKey: string): Promise<{
+    license: LicenseRecord | null;
+    error?: string;
+}> {
+    if (!supabaseServer) {
+        return { license: null, error: "Supabase not configured" };
+    }
+
+    const { data, error } = await supabaseServer
+        .from("subscription_licenses")
+        .select("*")
+        .eq("license_key", licenseKey.toUpperCase())
+        .eq("status", "active")
+        .maybeSingle();
+
+    if (error) {
+        return { license: null, error: error.message };
+    }
+
+    return { license: data as LicenseRecord | null };
+}
+
 // ── Get the active license for an organisation ─────────────────────
 export async function getLicenseByOrg(orgName: string): Promise<{
     license: LicenseRecord | null;

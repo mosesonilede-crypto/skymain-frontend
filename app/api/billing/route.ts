@@ -3,6 +3,8 @@ import { getDataMode } from "@/lib/dataService";
 import { getStripe, PLAN_DETAILS, STRIPE_PRICES } from "@/lib/stripe";
 import { verifyPayload } from "@/lib/twoFactor";
 import { resolveSessionRole } from "@/lib/auth/roles";
+import { getLicenseByEmail, getLicenseByKey } from "@/lib/licenseService";
+import type { LicenseRecord } from "@/lib/license";
 
 type BillingCycle = "Monthly" | "Annual";
 
@@ -442,19 +444,92 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
     }
 }
 
+// ── Enrich billing payload with real license data ───────────────────
+function enrichFromLicense(
+    payload: SubscriptionBillingPayload,
+    license: LicenseRecord,
+    hasRealStripeData: boolean
+): SubscriptionBillingPayload {
+    const result = { ...payload };
+
+    // Use license expiry for next billing date
+    if (license.expires_at) {
+        result.nextBilling = new Date(license.expires_at).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+        });
+    }
+
+    // Auto-renew reflects whether the license is active
+    result.autoRenewEnabled = license.status === "active";
+
+    // Attach Stripe customer ID from license if not already present
+    if (license.stripe_customer_id && !result.stripeCustomerId) {
+        result.stripeCustomerId = license.stripe_customer_id;
+    }
+
+    // When there's no real Stripe subscription, clear mock payment methods & invoices
+    if (!hasRealStripeData) {
+        result.paymentMethods = [];
+        result.billingHistory = [];
+    }
+
+    return result;
+}
+
+// ── Resolve the user's active license from session ──────────────────
+async function resolveSessionLicense(session: SessionPayload | null): Promise<LicenseRecord | null> {
+    if (!session?.email) return null;
+
+    try {
+        // 1. Try by email
+        const { license } = await getLicenseByEmail(session.email);
+        if (license) return license;
+
+        // 2. Fallback: try by licenseCode in JWT
+        if (session.licenseCode) {
+            const { license: codeLicense } = await getLicenseByKey(session.licenseCode);
+            if (codeLicense) return codeLicense;
+        }
+    } catch {
+        // License lookup is non-critical for billing
+    }
+
+    return null;
+}
+
 export async function GET(request: NextRequest) {
     const mode = getDataMode();
     const { searchParams } = new URL(request.url);
-    const customerId = searchParams.get("customerId");
+    const queryCustomerId = searchParams.get("customerId");
+    const session = getSession(request);
     const forceEnterprisePlan = isSuperAdminSession(request);
+
+    // Resolve license from session → DB
+    const sessionLicense = await resolveSessionLicense(session);
+
+    // Resolve Stripe customer ID: query param > license DB > none
+    const stripeCustomerId =
+        queryCustomerId ||
+        sessionLicense?.stripe_customer_id ||
+        undefined;
+
+    const hasRealStripeData = !!stripeCustomerId;
 
     try {
         // In live mode, try to fetch from Stripe first
         if (mode === "live" || mode === "hybrid") {
-            const stripeData = await fetchStripeBillingData(customerId || undefined);
+            const stripeData = await fetchStripeBillingData(stripeCustomerId);
             if (stripeData) {
                 const pricing = defaultPlanPricing();
-                const resolvedPayload = forceEnterprisePlan ? forceEnterprise(stripeData, pricing) : stripeData;
+                let resolvedPayload = forceEnterprisePlan ? forceEnterprise(stripeData, pricing) : stripeData;
+
+                // Enrich with real license data (dates, customer ID)
+                if (sessionLicense) {
+                    resolvedPayload = enrichFromLicense(resolvedPayload, sessionLicense, hasRealStripeData);
+                }
+
                 return NextResponse.json(resolvedPayload, {
                     headers: {
                         "Cache-Control": "private, no-cache",
@@ -473,7 +548,12 @@ export async function GET(request: NextRequest) {
         // Mock/hybrid mode: return mock data (prefer live Stripe catalog prices if available)
         const { pricing, priceSyncStatus } = await fetchStripePlanPricing();
         const baseBillingData = generateMockBillingData(pricing, priceSyncStatus);
-        const billingData = forceEnterprisePlan ? forceEnterprise(baseBillingData, pricing) : baseBillingData;
+        let billingData = forceEnterprisePlan ? forceEnterprise(baseBillingData, pricing) : baseBillingData;
+
+        // Enrich with real license data
+        if (sessionLicense) {
+            billingData = enrichFromLicense(billingData, sessionLicense, hasRealStripeData);
+        }
 
         return NextResponse.json(billingData, {
             headers: {
