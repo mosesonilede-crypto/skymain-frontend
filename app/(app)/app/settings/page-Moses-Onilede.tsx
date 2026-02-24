@@ -582,6 +582,53 @@ export default function SettingsPage() {
     // Router for navigation
     const router = useRouter();
 
+    // ── Audit log detail viewer state ────────────────────────────────
+    type AuditEntry = {
+        id: string;
+        action: string;
+        actor: string;
+        actorRole: string;
+        resourceType: string;
+        resourceId: string;
+        occurredAt: string;
+        timeAgo: string;
+        category: string;
+        metadata: Record<string, unknown> | null;
+    };
+    const [auditDetailOpen, setAuditDetailOpen] = useState(false);
+    const [auditDetailCategory, setAuditDetailCategory] = useState<string>("all");
+    const [auditDetailTitle, setAuditDetailTitle] = useState("Full Audit Trail");
+    const [auditDetailEntries, setAuditDetailEntries] = useState<AuditEntry[]>([]);
+    const [auditDetailLoading, setAuditDetailLoading] = useState(false);
+    const [auditDetailPage, setAuditDetailPage] = useState(1);
+    const [auditDetailTotalPages, setAuditDetailTotalPages] = useState(1);
+    const [auditDetailTotal, setAuditDetailTotal] = useState(0);
+
+    const fetchAuditLogs = useCallback(async (category: string, page: number, title: string) => {
+        setAuditDetailLoading(true);
+        setAuditDetailCategory(category);
+        setAuditDetailTitle(title);
+        setAuditDetailPage(page);
+        setAuditDetailOpen(true);
+        try {
+            const res = await fetch(
+                `/api/settings/audit-logs?category=${encodeURIComponent(category)}&page=${page}&limit=50`,
+                { credentials: "include" }
+            );
+            if (!res.ok) throw new Error("Failed to fetch");
+            const data = await res.json();
+            setAuditDetailEntries(data.entries || []);
+            setAuditDetailTotalPages(data.totalPages || 1);
+            setAuditDetailTotal(data.total || 0);
+        } catch {
+            setAuditDetailEntries([]);
+            setAuditDetailTotalPages(1);
+            setAuditDetailTotal(0);
+        } finally {
+            setAuditDetailLoading(false);
+        }
+    }, []);
+
     // Show notification helper
     const showNotification = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
         setNotification({ message, type });
@@ -4809,8 +4856,7 @@ export default function SettingsPage() {
                                             key={category.id}
                                             type="button"
                                             onClick={() => {
-                                                router.push(`/app/admin-panel?tab=audit&category=${category.id}`);
-                                                showNotification(`Opening ${category.name} audit logs...`, "info");
+                                                fetchAuditLogs(category.id, 1, category.name);
                                             }}
                                             className="flex items-center justify-between rounded-lg p-4 hover:shadow-md transition-shadow"
                                             style={{ backgroundColor: "white", border: "1px solid #e5e7eb" }}
@@ -4867,8 +4913,7 @@ export default function SettingsPage() {
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        router.push("/app/admin-panel?tab=audit");
-                                        showNotification("Opening full audit trail...", "info");
+                                        fetchAuditLogs("all", 1, "Full Audit Trail");
                                     }}
                                     className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
                                     style={{ border: "1px solid rgba(0,0,0,0.1)", color: "#0a0a0a" }}
@@ -4879,6 +4924,151 @@ export default function SettingsPage() {
                                     </svg>
                                     View Full Audit Trail
                                 </button>
+
+                                {/* ── Inline Audit Log Detail Viewer ─── */}
+                                {auditDetailOpen && (
+                                    <div
+                                        className="mt-4 rounded-xl"
+                                        style={{ border: "1px solid #e5e7eb", backgroundColor: "#f9fafb" }}
+                                    >
+                                        {/* Header */}
+                                        <div
+                                            className="flex items-center justify-between p-4"
+                                            style={{ borderBottom: "1px solid #e5e7eb" }}
+                                        >
+                                            <div>
+                                                <h3 className="text-base font-semibold" style={{ color: "#0a0a0a" }}>
+                                                    {auditDetailTitle}
+                                                </h3>
+                                                <p className="text-xs" style={{ color: "#4a5565" }}>
+                                                    {auditDetailTotal} event{auditDetailTotal !== 1 ? "s" : ""} found
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAuditDetailOpen(false)}
+                                                className="rounded-md p-1 hover:bg-gray-200 transition-colors"
+                                            >
+                                                <svg className="h-5 w-5" style={{ color: "#4a5565" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        {/* Entries */}
+                                        <div className="max-h-[400px] overflow-y-auto">
+                                            {auditDetailLoading ? (
+                                                <div className="flex items-center justify-center py-12">
+                                                    <div className="flex items-center gap-2 text-sm" style={{ color: "#4a5565" }}>
+                                                        <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                        </svg>
+                                                        Loading audit logs...
+                                                    </div>
+                                                </div>
+                                            ) : auditDetailEntries.length === 0 ? (
+                                                <div className="py-12 text-center text-sm" style={{ color: "#4a5565" }}>
+                                                    No audit log entries found for this category.
+                                                </div>
+                                            ) : (
+                                                <table className="w-full text-sm">
+                                                    <thead>
+                                                        <tr
+                                                            className="text-left text-xs uppercase"
+                                                            style={{ color: "#4a5565", borderBottom: "1px solid #e5e7eb" }}
+                                                        >
+                                                            <th className="px-4 py-2">Action</th>
+                                                            <th className="px-4 py-2">Actor</th>
+                                                            <th className="px-4 py-2">Resource</th>
+                                                            <th className="px-4 py-2 text-right">When</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {auditDetailEntries.map((entry) => (
+                                                            <tr
+                                                                key={entry.id}
+                                                                className="hover:bg-gray-100 transition-colors"
+                                                                style={{ borderBottom: "1px solid #f1f5f9" }}
+                                                            >
+                                                                <td className="px-4 py-2.5">
+                                                                    <span
+                                                                        className="inline-block rounded px-2 py-0.5 text-xs font-medium"
+                                                                        style={{
+                                                                            backgroundColor:
+                                                                                entry.action?.toLowerCase().includes("delete") ? "#fee2e2" :
+                                                                                entry.action?.toLowerCase().includes("create") || entry.action?.toLowerCase().includes("login") ? "#dcfce7" :
+                                                                                entry.action?.toLowerCase().includes("update") ? "#dbeafe" :
+                                                                                "#f1f5f9",
+                                                                            color:
+                                                                                entry.action?.toLowerCase().includes("delete") ? "#b91c1c" :
+                                                                                entry.action?.toLowerCase().includes("create") || entry.action?.toLowerCase().includes("login") ? "#166534" :
+                                                                                entry.action?.toLowerCase().includes("update") ? "#1d4ed8" :
+                                                                                "#475569",
+                                                                        }}
+                                                                    >
+                                                                        {entry.action}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-4 py-2.5" style={{ color: "#0a0a0a" }}>
+                                                                    <div>{entry.actor}</div>
+                                                                    {entry.actorRole && (
+                                                                        <div className="text-xs" style={{ color: "#4a5565" }}>
+                                                                            {entry.actorRole}
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 py-2.5" style={{ color: "#4a5565" }}>
+                                                                    {entry.resourceType}
+                                                                    {entry.resourceId && (
+                                                                        <span className="ml-1 text-xs" style={{ color: "#94a3b8" }}>
+                                                                            #{entry.resourceId}
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 py-2.5 text-right whitespace-nowrap" style={{ color: "#4a5565" }}>
+                                                                    {entry.timeAgo}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            )}
+                                        </div>
+
+                                        {/* Pagination */}
+                                        {auditDetailTotalPages > 1 && (
+                                            <div
+                                                className="flex items-center justify-between p-4"
+                                                style={{ borderTop: "1px solid #e5e7eb" }}
+                                            >
+                                                <span className="text-xs" style={{ color: "#4a5565" }}>
+                                                    Page {auditDetailPage} of {auditDetailTotalPages}
+                                                </span>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        disabled={auditDetailPage <= 1}
+                                                        onClick={() => fetchAuditLogs(auditDetailCategory, auditDetailPage - 1, auditDetailTitle)}
+                                                        className="rounded-md px-3 py-1 text-xs transition-colors disabled:opacity-40"
+                                                        style={{ border: "1px solid #e5e7eb", color: "#0a0a0a" }}
+                                                    >
+                                                        Previous
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={auditDetailPage >= auditDetailTotalPages}
+                                                        onClick={() => fetchAuditLogs(auditDetailCategory, auditDetailPage + 1, auditDetailTitle)}
+                                                        className="rounded-md px-3 py-1 text-xs transition-colors disabled:opacity-40"
+                                                        style={{ border: "1px solid #e5e7eb", color: "#0a0a0a" }}
+                                                    >
+                                                        Next
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ) : (
