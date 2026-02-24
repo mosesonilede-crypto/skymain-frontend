@@ -4,6 +4,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAircraft, type Aircraft } from "@/lib/AircraftContext";
+import { useAuth } from "@/lib/AuthContext";
 import { PasswordStrengthIndicator } from "@/components/ui/PasswordStrengthIndicator";
 
 /* ----------------------------- Icon Fallbacks ----------------------------- */
@@ -115,6 +116,7 @@ export default function SettingsPage() {
     const contentRef = useRef<HTMLDivElement | null>(null);
 
     const { selectedAircraft } = useAircraft();
+    const { user } = useAuth();
     const aircraftRegistration = selectedAircraft?.registration ?? "N872LM";
     const aircraftModel = selectedAircraft?.model ?? "Airbus A320";
     const aircraftLastService = selectedAircraft?.lastService ?? "2026-01-15";
@@ -129,11 +131,12 @@ export default function SettingsPage() {
         }
     }, [active]);
 
-    const [fullName, setFullName] = useState("John Mitchell");
+    const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
-    const [phone, setPhone] = useState("+1 (555) 123-4567");
-    const [role] = useState("Fleet Manager");
+    const [phone, setPhone] = useState("");
+    const [role, setRole] = useState("");
     const [readOnly] = useState(true);
+    const [profileLoaded, setProfileLoaded] = useState(false);
 
     const [twoFAEnabled, setTwoFAEnabled] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -280,55 +283,55 @@ export default function SettingsPage() {
     const [auditRetentionPeriod, setAuditRetentionPeriod] = useState("2");
     const [ipWhitelisting, setIpWhitelisting] = useState(false);
 
-    // Security & Audit Logs - Live audit log statistics (matching Figma 6:4096)
-    const auditLogCategories = useMemo(() => [
+    // Security & Audit Logs - Live audit log statistics (fetched from API)
+    const [auditLogCategories, setAuditLogCategories] = useState([
         {
             id: "login-history",
             name: "Login History",
             icon: "login",
-            eventsLogged: 45,
-            lastEvent: "2 hours ago",
+            eventsLogged: 0,
+            lastEvent: "Loading...",
         },
         {
             id: "maintenance-changes",
             name: "Maintenance Record Changes",
             icon: "wrench",
-            eventsLogged: 128,
-            lastEvent: "15 minutes ago",
+            eventsLogged: 0,
+            lastEvent: "Loading...",
         },
         {
             id: "document-uploads",
             name: "Document Uploads/Deletions",
             icon: "document",
-            eventsLogged: 67,
-            lastEvent: "1 hour ago",
+            eventsLogged: 0,
+            lastEvent: "Loading...",
         },
         {
             id: "compliance-actions",
             name: "Compliance Actions",
             icon: "shield",
-            eventsLogged: 34,
-            lastEvent: "3 hours ago",
+            eventsLogged: 0,
+            lastEvent: "Loading...",
         },
         {
             id: "settings-changes",
             name: "Settings Changes",
             icon: "settings",
-            eventsLogged: 12,
-            lastEvent: "Yesterday",
+            eventsLogged: 0,
+            lastEvent: "Loading...",
         },
-    ], []);
+    ]);
 
-    // Aircraft & Fleet - Live fleet statistics (AI-predicted data)
-    const fleetStatistics = useMemo(() => ({
-        totalAircraft: 12,
-        activeAircraft: 10,
-        averageFlightHours: 45892.5,
-        averageFlightCycles: 28456,
-        totalMaintenanceEvents: 847,
-        upcomingMaintenance: 5,
-        lastUpdated: new Date().toLocaleString(),
-    }), []);
+    // Aircraft & Fleet - Live fleet statistics (fetched from API)
+    const [fleetStatistics, setFleetStatistics] = useState({
+        totalAircraft: 0,
+        activeAircraft: 0,
+        averageFlightHours: 0,
+        averageFlightCycles: 0,
+        totalMaintenanceEvents: 0,
+        upcomingMaintenance: 0,
+        lastUpdated: "Loading...",
+    });
 
     // AI Assistant recommendations for Aircraft & Fleet
     const aiFleetRecommendations = useMemo(() => [
@@ -361,20 +364,20 @@ export default function SettingsPage() {
     // Show AI recommendation toggle
     const [showAIRecommendations, setShowAIRecommendations] = useState(true);
 
-    // Regulatory Compliance - Live compliance statistics (AI-predicted data)
-    const complianceStatistics = useMemo(() => ({
-        totalADs: 24,
-        pendingADs: 3,
+    // Regulatory Compliance - Live compliance statistics (fetched from API)
+    const [complianceStatistics, setComplianceStatistics] = useState({
+        totalADs: 0,
+        pendingADs: 0,
         overduADs: 0,
-        totalSBs: 47,
-        pendingSBs: 8,
-        totalLLPs: 156,
-        criticalLLPs: 2,
-        complianceRate: 98.5,
-        nextDueItem: `AD 2024-15-08 - Landing Gear Inspection (${aircraftRegistration})`,
-        nextDueHours: 45,
-        lastAuditDate: "2026-01-15",
-    }), [aircraftRegistration]);
+        totalSBs: 0,
+        pendingSBs: 0,
+        totalLLPs: 0,
+        criticalLLPs: 0,
+        complianceRate: 0,
+        nextDueItem: "Loading...",
+        nextDueHours: 0,
+        lastAuditDate: "",
+    });
 
     // AI Assistant recommendations for Regulatory Compliance
     const aiComplianceRecommendations = useMemo(() => [
@@ -459,7 +462,7 @@ export default function SettingsPage() {
 
     // SMS Alerts state (new delivery method)
     const [smsAlerts, setSmsAlerts] = useState(false);
-    const [smsPhoneNumber, setSmsPhoneNumber] = useState("+1 (555) 123-4567");
+    const [smsPhoneNumber, setSmsPhoneNumber] = useState("");
 
     // Push Notifications state (new delivery method)
     const [pushNotifications, setPushNotifications] = useState(true);
@@ -585,6 +588,62 @@ export default function SettingsPage() {
         setTimeout(() => setNotification(null), 3000);
     }, []);
 
+    // ── Fetch user profile from API on mount ─────────────────────────
+    useEffect(() => {
+        let cancelled = false;
+        async function loadProfile() {
+            try {
+                const res = await fetch("/api/profile", { credentials: "include" });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (cancelled) return;
+                if (data.full_name) setFullName(data.full_name);
+                if (data.email) setEmail(data.email);
+                if (data.phone) setPhone(data.phone);
+                if (data.role) setRole(data.role);
+                setProfileLoaded(true);
+            } catch {
+                // Fallback: populate from useAuth() context
+                if (!cancelled && user) {
+                    if (user.displayName) setFullName(user.displayName);
+                    if (user.email) setEmail(user.email);
+                    if (user.role) setRole(user.role);
+                    setProfileLoaded(true);
+                }
+            }
+        }
+        loadProfile();
+        return () => { cancelled = true; };
+    }, [user]);
+
+    // ── Fetch live stats from API on mount ────────────────────────────
+    useEffect(() => {
+        let cancelled = false;
+        async function loadStats() {
+            try {
+                const res = await fetch("/api/settings/stats", { credentials: "include" });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (cancelled) return;
+                if (data.fleet) setFleetStatistics(data.fleet);
+                if (data.auditCategories) setAuditLogCategories(data.auditCategories);
+                if (data.compliance) {
+                    setComplianceStatistics((prev) => ({
+                        ...prev,
+                        complianceRate: data.compliance.complianceRate ?? prev.complianceRate,
+                        nextDueItem: data.compliance.nextDueItem ?? prev.nextDueItem,
+                        nextDueHours: data.compliance.nextDueDays ?? prev.nextDueHours,
+                        lastAuditDate: data.compliance.lastAuditDate ?? prev.lastAuditDate,
+                    }));
+                }
+            } catch {
+                // Stats will stay at default values
+            }
+        }
+        loadStats();
+        return () => { cancelled = true; };
+    }, []);
+
     // Load settings from localStorage on mount
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -592,10 +651,12 @@ export default function SettingsPage() {
             if (savedSettings) {
                 try {
                     const settings = JSON.parse(savedSettings);
-                    // Account & Profile
-                    if (settings.fullName) setFullName(settings.fullName);
-                    if (settings.email) setEmail(settings.email);
-                    if (settings.phone) setPhone(settings.phone);
+                    // Account & Profile (only if profile API hasn't loaded yet)
+                    if (!profileLoaded) {
+                        if (settings.fullName) setFullName(settings.fullName);
+                        if (settings.email) setEmail(settings.email);
+                        if (settings.phone) setPhone(settings.phone);
+                    }
                     if (settings.twoFAEnabled !== undefined) setTwoFAEnabled(settings.twoFAEnabled);
                     // Aircraft & Fleet
                     if (settings.flightHoursFormat) setFlightHoursFormat(settings.flightHoursFormat);
@@ -647,7 +708,7 @@ export default function SettingsPage() {
                 }
             }
         }
-    }, []);
+    }, [profileLoaded]);
 
     const landingPageOptions = [
         { value: "Dashboard", label: "Dashboard" },
@@ -726,8 +787,8 @@ export default function SettingsPage() {
         { value: "480", label: "8 hours (Work day)" },
     ];
 
-    // Save settings to localStorage
-    const saveSettings = useCallback((sectionName: string) => {
+    // Save settings to localStorage + persist profile via API
+    const saveSettings = useCallback(async (sectionName: string) => {
         setSaving(true);
         const allSettings = {
             // Account & Profile
@@ -750,16 +811,34 @@ export default function SettingsPage() {
             sessionTimeout, requireMFAForSensitive, logAllActions, logDataExports, logLoginAttempts, auditRetentionPeriod, ipWhitelisting,
         };
 
-        setTimeout(() => {
-            try {
-                localStorage.setItem("skymaintain-settings", JSON.stringify(allSettings));
-                showNotification(`${sectionName} saved successfully!`, "success");
-            } catch {
-                showNotification("Failed to save settings. Please try again.", "error");
-            } finally {
-                setSaving(false);
+        try {
+            // Always persist preferences to localStorage (SessionTimeout.tsx reads from here)
+            localStorage.setItem("skymaintain-settings", JSON.stringify(allSettings));
+
+            // If saving Account & Profile, also persist to server
+            if (sectionName === "Account & Profile") {
+                const profileRes = await fetch("/api/profile", {
+                    method: "PATCH",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        full_name: fullName,
+                        phone: phone,
+                    }),
+                });
+                if (!profileRes.ok) {
+                    const err = await profileRes.json().catch(() => ({}));
+                    throw new Error(err.error || "Failed to save profile");
+                }
             }
-        }, 500);
+
+            showNotification(`${sectionName} saved successfully!`, "success");
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Failed to save settings. Please try again.";
+            showNotification(msg, "error");
+        } finally {
+            setSaving(false);
+        }
     }, [
         fullName, email, phone, twoFAEnabled,
         flightHoursFormat, pressureUnit, temperatureUnit, maintenanceBasis,
@@ -810,7 +889,20 @@ export default function SettingsPage() {
 
         setPasswordSaving(true);
         try {
-            await new Promise((r) => setTimeout(r, 600));
+            const res = await fetch("/api/settings/change-password", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ currentPassword, newPassword }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setPasswordError(data.error || "Unable to update password. Please try again.");
+                return;
+            }
+
             setPasswordSuccess("Password updated successfully.");
             setCurrentPassword("");
             setNewPassword("");
