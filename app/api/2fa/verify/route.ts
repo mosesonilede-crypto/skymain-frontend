@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyPayload, verifyTotp } from "@/lib/twoFactor";
+import { recordAuditEvent } from "@/lib/audit/logger";
+import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
 
 const COOKIE_NAME = "sm2fa";
+const SESSION_COOKIE = "sm_session";
+
+type SessionPayload = {
+    email: string;
+    orgName: string;
+    role: string;
+    exp: number;
+};
 
 type VerifyBody = {
     method: "email" | "sms" | "auth";
@@ -75,6 +85,33 @@ export async function POST(req: NextRequest) {
         });
         return NextResponse.json({ ok: false, error: "Invalid verification code. Please check the code and try again." }, { status: 400 });
     }
+
+    // Extract session info for audit
+    const sessionToken = req.cookies.get(SESSION_COOKIE)?.value;
+    let actorEmail = body.destination || "unknown";
+    let actorOrg = "unknown";
+    let actorRole = "user";
+    if (sessionToken) {
+        const sess = verifyPayload<SessionPayload>(sessionToken);
+        if (sess) {
+            actorEmail = sess.email;
+            actorOrg = sess.orgName;
+            actorRole = sess.role;
+        }
+    }
+
+    // Record 2FA verification audit event
+    recordAuditEvent({
+        id: randomUUID(),
+        occurredAt: new Date().toISOString(),
+        actorId: actorEmail,
+        actorRole: actorRole,
+        orgId: actorOrg,
+        action: "2fa_verified",
+        resourceType: "auth",
+        resourceId: actorEmail,
+        metadata: { method: body.method },
+    }).catch((e) => console.error("2FA audit error:", e));
 
     const response = NextResponse.json({ ok: true });
     response.cookies.delete(COOKIE_NAME);

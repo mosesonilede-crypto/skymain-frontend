@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyPayload } from "@/lib/twoFactor";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { recordAuditEvent } from "@/lib/audit/logger";
+import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
 
@@ -102,6 +104,19 @@ export async function POST(req: NextRequest) {
                 { status: 500 }
             );
         }
+
+        // Record password change audit event
+        recordAuditEvent({
+            id: randomUUID(),
+            occurredAt: new Date().toISOString(),
+            actorId: session.email,
+            actorRole: session.role || "user",
+            orgId: session.orgName,
+            action: "password_changed",
+            resourceType: "auth",
+            resourceId: session.email,
+            metadata: { method: "settings_page" },
+        }).catch((e) => console.error("Password change audit error:", e));
 
         return NextResponse.json({ success: true, message: "Password updated successfully" });
     } catch (e) {

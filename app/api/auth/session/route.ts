@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signPayload, verifyPayload } from "@/lib/twoFactor";
+import { recordAuditEvent } from "@/lib/audit/logger";
+import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
 
@@ -73,12 +75,53 @@ export async function POST(req: NextRequest) {
         path: "/",
     });
 
+    // Record login audit event
+    recordAuditEvent({
+        id: randomUUID(),
+        occurredAt: new Date().toISOString(),
+        actorId: body.email,
+        actorRole: body.role || "user",
+        orgId: body.orgName,
+        action: "user_login",
+        resourceType: "session",
+        resourceId: body.email,
+        metadata: { method: "password", orgName: body.orgName },
+    }).catch((e) => console.error("Login audit error:", e));
+
     return response;
 }
 
 // DELETE - Logout / destroy session
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
+    // Extract session info before destroying it for audit purposes
+    const token = req.cookies.get(SESSION_COOKIE)?.value;
+    let sessionEmail = "unknown";
+    let sessionOrg = "unknown";
+    let sessionRole = "user";
+    if (token) {
+        const payload = verifyPayload<SessionPayload>(token);
+        if (payload) {
+            sessionEmail = payload.email;
+            sessionOrg = payload.orgName;
+            sessionRole = payload.role;
+        }
+    }
+
     const response = NextResponse.json({ ok: true });
     response.cookies.delete(SESSION_COOKIE);
+
+    // Record logout audit event
+    recordAuditEvent({
+        id: randomUUID(),
+        occurredAt: new Date().toISOString(),
+        actorId: sessionEmail,
+        actorRole: sessionRole,
+        orgId: sessionOrg,
+        action: "user_logout",
+        resourceType: "session",
+        resourceId: sessionEmail,
+        metadata: { method: "manual" },
+    }).catch((e) => console.error("Logout audit error:", e));
+
     return response;
 }
