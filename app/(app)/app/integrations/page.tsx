@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { useAdminGuard } from "@/lib/auth/useAdminGuard";
 import {
     Key, Trash2, Copy, Check, RefreshCw, Database, Upload,
     Link2, AlertTriangle, ChevronDown, ChevronUp, Shield,
@@ -53,6 +54,7 @@ function TierBadge({ tier, active }: { tier: number; active: boolean }) {
 
 export default function IntegrationsPage() {
     useAuth(); // ensure authenticated
+    const { isAdmin, isLoading: adminLoading } = useAdminGuard();
 
     // API Keys
     const [keys, setKeys] = useState<ApiKey[]>([]);
@@ -184,6 +186,16 @@ export default function IntegrationsPage() {
     };
 
     const allTables = ["component_life", "system_inspections", "discrepancy_reports", "aircraft"];
+
+    // Block non-admin users
+    if (adminLoading) {
+        return (
+            <div className="flex min-h-[60vh] items-center justify-center">
+                <div className="text-sm text-zinc-500">Verifying access...</div>
+            </div>
+        );
+    }
+    if (!isAdmin) return null; // useAdminGuard will redirect
 
     return (
         <div className="max-w-6xl mx-auto p-6 space-y-8">

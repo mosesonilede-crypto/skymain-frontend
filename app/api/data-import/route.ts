@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { startIngestionLog, logIngestion } from "@/lib/ingestion/log";
+import { requireAdminSession } from "@/lib/auth/guards";
 
 // ─── CSV helpers ────────────────────────────────────────────────
 function parseCSV(text: string): Record<string, string>[] {
@@ -77,6 +78,10 @@ function mapDiscrepancy(row: Record<string, string>, orgName: string) {
 // ─── POST handler ───────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
+    // Admin/Super Admin role check
+    const authResult = requireAdminSession(request);
+    if (authResult instanceof NextResponse) return authResult;
+
     try {
         const sb = supabaseServer;
         if (!sb) {

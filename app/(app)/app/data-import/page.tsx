@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { useAuth } from "@/lib/AuthContext";
+import { useAdminGuard } from "@/lib/auth/useAdminGuard";
 import { useAircraft } from "@/lib/AircraftContext";
 import {
     Upload,
@@ -64,6 +65,7 @@ const TABLE_OPTIONS: {
 
 export default function DataImportPage() {
     const { user } = useAuth();
+    const { isAdmin, isLoading: adminLoading } = useAdminGuard();
     const { allAircraft } = useAircraft();
     const fileRef = useRef<HTMLInputElement>(null);
     const [selectedTable, setSelectedTable] = useState<TableTarget>("component_life");
@@ -129,6 +131,16 @@ export default function DataImportPage() {
     }, [file, orgName, selectedTable]);
 
     const currentOption = TABLE_OPTIONS.find((o) => o.value === selectedTable)!;
+
+    // Block non-admin users
+    if (adminLoading) {
+        return (
+            <div className="flex min-h-[60vh] items-center justify-center">
+                <div className="text-sm text-zinc-500">Verifying access...</div>
+            </div>
+        );
+    }
+    if (!isAdmin) return null; // useAdminGuard will redirect
 
     return (
         <section className="flex flex-col gap-6">

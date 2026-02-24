@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { User } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
+import { requireSuperAdminSession } from "@/lib/auth/guards";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -174,6 +175,10 @@ This email was sent to you as a registered user of SkyMaintain.
 }
 
 export async function POST(request: NextRequest) {
+    // Super Admin role check
+    const authResult = requireSuperAdminSession(request);
+    if (authResult instanceof NextResponse) return authResult;
+
     try {
         const body = await request.json();
         const { subject, body: messageBody, type, targetAudience } = body as MassEmailRequest;
