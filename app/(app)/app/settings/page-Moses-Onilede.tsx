@@ -333,8 +333,8 @@ export default function SettingsPage() {
         lastUpdated: "Loading...",
     });
 
-    // AI Assistant recommendations for Aircraft & Fleet
-    const aiFleetRecommendations = useMemo(() => [
+    // AI Assistant recommendations for Aircraft & Fleet (hydrated from API)
+    const [aiFleetRecommendations, setAiFleetRecommendations] = useState([
         {
             id: "REC-001",
             type: "optimization",
@@ -359,7 +359,7 @@ export default function SettingsPage() {
             confidence: 87,
             impact: "Improved data entry accuracy",
         },
-    ], []);
+    ]);
 
     // Show AI recommendation toggle
     const [showAIRecommendations, setShowAIRecommendations] = useState(true);
@@ -379,8 +379,11 @@ export default function SettingsPage() {
         lastAuditDate: "",
     });
 
-    // AI Assistant recommendations for Regulatory Compliance
-    const aiComplianceRecommendations = useMemo(() => [
+    // AI Assistant recommendations for Regulatory Compliance (hydrated from API)
+    const [aiComplianceRecommendations, setAiComplianceRecommendations] = useState<{
+        id: string; type: string; title: string; description: string;
+        confidence: number; impact: string; actionType?: string;
+    }[]>([
         {
             id: "COMP-001",
             type: "warning",
@@ -388,7 +391,7 @@ export default function SettingsPage() {
             description: "Based on your fleet's flight patterns, increase Warning Threshold to 75 hours for better planning lead time.",
             confidence: 91,
             impact: "Improve maintenance scheduling by 15%",
-            action: () => setWarningThreshold("75"),
+            actionType: "set-warning-threshold",
         },
         {
             id: "COMP-002",
@@ -401,12 +404,12 @@ export default function SettingsPage() {
         {
             id: "COMP-003",
             type: "critical",
-            title: "2 LLPs Approaching Limits",
-            description: `Engine disk #2 (${aircraftRegistration}) and Landing Gear actuator (${aircraftRegistration}) are within 500 cycles of their limits.`,
+            title: "LLPs Approaching Limits",
+            description: `Component life tracking: checking for parts within 500 cycles of their limits on ${aircraftRegistration}.`,
             confidence: 100,
             impact: "Schedule replacement within 60 days",
         },
-    ], [aircraftRegistration]);
+    ]);
 
     // Toggle for showing compliance AI recommendations
     const [showComplianceAI, setShowComplianceAI] = useState(true);
@@ -472,29 +475,29 @@ export default function SettingsPage() {
     const [quietHoursStart, setQuietHoursStart] = useState("22:00");
     const [quietHoursEnd, setQuietHoursEnd] = useState("07:00");
 
-    // AI & Predictive Maintenance - Live AI performance statistics
-    const aiPerformanceStatistics = useMemo(() => ({
-        predictionAccuracy: 94.2,
-        totalPredictionsMade: 1247,
-        truPositives: 1175,
-        falsePositives: 72,
-        costSavings: 2400000,
+    // AI & Predictive Maintenance - Live AI performance statistics (hydrated from API)
+    const [aiPerformanceStatistics, setAiPerformanceStatistics] = useState({
+        predictionAccuracy: 0,
+        totalPredictionsMade: 0,
+        truPositives: 0,
+        falsePositives: 0,
+        costSavings: 0,
         avgLeadTime: "72 hours",
-        componentsMonitored: 3456,
-        activePredictions: 23,
-        lastModelUpdate: "January 15, 2026",
+        componentsMonitored: 0,
+        activePredictions: 0,
+        lastModelUpdate: "Loading...",
         modelVersion: "SkyMaintain ML v2.1.0",
         trainingDataSize: "15 years",
         inferenceLatency: "45ms",
-    }), []);
+    });
 
-    // AI Assistant recommendations for AI Settings
-    const aiSettingsRecommendations = useMemo(() => [
+    // AI Assistant recommendations for AI Settings (hydrated from API)
+    const [aiSettingsRecommendations, setAiSettingsRecommendations] = useState([
         {
             id: "AI-001",
             type: "optimization",
             title: "Enable Aggressive Mode for High-Risk Components",
-            description: "Your fleet has 3 components with elevated failure risk. Aggressive mode would provide 48-hour earlier warnings.",
+            description: "Your fleet has components with elevated failure risk. Aggressive mode would provide 48-hour earlier warnings.",
             confidence: 91,
             impact: "Earlier detection of 48+ hours",
             actionType: "aggressive-mode",
@@ -503,7 +506,7 @@ export default function SettingsPage() {
             id: "AI-002",
             type: "info",
             title: "Model Performance Optimal",
-            description: "Current 94.2% accuracy is above industry benchmark (89%). No tuning needed.",
+            description: "Checking model accuracy against industry benchmark (89%)...",
             confidence: 99,
             impact: "Performance above benchmark",
         },
@@ -511,12 +514,12 @@ export default function SettingsPage() {
             id: "AI-003",
             type: "warning",
             title: "Consider Enabling Task Prioritization",
-            description: "AI Task Prioritization can reduce maintenance backlog by 27% based on your current workload patterns.",
+            description: "AI Task Prioritization can reduce maintenance backlog based on your current workload patterns.",
             confidence: 88,
-            impact: "27% reduction in backlog",
+            impact: "Reduction in backlog",
             actionType: "enable-task-priority",
         },
-    ], []);
+    ]);
 
     // Toggle for showing AI settings recommendations
     const [showAISettingsRecommendations, setShowAISettingsRecommendations] = useState(true);
@@ -696,6 +699,95 @@ export default function SettingsPage() {
                         lastAuditDate: data.compliance.lastAuditDate ?? prev.lastAuditDate,
                     }));
                 }
+
+                // ── Hydrate LLP stats into compliance panel ──────────────
+                if (data.llpStats) {
+                    setComplianceStatistics((prev) => ({
+                        ...prev,
+                        totalLLPs: data.llpStats.totalLLPs ?? prev.totalLLPs,
+                        criticalLLPs: data.llpStats.criticalLLPs ?? prev.criticalLLPs,
+                    }));
+                    // Update COMP-003 recommendation with real LLP data
+                    const critComps = data.llpStats.criticalComponents || [];
+                    if (critComps.length > 0) {
+                        const desc = critComps.map((c: { name: string; aircraft: string; cyclesRemaining: number }) =>
+                            `${c.name} (${c.aircraft}) — ${c.cyclesRemaining} cycles remaining`
+                        ).join(". ");
+                        setAiComplianceRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "COMP-003"
+                                    ? { ...r, title: `${critComps.length} LLP${critComps.length > 1 ? "s" : ""} Approaching Limits`, description: desc }
+                                    : r
+                            )
+                        );
+                    } else {
+                        setAiComplianceRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "COMP-003"
+                                    ? { ...r, type: "info", title: "No LLPs Near Limits", description: "All life-limited parts are within safe operating margins.", confidence: 100, impact: "Fleet LLP status healthy" }
+                                    : r
+                            )
+                        );
+                    }
+                }
+
+                // ── Hydrate inspection stats as pending ADs/SBs ──────────
+                if (data.inspectionStats) {
+                    setComplianceStatistics((prev) => ({
+                        ...prev,
+                        pendingADs: data.inspectionStats.overdue ?? prev.pendingADs,
+                        pendingSBs: data.inspectionStats.dueSoon ?? prev.pendingSBs,
+                    }));
+                }
+
+                // ── Hydrate discrepancy stats ────────────────────────────
+                if (data.discrepancies) {
+                    setComplianceStatistics((prev) => ({
+                        ...prev,
+                        totalADs: data.discrepancies.total ?? prev.totalADs,
+                        overduADs: data.discrepancies.open ?? prev.overduADs,
+                    }));
+                }
+
+                // ── Hydrate AI performance statistics ────────────────────
+                if (data.aiPerformance) {
+                    setAiPerformanceStatistics((prev) => ({
+                        ...prev,
+                        predictionAccuracy: data.aiPerformance.predictionAccuracy ?? prev.predictionAccuracy,
+                        totalPredictionsMade: data.aiPerformance.totalPredictionsMade ?? prev.totalPredictionsMade,
+                        componentsMonitored: data.aiPerformance.componentsMonitored ?? prev.componentsMonitored,
+                        activePredictions: data.aiPerformance.activePredictions ?? prev.activePredictions,
+                        costSavings: data.aiPerformance.costSavings ?? prev.costSavings,
+                        lastModelUpdate: data.aiPerformance.lastModelUpdate ?? prev.lastModelUpdate,
+                    }));
+                    // Update AI-001 recommendation with real component risk count
+                    const activeAlerts = data.aiPerformance.activePredictions || 0;
+                    if (activeAlerts > 0) {
+                        setAiSettingsRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "AI-001"
+                                    ? { ...r, description: `Your fleet has ${activeAlerts} component${activeAlerts > 1 ? "s" : ""} with elevated failure risk. Aggressive mode would provide 48-hour earlier warnings.` }
+                                    : r
+                            )
+                        );
+                    }
+                    // Update AI-002 with real accuracy
+                    const accuracy = data.aiPerformance.predictionAccuracy || 0;
+                    setAiSettingsRecommendations((prev) =>
+                        prev.map((r) =>
+                            r.id === "AI-002"
+                                ? {
+                                    ...r,
+                                    description: accuracy > 89
+                                        ? `Current ${accuracy}% accuracy is above industry benchmark (89%). No tuning needed.`
+                                        : `Current ${accuracy}% accuracy is below industry benchmark (89%). Consider reviewing data quality.`,
+                                    impact: accuracy > 89 ? "Performance above benchmark" : "Review recommended",
+                                    type: accuracy > 89 ? "info" : "warning",
+                                }
+                                : r
+                        )
+                    );
+                }
             } catch {
                 if (!cancelled) clearAuditLoading();
             }
@@ -847,6 +939,26 @@ export default function SettingsPage() {
         { value: "480", label: "8 hours (Work day)" },
     ];
 
+    // ── Apply a setting change and log it to audit trail ────────────────
+    const applySettingWithAudit = useCallback(async (
+        action: string,
+        setting: string,
+        value: unknown,
+        section: string,
+        metadata?: Record<string, unknown>,
+    ) => {
+        try {
+            await fetch("/api/settings/apply", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action, setting, value, section, metadata }),
+            });
+        } catch (e) {
+            console.error("Apply audit log error:", e);
+        }
+    }, []);
+
     // Save settings to localStorage + persist profile via API
     const saveSettings = useCallback(async (sectionName: string) => {
         setSaving(true);
@@ -892,6 +1004,30 @@ export default function SettingsPage() {
                 }
             }
 
+            // Persist all section saves server-side for audit trail
+            const sectionSettings: Record<string, unknown> = {};
+            if (sectionName === "Aircraft & Fleet") {
+                Object.assign(sectionSettings, { flightHoursFormat, pressureUnit, temperatureUnit, maintenanceBasis });
+            } else if (sectionName === "Regulatory Compliance") {
+                Object.assign(sectionSettings, { regulatoryAuthority, trackADs, trackSBs, trackLLPs, warningThreshold, criticalThreshold, mandatoryDocUpload });
+            } else if (sectionName === "AI & Predictive Maintenance") {
+                Object.assign(sectionSettings, { aiAssistanceLevel, predictiveFailureAlerts, aiTaskPrioritization, aiMaintenanceRecommendations, predictionHorizon, autoScheduleMaintenance });
+            } else if (sectionName === "Notifications & Alerts") {
+                Object.assign(sectionSettings, { alertCriticalAI, alertMaintenance, alertRegulatoryDeadlines, alertDocExpiration, emailAlerts, alertSeverityFilter });
+            } else if (sectionName === "Maintenance Workflow") {
+                Object.assign(sectionSettings, { signOffRule, requireFindings, requireRectification, requireRefDocs });
+            } else if (sectionName === "Documents & Records") {
+                Object.assign(sectionSettings, { retentionPeriod, autoVersionControl });
+            } else if (sectionName === "Security & Audit Logs") {
+                Object.assign(sectionSettings, { sessionTimeout, requireMFAForSensitive, logAllActions, logDataExports, logLoginAttempts, auditRetentionPeriod, ipWhitelisting });
+            } else if (sectionName === "Appearance") {
+                Object.assign(sectionSettings, { theme, dashboardDensity, defaultLandingPage });
+            }
+            // Fire-and-forget audit + server persist for each setting in this section
+            for (const [key, val] of Object.entries(sectionSettings)) {
+                applySettingWithAudit(`settings_save_${key}`, key, val, sectionName);
+            }
+
             showNotification(`${sectionName} saved successfully!`, "success");
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Failed to save settings. Please try again.";
@@ -905,11 +1041,12 @@ export default function SettingsPage() {
         regulatoryAuthority, trackADs, trackSBs, trackLLPs, warningThreshold, criticalThreshold, mandatoryDocUpload,
         alertCriticalAI, alertMaintenance, alertRegulatoryDeadlines, alertDocExpiration, emailAlerts, alertSeverityFilter,
         aiAssistanceLevel, predictiveFailureAlerts, aiTaskPrioritization, aiMaintenanceRecommendations,
+        predictionHorizon, autoScheduleMaintenance,
         signOffRule, requireFindings, requireRectification, requireRefDocs,
         retentionPeriod, autoVersionControl,
         theme, dashboardDensity, defaultLandingPage,
         sessionTimeout, requireMFAForSensitive, logAllActions, logDataExports, logLoginAttempts, auditRetentionPeriod, ipWhitelisting,
-        showNotification
+        showNotification, applySettingWithAudit
     ]);
 
     // Apply all AI recommendations for Aircraft & Fleet
@@ -918,7 +1055,10 @@ export default function SettingsPage() {
         setPressureUnit("PSI");
         setFlightHoursFormat("decimal");
         showNotification("All AI recommendations applied! Don't forget to save your changes.", "info");
-    }, [showNotification]);
+        applySettingWithAudit("apply_all_ai_fleet_recommendations", "fleet_ai_bulk", {
+            maintenanceBasis: "combined", pressureUnit: "PSI", flightHoursFormat: "decimal",
+        }, "Aircraft & Fleet", { source: "ai_recommendation" });
+    }, [showNotification, applySettingWithAudit]);
 
     // Reset Aircraft & Fleet to defaults
     const resetAircraftFleetDefaults = useCallback(() => {
@@ -927,7 +1067,10 @@ export default function SettingsPage() {
         setTemperatureUnit("Fahrenheit (°F)");
         setMaintenanceBasis("flight-hours");
         showNotification("Aircraft & Fleet settings reset to defaults.", "info");
-    }, [showNotification]);
+        applySettingWithAudit("reset_fleet_defaults", "fleet_defaults", {
+            flightHoursFormat: "decimal", pressureUnit: "PSI", temperatureUnit: "Fahrenheit (°F)", maintenanceBasis: "flight-hours",
+        }, "Aircraft & Fleet", { source: "user_reset" });
+    }, [showNotification, applySettingWithAudit]);
 
     async function handleChangePassword() {
         if (passwordSaving) return;
@@ -1397,7 +1540,11 @@ export default function SettingsPage() {
                                                 {rec.type === "optimization" && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => setMaintenanceBasis("combined")}
+                                                        onClick={() => {
+                                                            setMaintenanceBasis("combined");
+                                                            showNotification("Combined Maintenance Basis applied.", "success");
+                                                            applySettingWithAudit("apply_ai_recommendation", "maintenanceBasis", "combined", "Aircraft & Fleet", { recId: rec.id, source: "ai_recommendation" });
+                                                        }}
                                                         className="shrink-0 text-xs px-3 py-1.5 rounded-lg text-white"
                                                         style={{ backgroundColor: "#9810fa" }}
                                                     >
@@ -1929,10 +2076,16 @@ export default function SettingsPage() {
                                                         💡 {rec.impact}
                                                     </p>
                                                 </div>
-                                                {rec.action && (
+                                                {rec.actionType && (
                                                     <button
                                                         type="button"
-                                                        onClick={rec.action}
+                                                        onClick={() => {
+                                                            if (rec.actionType === "set-warning-threshold") {
+                                                                setWarningThreshold("75");
+                                                                showNotification("Warning threshold updated to 75 hours.", "success");
+                                                            }
+                                                            applySettingWithAudit("apply_compliance_recommendation", rec.actionType, rec.actionType === "set-warning-threshold" ? "75" : true, "Regulatory Compliance", { recId: rec.id, source: "ai_recommendation" });
+                                                        }}
                                                         className="shrink-0 text-xs px-3 py-1.5 rounded-lg text-white"
                                                         style={{ backgroundColor: "#9810fa" }}
                                                     >
@@ -2352,12 +2505,15 @@ export default function SettingsPage() {
                                                             if (rec.actionType === "consolidation") {
                                                                 setAlertMaintenance(true);
                                                                 showNotification("Smart alert grouping enabled", "success");
+                                                                applySettingWithAudit("apply_notification_recommendation", "alertMaintenance", true, "Notifications & Alerts", { recId: rec.id, source: "ai_recommendation" });
                                                             } else if (rec.actionType === "sms") {
                                                                 setSmsAlerts(true);
                                                                 showNotification("SMS alerts enabled", "success");
+                                                                applySettingWithAudit("apply_notification_recommendation", "smsAlerts", true, "Notifications & Alerts", { recId: rec.id, source: "ai_recommendation" });
                                                             } else if (rec.actionType === "severity") {
                                                                 setAlertSeverityFilter("critical-warnings");
                                                                 showNotification("Severity filter optimized", "success");
+                                                                applySettingWithAudit("apply_notification_recommendation", "alertSeverityFilter", "critical-warnings", "Notifications & Alerts", { recId: rec.id, source: "ai_recommendation" });
                                                             }
                                                         }}
                                                         className="shrink-0 text-xs px-2 py-1 rounded transition-colors"
@@ -3006,9 +3162,11 @@ export default function SettingsPage() {
                                                             if (rec.actionType === "aggressive-mode") {
                                                                 setAiAssistanceLevel("aggressive");
                                                                 showNotification("Switched to Aggressive AI mode", "success");
+                                                                applySettingWithAudit("apply_ai_recommendation", "aiAssistanceLevel", "aggressive", "AI & Predictive Maintenance", { recId: rec.id, source: "ai_recommendation" });
                                                             } else if (rec.actionType === "enable-task-priority") {
                                                                 setAiTaskPrioritization(true);
                                                                 showNotification("AI Task Prioritization enabled", "success");
+                                                                applySettingWithAudit("apply_ai_recommendation", "aiTaskPrioritization", true, "AI & Predictive Maintenance", { recId: rec.id, source: "ai_recommendation" });
                                                             }
                                                         }}
                                                         className="shrink-0 text-xs px-2 py-1 rounded transition-colors"
@@ -3615,8 +3773,10 @@ export default function SettingsPage() {
                                                             if (rec.actionType === "dual-inspection") {
                                                                 setSignOffRule("dual-inspection");
                                                                 showNotification("Dual Inspection mode enabled for all tasks");
+                                                                applySettingWithAudit("apply_workflow_recommendation", "signOffRule", "dual-inspection", "Maintenance Workflow", { recId: rec.id, source: "ai_recommendation" });
                                                             } else if (rec.actionType === "overdue-alert") {
                                                                 showNotification("Overdue tasks flagged for immediate supervisor review", "info");
+                                                                applySettingWithAudit("apply_workflow_recommendation", "overdue-alert-flag", true, "Maintenance Workflow", { recId: rec.id, source: "ai_recommendation" });
                                                             }
                                                         }}
                                                         className="shrink-0 rounded-md px-3 py-1.5 text-xs font-medium text-white"
