@@ -716,16 +716,16 @@ Description: ${log.description}
     );
 }
 
-// Access Code Types for Regulatory Agency Management
-type RegulatoryAgency = "FAA" | "EASA" | "CAAC" | "TCCA" | "CASA" | "ANAC" | "DGCA" | "Other";
+// Access Code Types
+type AccessCodeType = "regulator" | "partner" | "demo" | "trial" | "special";
 
 type AccessCode = {
     id: string;
     code: string;
-    agency: RegulatoryAgency;
-    agencyName: string;
-    contactName: string;
-    contactEmail: string;
+    type: AccessCodeType;
+    recipientName: string;
+    recipientEmail: string;
+    recipientOrg: string;
     purpose: string;
     createdAt: string;
     expiresAt: string;
@@ -733,13 +733,168 @@ type AccessCode = {
     usageCount: number;
     maxUsageCount: number | null;
     status: "active" | "expired" | "revoked" | "exhausted";
-    lastUsedAt: string | null;
-    lastUsedBy: string | null;
-    lastUsedIp: string | null;
     createdBy: string;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapAccessCode(raw: any): AccessCode {
+    return {
+        id: raw.id,
+        code: raw.code,
+        type: raw.type ?? "regulator",
+        recipientName: raw.recipient_name ?? "",
+        recipientEmail: raw.recipient_email ?? "",
+        recipientOrg: raw.recipient_org ?? "",
+        purpose: raw.purpose ?? "",
+        createdAt: raw.created_at ?? "",
+        expiresAt: raw.expires_at ?? "",
+        usageLimit: raw.usage_limit ?? "single",
+        usageCount: raw.usage_count ?? 0,
+        maxUsageCount: raw.max_usage_count ?? null,
+        status: raw.status ?? "active",
+        createdBy: raw.created_by ?? "",
+    };
+}
+
+const AGENCY_OPTIONS: { value: AccessCodeType; label: string }[] = [
+    { value: "regulator", label: "Regulator (FAA/EASA)" },
+    { value: "partner", label: "Partner" },
+    { value: "demo", label: "Demo" },
+    { value: "trial", label: "Trial" },
+    { value: "special", label: "Special" },
+];
+
 function AccessCodeManagementSection() {
-    const accessCodes: AccessCode[] = [];
+    const [accessCodes, setAccessCodes] = useState<AccessCode[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [showGenerateModal, setShowGenerateModal] = useState(false);
+    const [generating, setGenerating] = useState(false);
+    const [revokingId, setRevokingId] = useState<string | null>(null);
+
+    // Generate form state
+    const [genType, setGenType] = useState<AccessCodeType>("regulator");
+    const [genName, setGenName] = useState("");
+    const [genEmail, setGenEmail] = useState("");
+    const [genOrg, setGenOrg] = useState("");
+    const [genPurpose, setGenPurpose] = useState("");
+    const [genExpiresDays, setGenExpiresDays] = useState(30);
+    const [genUsageLimit, setGenUsageLimit] = useState<"single" | "multi" | "unlimited">("single");
+
+    async function fetchCodes() {
+        setLoading(true);
+        setError("");
+        try {
+            const res = await fetch("/api/admin/access-codes", {
+                method: "GET",
+                headers: { Accept: "application/json" },
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || `Failed to fetch (${res.status})`);
+            }
+            const data = await res.json();
+            setAccessCodes((data.codes || []).map(mapAccessCode));
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Failed to load access codes");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        fetchCodes();
+    }, []);
+
+    async function handleGenerate() {
+        if (!genName.trim() || !genEmail.trim()) return;
+        setGenerating(true);
+        setError("");
+        try {
+            const res = await fetch("/api/admin/access-codes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    type: genType,
+                    recipientName: genName.trim(),
+                    recipientEmail: genEmail.trim(),
+                    recipientOrg: genOrg.trim(),
+                    purpose: genPurpose.trim(),
+                    expiresInDays: genExpiresDays,
+                    usageLimit: genUsageLimit,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to generate code");
+            }
+            // Reset form and close modal
+            setGenType("regulator");
+            setGenName("");
+            setGenEmail("");
+            setGenOrg("");
+            setGenPurpose("");
+            setGenExpiresDays(30);
+            setGenUsageLimit("single");
+            setShowGenerateModal(false);
+            await fetchCodes();
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Failed to generate code");
+        } finally {
+            setGenerating(false);
+        }
+    }
+
+    async function handleRevoke(id: string) {
+        setRevokingId(id);
+        setError("");
+        try {
+            const res = await fetch("/api/admin/access-codes", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, action: "revoke" }),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to revoke code");
+            }
+            await fetchCodes();
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Failed to revoke code");
+        } finally {
+            setRevokingId(null);
+        }
+    }
+
+    async function handleDelete(id: string) {
+        setError("");
+        try {
+            const res = await fetch(`/api/admin/access-codes?id=${id}`, {
+                method: "DELETE",
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to delete code");
+            }
+            await fetchCodes();
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Failed to delete code");
+        }
+    }
+
+    function statusBadge(status: AccessCode["status"]) {
+        const styles: Record<string, string> = {
+            active: "border-emerald-200 bg-emerald-50 text-emerald-700",
+            expired: "border-slate-200 bg-slate-50 text-slate-500",
+            revoked: "border-red-200 bg-red-50 text-red-700",
+            exhausted: "border-amber-200 bg-amber-50 text-amber-700",
+        };
+        return (
+            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${styles[status] || styles.expired}`}>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+            </span>
+        );
+    }
 
     return (
         <section className="lg:col-span-12 rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
@@ -759,18 +914,19 @@ function AccessCodeManagementSection() {
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        disabled
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-400"
+                        onClick={fetchCodes}
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
                     >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Usage Log
+                        Refresh
                     </button>
                     <button
                         type="button"
-                        disabled
-                        className="inline-flex items-center gap-2 rounded-xl bg-slate-200 px-3 py-2 text-sm font-medium text-slate-500"
+                        onClick={() => setShowGenerateModal(true)}
+                        className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
                     >
                         <span aria-hidden="true">+</span>
                         Generate Code
@@ -778,9 +934,118 @@ function AccessCodeManagementSection() {
                 </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Access code management is available once the compliance service is configured.
-            </div>
+            {error && (
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    {error}
+                </div>
+            )}
+
+            {loading && accessCodes.length === 0 && (
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    Loading access codes…
+                </div>
+            )}
+
+            {/* Generate Code Modal */}
+            {showGenerateModal && (
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-5">
+                    <div className="text-sm font-semibold text-slate-900 mb-4">Generate New Access Code</div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Code Type *</label>
+                            <select
+                                value={genType}
+                                onChange={(e) => setGenType(e.target.value as AccessCodeType)}
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                            >
+                                {AGENCY_OPTIONS.map((o) => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Recipient Name *</label>
+                            <input
+                                type="text"
+                                value={genName}
+                                onChange={(e) => setGenName(e.target.value)}
+                                placeholder="e.g. John Smith"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Recipient Email *</label>
+                            <input
+                                type="email"
+                                value={genEmail}
+                                onChange={(e) => setGenEmail(e.target.value)}
+                                placeholder="e.g. auditor@faa.gov"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Organisation</label>
+                            <input
+                                type="text"
+                                value={genOrg}
+                                onChange={(e) => setGenOrg(e.target.value)}
+                                placeholder="e.g. FAA"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Purpose</label>
+                            <input
+                                type="text"
+                                value={genPurpose}
+                                onChange={(e) => setGenPurpose(e.target.value)}
+                                placeholder="e.g. Annual compliance audit"
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Expires In (days)</label>
+                            <input
+                                type="number"
+                                value={genExpiresDays}
+                                onChange={(e) => setGenExpiresDays(Math.max(1, Number(e.target.value)))}
+                                min={1}
+                                max={365}
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Usage Limit</label>
+                            <select
+                                value={genUsageLimit}
+                                onChange={(e) => setGenUsageLimit(e.target.value as "single" | "multi" | "unlimited")}
+                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                            >
+                                <option value="single">Single use</option>
+                                <option value="multi">Multi use (10)</option>
+                                <option value="unlimited">Unlimited</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="mt-4 flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={handleGenerate}
+                            disabled={generating || !genName.trim() || !genEmail.trim()}
+                            className="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+                        >
+                            {generating ? "Generating…" : "Generate Code"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowGenerateModal(false)}
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
                 <div className="overflow-x-auto">
@@ -788,7 +1053,7 @@ function AccessCodeManagementSection() {
                         <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                             <tr>
                                 <th className="px-4 py-3">Code</th>
-                                <th className="px-4 py-3">Agency</th>
+                                <th className="px-4 py-3">Type</th>
                                 <th className="px-4 py-3">Contact</th>
                                 <th className="px-4 py-3">Usage</th>
                                 <th className="px-4 py-3">Expires</th>
@@ -797,20 +1062,71 @@ function AccessCodeManagementSection() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
-                            {accessCodes.length === 0 ? (
+                            {accessCodes.length === 0 && !loading ? (
                                 <tr>
                                     <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                                        No access codes available.
+                                        No access codes available. Click &quot;Generate Code&quot; to create one.
                                     </td>
                                 </tr>
                             ) : null}
+                            {accessCodes.map((ac) => (
+                                <tr key={ac.id} className="hover:bg-slate-50/50">
+                                    <td className="px-4 py-3">
+                                        <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-800">
+                                            {ac.code}
+                                        </code>
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-700 capitalize">{ac.type}</td>
+                                    <td className="px-4 py-3">
+                                        <div className="text-sm text-slate-900">{ac.recipientName}</div>
+                                        <div className="text-xs text-slate-500">{ac.recipientEmail}</div>
+                                        {ac.recipientOrg && (
+                                            <div className="text-xs text-slate-400">{ac.recipientOrg}</div>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-700">
+                                        {ac.usageCount}{ac.maxUsageCount ? `/${ac.maxUsageCount}` : "/∞"}
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-700">
+                                        {new Date(ac.expiresAt).toLocaleDateString("en-US", {
+                                            month: "short",
+                                            day: "numeric",
+                                            year: "numeric",
+                                        })}
+                                    </td>
+                                    <td className="px-4 py-3">{statusBadge(ac.status)}</td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-1">
+                                            {ac.status === "active" && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRevoke(ac.id)}
+                                                    disabled={revokingId === ac.id}
+                                                    className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                                                >
+                                                    {revokingId === ac.id ? "Revoking…" : "Revoke"}
+                                                </button>
+                                            )}
+                                            {(ac.status === "revoked" || ac.status === "expired" || ac.status === "exhausted") && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDelete(ac.id)}
+                                                    className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors"
+                                                >
+                                                    Delete
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <p className="mt-3 text-xs text-slate-500">
-                Codes are issued by the compliance service and validated server-side before granting access.
+                Codes are generated server-side and validated before granting access. Data: live
             </p>
         </section>
     );
