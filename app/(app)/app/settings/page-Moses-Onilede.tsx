@@ -2084,7 +2084,7 @@ export default function SettingsPage() {
                                                                 setWarningThreshold("75");
                                                                 showNotification("Warning threshold updated to 75 hours.", "success");
                                                             }
-                                                            applySettingWithAudit("apply_compliance_recommendation", rec.actionType, rec.actionType === "set-warning-threshold" ? "75" : true, "Regulatory Compliance", { recId: rec.id, source: "ai_recommendation" });
+                                                            applySettingWithAudit("apply_compliance_recommendation", rec.actionType ?? "unknown", rec.actionType === "set-warning-threshold" ? "75" : true, "Regulatory Compliance", { recId: rec.id, source: "ai_recommendation" });
                                                         }}
                                                         className="shrink-0 text-xs px-3 py-1.5 rounded-lg text-white"
                                                         style={{ backgroundColor: "#9810fa" }}
