@@ -54,6 +54,7 @@ ALTER TABLE public.component_life ENABLE ROW LEVEL SECURITY;
 GRANT ALL ON public.component_life TO service_role;
 
 -- Authenticated users can read their own org's data
+DROP POLICY IF EXISTS "Users can view own org component life" ON public.component_life;
 CREATE POLICY "Users can view own org component life"
     ON public.component_life
     FOR SELECT
@@ -151,6 +152,7 @@ ALTER TABLE public.system_inspections ENABLE ROW LEVEL SECURITY;
 
 GRANT ALL ON public.system_inspections TO service_role;
 
+DROP POLICY IF EXISTS "Users can view own org system inspections" ON public.system_inspections;
 CREATE POLICY "Users can view own org system inspections"
     ON public.system_inspections
     FOR SELECT
@@ -228,6 +230,7 @@ ALTER TABLE public.discrepancy_reports ENABLE ROW LEVEL SECURITY;
 
 GRANT ALL ON public.discrepancy_reports TO service_role;
 
+DROP POLICY IF EXISTS "Users can view own org discrepancies" ON public.discrepancy_reports;
 CREATE POLICY "Users can view own org discrepancies"
     ON public.discrepancy_reports
     FOR SELECT
