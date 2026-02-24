@@ -664,16 +664,29 @@ export default function SettingsPage() {
     }, [user]);
 
     // ── Fetch live stats from API on mount ────────────────────────────
+    const clearAuditLoading = useCallback(() => {
+        setAuditLogCategories((prev) =>
+            prev.map((c) => ({
+                ...c,
+                lastEvent: c.lastEvent === "Loading..." ? "No events" : c.lastEvent,
+            }))
+        );
+    }, []);
+
     useEffect(() => {
         let cancelled = false;
         async function loadStats() {
             try {
                 const res = await fetch("/api/settings/stats", { credentials: "include" });
-                if (!res.ok) return;
+                if (!res.ok) {
+                    if (!cancelled) clearAuditLoading();
+                    return;
+                }
                 const data = await res.json();
                 if (cancelled) return;
                 if (data.fleet) setFleetStatistics(data.fleet);
                 if (data.auditCategories) setAuditLogCategories(data.auditCategories);
+                else clearAuditLoading();
                 if (data.compliance) {
                     setComplianceStatistics((prev) => ({
                         ...prev,
@@ -684,12 +697,12 @@ export default function SettingsPage() {
                     }));
                 }
             } catch {
-                // Stats will stay at default values
+                if (!cancelled) clearAuditLoading();
             }
         }
         loadStats();
         return () => { cancelled = true; };
-    }, []);
+    }, [clearAuditLoading]);
 
     // Load settings from localStorage on mount
     useEffect(() => {

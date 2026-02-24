@@ -113,71 +113,72 @@ export async function GET(req: NextRequest) {
             .order("occurred_at", { ascending: false })
             .limit(2000);
 
-        if (!error && auditLogs && auditLogs.length > 0) {
-            const categorize = (
-                logs: typeof auditLogs,
-                patterns: string[]
-            ) =>
-                logs.filter((l) => {
-                    const action = (l.action || "").toLowerCase();
-                    const resource = (l.resource_type || "").toLowerCase();
-                    return patterns.some(
-                        (p) => action.includes(p) || resource.includes(p)
-                    );
-                });
+        const logs = (!error && auditLogs) ? auditLogs : [];
 
-            const loginLogs = categorize(auditLogs, [
-                "login",
-                "signin",
-                "sign_in",
-                "auth",
-                "session",
-            ]);
-            const maintenanceLogs = categorize(auditLogs, [
-                "maintenance",
-                "task",
-                "work_order",
-            ]);
-            const documentLogs = categorize(auditLogs, [
-                "document",
-                "upload",
-                "delete",
-                "file",
-            ]);
-            const complianceLogs = categorize(auditLogs, [
-                "compliance",
-                "regulatory",
-                "ad_",
-                "sb_",
-            ]);
-            const settingsLogs = categorize(auditLogs, [
-                "setting",
-                "config",
-                "preference",
-            ]);
+        const categorize = (
+            items: typeof logs,
+            patterns: string[]
+        ) =>
+            items.filter((l) => {
+                const action = (l.action || "").toLowerCase();
+                const resource = (l.resource_type || "").toLowerCase();
+                return patterns.some(
+                    (p) => action.includes(p) || resource.includes(p)
+                );
+            });
 
-            const lastEventTime = (logs: typeof auditLogs) =>
-                logs.length > 0 ? timeAgo(logs[0].occurred_at) : "No events";
+        const loginLogs = categorize(logs, [
+            "login",
+            "signin",
+            "sign_in",
+            "auth",
+            "session",
+        ]);
+        const maintenanceLogs = categorize(logs, [
+            "maintenance",
+            "task",
+            "work_order",
+        ]);
+        const documentLogs = categorize(logs, [
+            "document",
+            "upload",
+            "delete",
+            "file",
+        ]);
+        const complianceLogs = categorize(logs, [
+            "compliance",
+            "regulatory",
+            "ad_",
+            "sb_",
+        ]);
+        const settingsLogs = categorize(logs, [
+            "setting",
+            "config",
+            "preference",
+        ]);
 
-            stats.auditCategories = [
-                {
-                    id: "login-history",
-                    name: "Login History",
-                    icon: "login",
-                    eventsLogged: loginLogs.length,
-                    lastEvent: lastEventTime(loginLogs),
-                },
-                {
-                    id: "maintenance-changes",
-                    name: "Maintenance Record Changes",
-                    icon: "wrench",
-                    eventsLogged: maintenanceLogs.length,
-                    lastEvent: lastEventTime(maintenanceLogs),
-                },
-                {
-                    id: "document-uploads",
-                    name: "Document Uploads/Deletions",
-                    icon: "document",
+        const lastEventTime = (items: typeof logs) =>
+            items.length > 0 ? timeAgo(items[0].occurred_at) : "No events";
+
+        stats.auditCategories = [
+            {
+                id: "login-history",
+                name: "Login History",
+                icon: "login",
+                eventsLogged: loginLogs.length,
+                lastEvent: lastEventTime(loginLogs),
+            },
+            {
+                id: "maintenance-changes",
+                name: "Maintenance Record Changes",
+                icon: "wrench",
+                eventsLogged: maintenanceLogs.length,
+                lastEvent: lastEventTime(maintenanceLogs),
+            },
+            {
+                id: "document-uploads",
+                name: "Document Uploads/Deletions",
+                icon: "document",
                     eventsLogged: documentLogs.length,
                     lastEvent: lastEventTime(documentLogs),
                 },
@@ -197,10 +198,17 @@ export async function GET(req: NextRequest) {
                 },
             ];
 
-            stats.auditTotalEvents = auditLogs.length;
-        }
+            stats.auditTotalEvents = logs.length;
     } catch (e) {
         console.error("Audit stats error:", e);
+        // Return zeroed categories so frontend doesn't stay stuck on "Loading..."
+        stats.auditCategories = [
+            { id: "login-history", name: "Login History", icon: "login", eventsLogged: 0, lastEvent: "No events" },
+            { id: "maintenance-changes", name: "Maintenance Record Changes", icon: "wrench", eventsLogged: 0, lastEvent: "No events" },
+            { id: "document-uploads", name: "Document Uploads/Deletions", icon: "document", eventsLogged: 0, lastEvent: "No events" },
+            { id: "compliance-actions", name: "Compliance Actions", icon: "shield", eventsLogged: 0, lastEvent: "No events" },
+            { id: "settings-changes", name: "Settings Changes", icon: "settings", eventsLogged: 0, lastEvent: "No events" },
+        ];
     }
 
     // ── Compliance Statistics (from aircraft compliance fields) ───────────
