@@ -11,11 +11,10 @@ export default function Error({
     reset: () => void;
 }) {
     useEffect(() => {
-        // Log error to monitoring service in production
-        if (process.env.NODE_ENV === "production") {
-            console.error("Application error:", error.digest || error.message);
-            // TODO: Send to Sentry or other error tracking
-        }
+        // Send error to tracking service
+        import("@/lib/errorTracker").then(({ captureException }) => {
+            captureException(error, { digest: error.digest });
+        });
     }, [error]);
 
     return (

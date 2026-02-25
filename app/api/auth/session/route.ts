@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signPayload, verifyPayload } from "@/lib/twoFactor";
 import { recordAuditEvent } from "@/lib/audit/logger";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 
 export const runtime = "nodejs";
 
 const SESSION_COOKIE = "sm_session";
+const CSRF_COOKIE = "sm_csrf";
 const SESSION_TTL_DAYS = 7;
 
 type SessionPayload = {
+    sid: string;   // Session ID — rotated on every login/privilege change
     email: string;
     orgName: string;
     role: string;
@@ -58,6 +60,7 @@ export async function POST(req: NextRequest) {
     const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_DAYS * 24 * 60 * 60;
 
     const token = signPayload({
+        sid: randomUUID(),  // Session rotation: new ID on every login
         email: body.email,
         orgName: body.orgName,
         role: body.role || "user",
@@ -65,6 +68,8 @@ export async function POST(req: NextRequest) {
     });
 
     const response = NextResponse.json({ ok: true });
+
+    // Set new session cookie
     response.cookies.set({
         name: SESSION_COOKIE,
         value: token,
@@ -73,6 +78,18 @@ export async function POST(req: NextRequest) {
         sameSite: "lax",
         maxAge: SESSION_TTL_DAYS * 24 * 60 * 60,
         path: "/",
+    });
+
+    // Rotate CSRF token on login (session rotation pattern)
+    const newCsrf = randomBytes(32).toString("hex");
+    response.cookies.set({
+        name: CSRF_COOKIE,
+        value: newCsrf,
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: SESSION_TTL_DAYS * 24 * 60 * 60,
     });
 
     // Record login audit event
