@@ -44,7 +44,7 @@ export default function DocumentationPage() {
         } catch (error) {
             console.error("Error fetching docs:", error);
         }
-    }, [selectedAircraft?.registration]);
+    }, [selectedAircraft]);
 
     useEffect(() => {
         fetchDocsData();

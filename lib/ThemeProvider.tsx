@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, type ReactNode } from "react";
 
 type Theme = "light" | "dark" | "system";
 
@@ -27,47 +27,40 @@ function getSystemTheme(): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function resolveTheme(theme: Theme): "light" | "dark" {
-  if (theme === "system") return getSystemTheme();
-  return theme;
-}
-
 const STORAGE_KEY = "sm-theme";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
-
-  // Initialize from localStorage
-  useEffect(() => {
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "system";
     const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-    if (stored && ["light", "dark", "system"].includes(stored)) {
-      setThemeState(stored);
-    }
-  }, []);
+    if (stored && ["light", "dark", "system"].includes(stored)) return stored;
+    return "system";
+  });
 
-  // Apply theme to document
+  // Track system preference so resolvedTheme can be derived without setState in effects
+  const [systemTheme, setSystemTheme] = useState<"light" | "dark">(getSystemTheme);
+
+  // Derive resolved theme — no setState needed
+  const resolvedTheme = useMemo<"light" | "dark">(
+    () => (theme === "system" ? systemTheme : theme),
+    [theme, systemTheme],
+  );
+
+  // Apply theme to document (DOM side-effects only, no setState)
   useEffect(() => {
-    const resolved = resolveTheme(theme);
-    setResolvedTheme(resolved);
-
     const root = document.documentElement;
     root.classList.remove("light", "dark");
-    root.classList.add(resolved);
+    root.classList.add(resolvedTheme);
+    root.style.colorScheme = resolvedTheme;
+  }, [resolvedTheme]);
 
-    // Set color-scheme for native form elements
-    root.style.colorScheme = resolved;
-  }, [theme]);
-
-  // Listen for system theme changes
+  // Listen for system theme changes (setState in event callback, not synchronously in effect)
   useEffect(() => {
-    if (theme !== "system") return;
-
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => setResolvedTheme(getSystemTheme());
+    const handler = () => setSystemTheme(mq.matches ? "dark" : "light");
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme]);
+  }, []);
 
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);

@@ -403,7 +403,6 @@ export async function GET(req: NextRequest) {
 
     // ── Notification / Alert Statistics (from notifications table) ──────
     try {
-        const nowISO = new Date().toISOString();
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
         const weekStart = new Date();

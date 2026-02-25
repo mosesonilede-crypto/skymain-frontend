@@ -6,7 +6,7 @@
  */
 
 import { supabaseServer } from "@/lib/supabaseServer";
-import { getEntitlementsForTier, normalizeTier, type SubscriptionEntitlements } from "@/lib/entitlements";
+import { getEntitlementsForTier, type SubscriptionEntitlements } from "@/lib/entitlements";
 
 export type EnforcementResult =
     | { allowed: true }

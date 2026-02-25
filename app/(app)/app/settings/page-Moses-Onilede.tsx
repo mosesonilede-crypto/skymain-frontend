@@ -334,7 +334,7 @@ export default function SettingsPage() {
     });
 
     // AI Assistant recommendations for Aircraft & Fleet (hydrated from API)
-    const [aiFleetRecommendations, setAiFleetRecommendations] = useState([
+    const [aiFleetRecommendations] = useState([
         {
             id: "REC-001",
             type: "optimization",

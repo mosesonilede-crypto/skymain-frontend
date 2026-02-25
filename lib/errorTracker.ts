@@ -19,14 +19,30 @@ type ErrorContext = {
     [key: string]: unknown;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let _sentryModule: any = null;
+/** Minimal shape of a Sentry-like scope (avoids `any`). */
+interface SentryScope {
+    setUser(user: { id: string; email?: string }): void;
+    setTag(key: string, value: string): void;
+    setExtra(key: string, value: unknown): void;
+    setLevel(level: string): void;
+}
 
-async function getSentry(): Promise<any> {
+/** Minimal shape of the Sentry SDK surface we actually call. */
+interface SentryLike {
+    withScope(cb: (scope: SentryScope) => void): void;
+    captureException(error: unknown): void;
+    captureMessage(message: string): void;
+    setUser(user: { id: string; email?: string }): void;
+    setTag(key: string, value: string): void;
+}
+
+let _sentryModule: SentryLike | null = null;
+
+async function getSentry(): Promise<SentryLike | null> {
     if (_sentryModule) return _sentryModule;
     try {
         // Dynamic import — will fail gracefully if @sentry/nextjs is not installed
-        _sentryModule = await import(/* webpackIgnore: true */ "@sentry/nextjs" as string);
+        _sentryModule = await import(/* webpackIgnore: true */ "@sentry/nextjs" as string) as unknown as SentryLike;
         return _sentryModule;
     } catch {
         return null; // Sentry not installed yet
@@ -46,7 +62,7 @@ export async function captureException(
     const sentry = await getSentry();
     if (sentry) {
         if (context) {
-            sentry.withScope((scope: any) => {
+            sentry.withScope((scope: SentryScope) => {
                 if (context.userId) scope.setUser({ id: context.userId, email: context.userId });
                 if (context.orgName) scope.setTag("org", context.orgName);
                 if (context.role) scope.setTag("role", context.role);
@@ -73,7 +89,7 @@ export async function captureMessage(
 ): Promise<void> {
     const sentry = await getSentry();
     if (sentry) {
-        sentry.withScope((scope: any) => {
+        sentry.withScope((scope: SentryScope) => {
             if (context?.userId) scope.setUser({ id: context.userId });
             if (context?.orgName) scope.setTag("org", context.orgName);
             scope.setLevel(level);
