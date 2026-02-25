@@ -19,6 +19,7 @@ export default function SignInPage() {
     const [showLicenseCode, setShowLicenseCode] = React.useState(false);
     const [showPassword, setShowPassword] = React.useState(false);
     const [remember, setRemember] = React.useState(true);
+    const [acceptTerms, setAcceptTerms] = React.useState(false);
 
     const [submitting, setSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
@@ -50,6 +51,11 @@ export default function SignInPage() {
                     ? "Enter your email, organization name, and password. License code is required after trial."
                     : "Enter your email, organization name, license code, and password."
             );
+            return;
+        }
+
+        if (!acceptTerms) {
+            setError("You must agree to the Terms & Conditions and Privacy Policy before signing in.");
             return;
         }
 
@@ -239,9 +245,28 @@ export default function SignInPage() {
                                 </Link>
                             </div>
 
+                            <label className="flex items-start gap-2 text-sm text-slate-600">
+                                <input
+                                    checked={acceptTerms}
+                                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                                    type="checkbox"
+                                    className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                                />
+                                <span>
+                                    I agree to the{" "}
+                                    <Link href="/terms" className="font-semibold text-slate-900 hover:underline">
+                                        Terms &amp; Conditions
+                                    </Link>{" "}
+                                    and{" "}
+                                    <Link href="/privacy" className="font-semibold text-slate-900 hover:underline">
+                                        Privacy Policy
+                                    </Link>
+                                </span>
+                            </label>
+
                             <button
                                 type="submit"
-                                disabled={submitting}
+                                disabled={submitting || !acceptTerms}
                                 className="mt-2 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
                             >
                                 {submitting ? "Signing in..." : "Sign In"}
@@ -256,8 +281,7 @@ export default function SignInPage() {
                         </form>
 
                         <div className="mt-6 text-xs text-slate-500">
-                            By signing in, you acknowledge the operational decision-support nature of SkyMaintain and that final
-                            authority remains with certified personnel.
+                            Final authority for all operational decisions remains with certified personnel.
                         </div>
                     </div>
                 </section>

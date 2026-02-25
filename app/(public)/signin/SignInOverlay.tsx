@@ -73,12 +73,13 @@ export default function SignInOverlay() {
     const [showLicenseCode, setShowLicenseCode] = useState(false);
     const [password, setPassword] = useState("");
     const [remember, setRemember] = useState(true);
+    const [acceptTerms, setAcceptTerms] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const disabled = useMemo(
-        () => !email.trim() || !orgName.trim() || !licenseCode.trim() || !password || submitting,
-        [email, orgName, licenseCode, password, submitting]
+        () => !email.trim() || !orgName.trim() || !licenseCode.trim() || !password || !acceptTerms || submitting,
+        [email, orgName, licenseCode, password, acceptTerms, submitting]
     );
 
     async function onSubmit(event: FormEvent) {
@@ -86,7 +87,11 @@ export default function SignInOverlay() {
         setError(null);
 
         if (disabled) {
-            setError("Enter your email, organization name, license code, and password.");
+            setError(
+                !acceptTerms
+                    ? "You must agree to the Terms & Conditions and Privacy Policy before signing in."
+                    : "Enter your email, organization name, license code, and password."
+            );
             return;
         }
 
@@ -255,6 +260,25 @@ export default function SignInOverlay() {
                                 Forgot password?
                             </Link>
                         </div>
+
+                        <label className="flex items-start gap-[8px] text-[12px] text-[#4a5565]">
+                            <input
+                                type="checkbox"
+                                checked={acceptTerms}
+                                onChange={(event) => setAcceptTerms(event.target.checked)}
+                                className="mt-[2px] h-[13px] w-[13px] rounded border border-[#cbd5e1]"
+                            />
+                            <span>
+                                I agree to the{" "}
+                                <Link href="/terms" className="text-[#155dfc] hover:underline">
+                                    Terms &amp; Conditions
+                                </Link>{" "}
+                                and{" "}
+                                <Link href="/privacy" className="text-[#155dfc] hover:underline">
+                                    Privacy Policy
+                                </Link>
+                            </span>
+                        </label>
 
                         <button
                             type="submit"
