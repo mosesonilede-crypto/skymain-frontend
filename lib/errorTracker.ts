@@ -19,12 +19,14 @@ type ErrorContext = {
     [key: string]: unknown;
 };
 
-let _sentryModule: typeof import("@sentry/nextjs") | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _sentryModule: any = null;
 
-async function getSentry() {
+async function getSentry(): Promise<any> {
     if (_sentryModule) return _sentryModule;
     try {
-        _sentryModule = await import("@sentry/nextjs");
+        // Dynamic import — will fail gracefully if @sentry/nextjs is not installed
+        _sentryModule = await import(/* webpackIgnore: true */ "@sentry/nextjs" as string);
         return _sentryModule;
     } catch {
         return null; // Sentry not installed yet
@@ -44,7 +46,7 @@ export async function captureException(
     const sentry = await getSentry();
     if (sentry) {
         if (context) {
-            sentry.withScope((scope) => {
+            sentry.withScope((scope: any) => {
                 if (context.userId) scope.setUser({ id: context.userId, email: context.userId });
                 if (context.orgName) scope.setTag("org", context.orgName);
                 if (context.role) scope.setTag("role", context.role);
@@ -71,7 +73,7 @@ export async function captureMessage(
 ): Promise<void> {
     const sentry = await getSentry();
     if (sentry) {
-        sentry.withScope((scope) => {
+        sentry.withScope((scope: any) => {
             if (context?.userId) scope.setUser({ id: context.userId });
             if (context?.orgName) scope.setTag("org", context.orgName);
             scope.setLevel(level);
