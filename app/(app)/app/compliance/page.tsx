@@ -235,11 +235,52 @@ export default function RegulatoryCompliancePage() {
                 status: normalizeComplianceStatus(item.status),
             }));
 
-            setAirworthiness(createEmptyAirworthiness(data.aircraftRegistration || aircraftReg));
+            // Airworthiness — use live data if API returned it
+            if (data.airworthiness) {
+                setAirworthiness({
+                    status: data.airworthiness.status || "Unknown",
+                    certificate: data.airworthiness.certificate || "Not available",
+                    certificateStatus: data.airworthiness.certificateStatus || "Not available",
+                    certificateExpiry: data.airworthiness.certificateExpiry || "Not available",
+                    registration: data.airworthiness.registration || aircraftReg,
+                    annualInspection: data.airworthiness.annualInspection || "Not available",
+                    issuingAuthority: data.airworthiness.issuingAuthority || "Not available",
+                    nextRenewal: data.airworthiness.nextRenewal || "Not available",
+                });
+            } else {
+                setAirworthiness(createEmptyAirworthiness(data.aircraftRegistration || aircraftReg));
+            }
+
             setAds(mappedAds);
             setSbs(mappedSbs);
-            setCertificates([]);
-            setAnnualInspection(EMPTY_ANNUAL_INSPECTION);
+
+            // Certificates — use live data if API returned it
+            if (Array.isArray(data.certificates) && data.certificates.length > 0) {
+                setCertificates(
+                    data.certificates.map((c: { type?: string; status?: string; number?: string; expires?: string; authority?: string }) => ({
+                        type: c.type || "Unknown",
+                        status: (c.status || "Valid") as "Valid" | "Expiring Soon" | "Expired",
+                        number: c.number || "—",
+                        expires: c.expires || "N/A",
+                        authority: c.authority || "Unknown",
+                    }))
+                );
+            } else {
+                setCertificates([]);
+            }
+
+            // Annual inspection — use live data if API returned it
+            if (data.annualInspection) {
+                setAnnualInspection({
+                    status: data.annualInspection.status || "Not available",
+                    last: data.annualInspection.last || "Not available",
+                    nextDue: data.annualInspection.nextDue || "Not available",
+                    inspector: data.annualInspection.inspector || "Not available",
+                });
+            } else {
+                setAnnualInspection(EMPTY_ANNUAL_INSPECTION);
+            }
+
             setApplicableUpdates([]);
             setComplianceScore(calculateComplianceScore([...mappedAds, ...mappedSbs]));
             setLastChecked(formatLastChecked(data.lastUpdated));
@@ -734,14 +775,23 @@ function UpdateCard({
 }
 
 function ADRow({ item }: { item: ADItem }) {
+    const { selectedAircraft } = useAircraft();
     const [status, setStatus] = React.useState(item.status);
     const [isLoading, setIsLoading] = React.useState(false);
 
     async function handleStatusChange(newStatus: "Compliant" | "Pending" | "Overdue") {
         setIsLoading(true);
         try {
-            // TODO: Call API to update status
-            // await fetch(`/api/compliance/ad/${item.id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+            const reg = selectedAircraft?.registration || "";
+            const res = await fetch(`/api/compliance/${reg}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    eoNumber: item.id,
+                    status: newStatus.toLowerCase(),
+                }),
+            });
+            if (!res.ok) throw new Error("Failed to update");
             setStatus(newStatus);
         } catch (error) {
             console.error("Error updating AD status:", error);
@@ -784,14 +834,23 @@ function ADRow({ item }: { item: ADItem }) {
 }
 
 function SBRow({ item }: { item: SBItem }) {
+    const { selectedAircraft } = useAircraft();
     const [status, setStatus] = React.useState(item.status);
     const [isLoading, setIsLoading] = React.useState(false);
 
     async function handleStatusChange(newStatus: "Compliant" | "Pending" | "Overdue") {
         setIsLoading(true);
         try {
-            // TODO: Call API to update status
-            // await fetch(`/api/compliance/sb/${item.id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+            const reg = selectedAircraft?.registration || "";
+            const res = await fetch(`/api/compliance/${reg}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    eoNumber: item.id,
+                    status: newStatus.toLowerCase(),
+                }),
+            });
+            if (!res.ok) throw new Error("Failed to update");
             setStatus(newStatus);
         } catch (error) {
             console.error("Error updating SB status:", error);
@@ -844,8 +903,8 @@ function CertRow({ item }: { item: CertificateItem }) {
     async function handleRenewal() {
         setIsLoading(true);
         try {
-            // TODO: Call API to initiate renewal
-            // await fetch(`/api/compliance/certificate/${item.number}`, { method: 'POST', body: JSON.stringify({ action: 'renew' }) });
+            // Certificate renewal is an admin workflow — mark locally for now
+            // In production, this would trigger a renewal request to the authority
             setStatus("Valid");
         } catch (error) {
             console.error("Error renewing certificate:", error);
