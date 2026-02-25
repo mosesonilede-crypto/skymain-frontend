@@ -22,6 +22,9 @@ const CSRF_EXEMPT = [
     "/api/v1/api-keys",
     "/api/health",
     "/api/auth/session",
+    "/api/2fa/",              // OTP flow — already protected by one-time code
+    "/api/auth/sso/",         // SSO redirects — no mutable state
+    "/api/contact",           // Public contact form — rate-limited separately
 ];
 
 // Protected app routes that require a session cookie
