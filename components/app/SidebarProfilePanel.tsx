@@ -13,6 +13,7 @@ import {
     Check,
     Loader2,
 } from "lucide-react";
+import { csrfFetch } from "@/lib/csrfFetch";
 
 interface ProfileData {
     full_name: string;
@@ -182,9 +183,8 @@ export default function SidebarProfilePanel({
         try {
             const form = new FormData();
             form.append("file", file);
-            const res = await fetch("/api/profile/avatar", {
+            const res = await csrfFetch("/api/profile/avatar", {
                 method: "POST",
-                credentials: "include",
                 body: form,
             });
             const data = await res.json();
@@ -207,9 +207,8 @@ export default function SidebarProfilePanel({
         setAvatarError("");
         setAvatarUploading(true);
         try {
-            const res = await fetch("/api/profile/avatar", {
+            const res = await csrfFetch("/api/profile/avatar", {
                 method: "DELETE",
-                credentials: "include",
             });
             if (res.ok) {
                 setAvatarPreview(null);
@@ -242,10 +241,9 @@ export default function SidebarProfilePanel({
         localStorage.setItem("skymaintain.profile", JSON.stringify(localProfile));
 
         try {
-            const res = await fetch("/api/profile", {
+            const res = await csrfFetch("/api/profile", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
                 body: JSON.stringify(updatedFields),
             });
 
