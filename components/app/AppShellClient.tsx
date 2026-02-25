@@ -31,6 +31,19 @@ import {
     CreditCard,
     Upload,
     Plug,
+    Package,
+    Factory,
+    Gauge,
+    FileCode,
+    ListChecks,
+    ClipboardCheck,
+    Calendar,
+    Search,
+    AlertTriangle,
+    BarChart3,
+    DollarSign,
+    GraduationCap,
+    FolderOpen,
 } from "lucide-react";
 import AppSidebarNav from "@/components/app/AppSidebarNav";
 import SidebarProfilePanel from "@/components/app/SidebarProfilePanel";
@@ -57,6 +70,20 @@ const ALL_NAV_ITEMS = [
     { href: "/app/subscription-billing", label: "Billing", icon: <CreditCard className="h-5 w-5" /> },
     { href: "/app/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
     { href: "/app/admin-panel", label: "Admin Panel", icon: <Shield className="h-5 w-5" />, adminOnly: true },
+    // ── MRO Modules ──
+    { href: "/app/inventory", label: "Parts Inventory", icon: <Package className="h-5 w-5" /> },
+    { href: "/app/shop-visits", label: "Shop Visits", icon: <Factory className="h-5 w-5" /> },
+    { href: "/app/tools", label: "Tools & Calibration", icon: <Gauge className="h-5 w-5" />, tall: true },
+    { href: "/app/engineering-orders", label: "Engineering Orders", icon: <FileCode className="h-5 w-5" />, tall: true },
+    { href: "/app/maintenance-programs", label: "Maintenance Programs", icon: <ListChecks className="h-5 w-5" />, tall: true },
+    { href: "/app/job-cards", label: "Job Cards", icon: <ClipboardCheck className="h-5 w-5" /> },
+    { href: "/app/maintenance-events", label: "Maintenance Events", icon: <Calendar className="h-5 w-5" />, tall: true },
+    { href: "/app/findings", label: "Findings & NRCs", icon: <Search className="h-5 w-5" /> },
+    { href: "/app/mel-deferrals", label: "MEL Deferrals", icon: <AlertTriangle className="h-5 w-5" /> },
+    { href: "/app/reliability", label: "Reliability", icon: <BarChart3 className="h-5 w-5" /> },
+    { href: "/app/warranty", label: "Warranty Claims", icon: <DollarSign className="h-5 w-5" /> },
+    { href: "/app/training", label: "Staff Training", icon: <GraduationCap className="h-5 w-5" /> },
+    { href: "/app/document-control", label: "Document Control", icon: <FolderOpen className="h-5 w-5" />, tall: true },
 ];
 
 type AppShellClientProps = {
