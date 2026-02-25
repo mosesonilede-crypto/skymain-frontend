@@ -35,7 +35,10 @@ export async function GET(req: NextRequest) {
     if (status) query = query.eq("status", status);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+        console.warn("[warranty] Supabase query error:", error.message);
+        return NextResponse.json({ claims: [] });
+    }
     return NextResponse.json({ claims: data || [] });
 }
 

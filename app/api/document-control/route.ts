@@ -37,7 +37,10 @@ export async function GET(req: NextRequest) {
     if (search) query = query.or(`title.ilike.%${search}%,document_number.ilike.%${search}%`);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+        console.warn("[document-control] Supabase query error:", error.message);
+        return NextResponse.json({ documents: [], stats: { total: 0, by_kind: {} } });
+    }
 
     // Stats
     const list = data || [];

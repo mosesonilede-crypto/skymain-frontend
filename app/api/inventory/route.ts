@@ -36,7 +36,10 @@ export async function GET(req: NextRequest) {
     if (search) query = query.ilike("part_number", `%${search}%`);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+        console.warn("[inventory] Supabase query error:", error.message);
+        return NextResponse.json({ items: [], stats: { total_items: 0, low_stock_items: 0, total_value: 0 } });
+    }
 
     let items = data || [];
     if (lowStock) {

@@ -36,7 +36,10 @@ export async function GET(req: NextRequest) {
             .limit(200);
         if (status) query = query.eq("status", status);
         const { data, error } = await query;
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error) {
+            console.warn("[training] Supabase query error (type_ratings):", error.message);
+            return NextResponse.json({ type_ratings: [] });
+        }
         return NextResponse.json({ type_ratings: data || [] });
     }
 
@@ -49,7 +52,10 @@ export async function GET(req: NextRequest) {
             .limit(200);
         if (status) query = query.eq("status", status);
         const { data, error } = await query;
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error) {
+            console.warn("[training] Supabase query error (authorizations):", error.message);
+            return NextResponse.json({ authorizations: [] });
+        }
         return NextResponse.json({ authorizations: data || [] });
     }
 
@@ -65,7 +71,10 @@ export async function GET(req: NextRequest) {
     if (license_type) query = query.eq("license_type", license_type);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+        console.warn("[training] Supabase query error (licenses):", error.message);
+        return NextResponse.json({ licenses: [], stats: { total: 0, active: 0, expiring_soon: 0 } });
+    }
 
     // Stats
     const total = (data || []).length;

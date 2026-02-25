@@ -36,7 +36,10 @@ export async function GET(req: NextRequest) {
         if (url.searchParams.get("category")) query = query.eq("category", url.searchParams.get("category"));
 
         const { data, error } = await query;
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error) {
+            console.warn("[mel-deferrals] Supabase query error (items):", error.message);
+            return NextResponse.json({ items: [] });
+        }
         return NextResponse.json({ items: data || [] });
     }
 
@@ -50,7 +53,10 @@ export async function GET(req: NextRequest) {
     if (status) query = query.eq("status", status);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+        console.warn("[mel-deferrals] Supabase query error (deferrals):", error.message);
+        return NextResponse.json({ deferrals: [], stats: { open_deferrals: 0, overdue_deferrals: 0 } });
+    }
 
     const deferrals = data || [];
     const now = new Date().toISOString();

@@ -38,7 +38,10 @@ export async function GET(req: NextRequest) {
     if (status) query = query.eq("status", status);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+        console.warn("[tools] Supabase query error:", error.message);
+        return NextResponse.json({ tools: [], stats: { total_tools: 0, overdue_calibrations: 0 } });
+    }
 
     let tools = data || [];
     const now = new Date().toISOString();

@@ -68,7 +68,6 @@ const ALL_NAV_ITEMS = [
     { href: "/app/data-import", label: "Data Import", icon: <Upload className="h-5 w-5" />, adminOnly: true },
     { href: "/app/integrations", label: "Integrations", icon: <Plug className="h-5 w-5" />, adminOnly: true },
     { href: "/app/subscription-billing", label: "Billing", icon: <CreditCard className="h-5 w-5" /> },
-    { href: "/app/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
     // ── MRO Modules ──
     { href: "/app/inventory", label: "Parts Inventory", icon: <Package className="h-5 w-5" /> },
     { href: "/app/shop-visits", label: "Shop Visits", icon: <Factory className="h-5 w-5" /> },
@@ -83,6 +82,7 @@ const ALL_NAV_ITEMS = [
     { href: "/app/warranty", label: "Warranty Claims", icon: <DollarSign className="h-5 w-5" /> },
     { href: "/app/training", label: "Staff Training", icon: <GraduationCap className="h-5 w-5" /> },
     { href: "/app/document-control", label: "Document Control", icon: <FolderOpen className="h-5 w-5" />, tall: true },
+    { href: "/app/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
     { href: "/app/admin-panel", label: "Admin Panel", icon: <Shield className="h-5 w-5" />, adminOnly: true },
 ];
 

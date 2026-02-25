@@ -38,7 +38,10 @@ export async function GET(req: NextRequest) {
     if (isMandatory === "true") query = query.eq("is_mandatory", true);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+        console.warn("[engineering-orders] Supabase query error:", error.message);
+        return NextResponse.json({ orders: [] });
+    }
     return NextResponse.json({ orders: data || [] });
 }
 

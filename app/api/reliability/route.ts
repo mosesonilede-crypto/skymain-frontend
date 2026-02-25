@@ -36,7 +36,10 @@ export async function GET(req: NextRequest) {
         if (status) query = query.eq("status", status);
 
         const { data, error } = await query;
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error) {
+            console.warn("[reliability] Supabase query error (alerts):", error.message);
+            return NextResponse.json({ alerts: [] });
+        }
         return NextResponse.json({ alerts: data || [] });
     }
 
@@ -55,7 +58,10 @@ export async function GET(req: NextRequest) {
         sbAny.from("reliability_alerts").select("id, status").eq("org_name", session.orgName),
     ]);
 
-    if (evRes.error) return NextResponse.json({ error: evRes.error.message }, { status: 500 });
+    if (evRes.error) {
+        console.warn("[reliability] Supabase query error (events):", evRes.error.message);
+        return NextResponse.json({ events: [], stats: { total_events: 0, open_alerts: 0 } });
+    }
     const events = evRes.data || [];
     const alerts = alRes.data || [];
     const open_alerts = alerts.filter((a: any) => a.status === "open" || a.status === "under_investigation").length;
