@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useAuth, type UserRole } from "@/lib/AuthContext";
-import { resolveSessionRole } from "@/lib/auth/roles";
+import { isSuperAdmin, resolveSessionRole } from "@/lib/auth/roles";
 import { getTrialStatus, startTrialIfMissing } from "@/lib/trial";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -28,29 +28,37 @@ export default function SignInPage() {
         e.preventDefault();
         setError(null);
 
-        const trial = getTrialStatus();
-        if (trial?.expired) {
-            setError("Your 14-day trial has ended. Please contact sales to continue.");
-            return;
-        }
-
         const eTrim = email.trim();
         const oTrim = orgName.trim();
         const lTrim = licenseCode.trim();
 
-        if (!trial && !lTrim) {
-            await startTrialIfMissing();
-        }
+        // Super admins bypass all trial and license checks
+        const _isSuperAdmin = isSuperAdmin({ email: eTrim, licenseCode: lTrim });
 
-        const activeTrial = getTrialStatus();
-        const trialActive = Boolean(activeTrial && !activeTrial.expired);
+        if (!_isSuperAdmin) {
+            const trial = getTrialStatus();
+            if (trial?.expired) {
+                setError("Your 14-day trial has ended. Please contact sales to continue.");
+                return;
+            }
 
-        if (!eTrim || !oTrim || !password || (!lTrim && !trialActive)) {
-            setError(
-                trialActive
-                    ? "Enter your email, organization name, and password. License code is required after trial."
-                    : "Enter your email, organization name, license code, and password."
-            );
+            if (!trial && !lTrim) {
+                await startTrialIfMissing();
+            }
+
+            const activeTrial = getTrialStatus();
+            const trialActive = Boolean(activeTrial && !activeTrial.expired);
+
+            if (!eTrim || !oTrim || !password || (!lTrim && !trialActive)) {
+                setError(
+                    trialActive
+                        ? "Enter your email, organization name, and password. License code is required after trial."
+                        : "Enter your email, organization name, license code, and password."
+                );
+                return;
+            }
+        } else if (!eTrim || !oTrim || !password) {
+            setError("Enter your email, organization name, and password.");
             return;
         }
 

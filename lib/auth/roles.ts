@@ -24,36 +24,47 @@ export function isAdminRole(role?: string | null): boolean {
     return normalized === "admin" || normalized === "super_admin";
 }
 
-export function resolveSessionRole(input: { rawRole?: string | null; licenseCode?: string | null; email?: string | null }): string {
-    const normalizedRole = normalizeRole(input.rawRole);
-    const normalizedCode = normalizeLicenseCode(input.licenseCode);
-    const normalizedEmail = normalizeEmail(input.email);
-
-    const superAdminCodes = new Set([
+function getSuperAdminCodes(): Set<string> {
+    return new Set([
         "MOSES-SUPER-ADMIN-LICENSE",
         "ADMIN-SUPER-ACCESS",
         ...parseCsvCodes(process.env.NEXT_PUBLIC_SUPER_ADMIN_LICENSE_CODES),
     ]);
+}
 
-    const adminCodes = new Set([
-        ...parseCsvCodes(process.env.NEXT_PUBLIC_ADMIN_LICENSE_CODES),
-    ]);
-
-    const superAdminEmails = new Set([
+function getSuperAdminEmails(): Set<string> {
+    return new Set([
         "mosesonilede@gmail.com",
         ...((process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAILS || "")
             .split(",")
             .map((item) => normalizeEmail(item))
             .filter(Boolean)),
     ]);
+}
 
-    if (normalizedEmail && superAdminEmails.has(normalizedEmail)) {
+/**
+ * Returns true if the given email or license code identifies a super admin.
+ * Super admins have unrestricted access — no trial or subscription required.
+ */
+export function isSuperAdmin(input: { email?: string | null; licenseCode?: string | null }): boolean {
+    const normalizedEmail = normalizeEmail(input.email);
+    const normalizedCode = normalizeLicenseCode(input.licenseCode);
+    if (normalizedEmail && getSuperAdminEmails().has(normalizedEmail)) return true;
+    if (normalizedCode && getSuperAdminCodes().has(normalizedCode)) return true;
+    return false;
+}
+
+export function resolveSessionRole(input: { rawRole?: string | null; licenseCode?: string | null; email?: string | null }): string {
+    const normalizedRole = normalizeRole(input.rawRole);
+    const normalizedCode = normalizeLicenseCode(input.licenseCode);
+
+    if (isSuperAdmin({ email: input.email, licenseCode: input.licenseCode })) {
         return "super_admin";
     }
 
-    if (normalizedCode && superAdminCodes.has(normalizedCode)) {
-        return "super_admin";
-    }
+    const adminCodes = new Set([
+        ...parseCsvCodes(process.env.NEXT_PUBLIC_ADMIN_LICENSE_CODES),
+    ]);
 
     if (normalizedCode && adminCodes.has(normalizedCode)) {
         return "admin";

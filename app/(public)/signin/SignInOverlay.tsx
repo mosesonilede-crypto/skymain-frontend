@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { useAuth, type UserRole } from "@/lib/AuthContext";
-import { resolveSessionRole } from "@/lib/auth/roles";
+import { isSuperAdmin, resolveSessionRole } from "@/lib/auth/roles";
 
 const imgVector22 = "https://www.figma.com/api/mcp/asset/e5b2a959-7f57-42ab-94cc-9040775c2796";
 const imgIcon23 = "https://www.figma.com/api/mcp/asset/b7a54d66-e02b-4057-b1f4-54610111e27a";
@@ -77,9 +77,14 @@ export default function SignInOverlay() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const _isSuperAdmin = useMemo(
+        () => isSuperAdmin({ email: email.trim(), licenseCode: licenseCode.trim() }),
+        [email, licenseCode]
+    );
+
     const disabled = useMemo(
-        () => !email.trim() || !orgName.trim() || !licenseCode.trim() || !password || !acceptTerms || submitting,
-        [email, orgName, licenseCode, password, acceptTerms, submitting]
+        () => !email.trim() || !orgName.trim() || (!_isSuperAdmin && !licenseCode.trim()) || !password || !acceptTerms || submitting,
+        [email, orgName, licenseCode, password, acceptTerms, submitting, _isSuperAdmin]
     );
 
     async function onSubmit(event: FormEvent) {
