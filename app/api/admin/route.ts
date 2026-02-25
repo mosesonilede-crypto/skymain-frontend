@@ -271,9 +271,11 @@ export async function GET(req: NextRequest) {
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (normalizeRole(session.role) !== "super_admin") {
+    const callerRole = normalizeRole(session.role);
+    if (callerRole !== "super_admin" && callerRole !== "admin") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    const isSuperAdmin = callerRole === "super_admin";
 
     try {
         if (!supabaseServer) {
@@ -400,6 +402,15 @@ export async function GET(req: NextRequest) {
                 })
         );
 
+        // Org-scoped filtering: admins see only their own org; super_admins see everyone
+        const visibleUsers = isSuperAdmin
+            ? users
+            : users.filter((u) => {
+                  const userOrg = (u.organization || "").toLowerCase().trim();
+                  const sessionOrg = (session.orgName || "").toLowerCase().trim();
+                  return sessionOrg && userOrg === sessionOrg;
+              });
+
         // Count actual aircraft in the database
         let totalAircraft = 0;
         try {
@@ -417,11 +428,11 @@ export async function GET(req: NextRequest) {
             {
                 kpis: {
                     totalAircraft,
-                    activeUsers: users.length,
+                    activeUsers: visibleUsers.length,
                     maintenanceRecords: 0,
                     complianceRatePct: 0,
                 },
-                users,
+                users: visibleUsers,
                 system: {
                     licenseStatus: "Active",
                     licenseExpires: "Not available",
