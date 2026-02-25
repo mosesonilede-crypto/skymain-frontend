@@ -205,32 +205,32 @@ export default function SettingsPage() {
     const [retentionPeriod, setRetentionPeriod] = useState("7");
     const [autoVersionControl, setAutoVersionControl] = useState(true);
 
-    // Documents & Records - Live document statistics (AI-predicted data)
-    const documentStatistics = useMemo(() => ({
-        totalDocuments: 3247,
-        maintenanceRecords: 1456,
-        inspectionReports: 589,
-        complianceDocuments: 412,
-        technicalPublications: 234,
-        certifications: 187,
-        trainingRecords: 369,
-        documentsThisMonth: 127,
-        pendingApproval: 8,
-        expiringIn30Days: 12,
-        averageDocumentAge: "2.3 years",
-        storageUsed: "24.7 GB",
-        lastUpload: "15 mins ago",
-        versionControlEnabled: 2891,
-        averageVersions: 3.2,
-    }), []);
+    // Documents & Records - Live document statistics (fetched from API)
+    const [documentStatistics, setDocumentStatistics] = useState({
+        totalDocuments: 0,
+        maintenanceRecords: 0,
+        inspectionReports: 0,
+        complianceDocuments: 0,
+        technicalPublications: 0,
+        certifications: 0,
+        trainingRecords: 0,
+        documentsThisMonth: 0,
+        pendingApproval: 0,
+        expiringIn30Days: 0,
+        averageDocumentAge: "—",
+        storageUsed: "—",
+        lastUpload: "Loading...",
+        versionControlEnabled: 0,
+        averageVersions: 1,
+    });
 
-    // AI Assistant recommendations for Documents & Records
-    const aiDocumentRecommendations = useMemo(() => [
+    // AI Assistant recommendations for Documents & Records (hydrated from API)
+    const [aiDocumentRecommendations, setAiDocumentRecommendations] = useState([
         {
             id: "DOC-001",
             type: "warning",
-            title: "12 Documents Expiring Soon",
-            description: "12 certifications and compliance documents are expiring within 30 days. Review and renew to maintain compliance.",
+            title: "Documents Expiring Soon",
+            description: "Checking for certifications and compliance documents expiring within 30 days...",
             confidence: 100,
             impact: "Prevent compliance gaps",
             actionType: "expiring-docs",
@@ -238,8 +238,8 @@ export default function SettingsPage() {
         {
             id: "DOC-002",
             type: "optimization",
-            title: "Enable 10-Year Retention for Certifications",
-            description: "Your certifications category has high audit frequency. Recommend 10-year retention for regulatory protection.",
+            title: "Retention Policy Analysis",
+            description: "Analyzing document categories for optimal retention recommendations...",
             confidence: 94,
             impact: "Enhanced audit readiness",
             actionType: "retention-policy",
@@ -247,12 +247,12 @@ export default function SettingsPage() {
         {
             id: "DOC-003",
             type: "info",
-            title: "Version Control Coverage Optimal",
-            description: "89% of documents have version control enabled. This exceeds industry average of 72%.",
+            title: "Version Control Analysis",
+            description: "Checking version control coverage across your document library...",
             confidence: 98,
-            impact: "Current coverage is excellent",
+            impact: "Analyzing coverage",
         },
-    ], []);
+    ]);
 
     // Toggle for showing document AI recommendations
     const [showDocumentsAI, setShowDocumentsAI] = useState(true);
@@ -414,37 +414,37 @@ export default function SettingsPage() {
     // Toggle for showing compliance AI recommendations
     const [showComplianceAI, setShowComplianceAI] = useState(true);
 
-    // Notifications & Alerts - Live notification statistics (AI-predicted data)
-    const notificationStatistics = useMemo(() => ({
-        totalAlertsToday: 12,
-        criticalAlerts: 2,
-        warningAlerts: 5,
-        infoAlerts: 5,
-        alertsThisWeek: 47,
-        alertsThisMonth: 156,
-        averageResponseTime: "4.2 mins",
-        acknowledgedRate: 98.7,
-        unreadAlerts: 3,
-        emailDeliveryRate: 99.8,
-        lastAlertTime: "2 mins ago",
-    }), []);
+    // Notifications & Alerts - Live notification statistics (fetched from API)
+    const [notificationStatistics, setNotificationStatistics] = useState({
+        totalAlertsToday: 0,
+        criticalAlerts: 0,
+        warningAlerts: 0,
+        infoAlerts: 0,
+        alertsThisWeek: 0,
+        alertsThisMonth: 0,
+        averageResponseTime: "—",
+        acknowledgedRate: 100,
+        unreadAlerts: 0,
+        emailDeliveryRate: 0,
+        lastAlertTime: "Loading...",
+    });
 
-    // AI Assistant recommendations for Notifications & Alerts
-    const aiNotificationRecommendations = useMemo(() => [
+    // AI Assistant recommendations for Notifications & Alerts (hydrated from API)
+    const [aiNotificationRecommendations, setAiNotificationRecommendations] = useState([
         {
             id: "NOTIF-001",
             type: "optimization",
-            title: "Alert Consolidation Suggested",
-            description: "You receive 12+ maintenance reminders daily. Enable smart grouping to reduce notification fatigue by 40%.",
+            title: "Alert Consolidation Analysis",
+            description: "Analyzing your daily notification volume for consolidation opportunities...",
             confidence: 89,
-            impact: "Reduce notifications by 40%",
+            impact: "Reduce notification fatigue",
             actionType: "consolidation",
         },
         {
             id: "NOTIF-002",
             type: "warning",
             title: "Critical Alert Response Time",
-            description: "Average response to critical alerts is 4.2 mins. Consider enabling SMS for faster acknowledgment.",
+            description: "Calculating average response time to critical alerts...",
             confidence: 94,
             impact: "Faster critical alert response",
             actionType: "sms",
@@ -452,13 +452,13 @@ export default function SettingsPage() {
         {
             id: "NOTIF-003",
             type: "info",
-            title: "Optimal Severity Filter",
-            description: "Based on your role (Fleet Manager), 'Critical + Warnings' filter provides best balance of awareness and productivity.",
+            title: "Severity Filter Analysis",
+            description: "Analyzing optimal severity filter based on your role and activity...",
             confidence: 96,
-            impact: "Recommended: Current setting optimal",
+            impact: "Analyzing optimal setting",
             actionType: "severity",
         },
-    ], []);
+    ]);
 
     // Toggle for showing notifications AI recommendations
     const [showNotificationsAI, setShowNotificationsAI] = useState(true);
@@ -530,38 +530,38 @@ export default function SettingsPage() {
     const [autoScheduleMaintenance, setAutoScheduleMaintenance] = useState(false);
     const [aiDataSharingConsent, setAiDataSharingConsent] = useState(true);
 
-    // Maintenance Workflow - Live workflow statistics (AI-predicted data)
-    const workflowStatistics = useMemo(() => ({
-        totalOpenTasks: 47,
-        tasksInProgress: 23,
-        tasksInspected: 8,
-        tasksClosed: 1247,
-        averageCompletionTime: "4.2 hours",
-        averageApprovalTime: "1.8 hours",
-        supervisorApprovalRate: 94.6,
-        dualInspectionRate: 12.3,
-        documentComplianceRate: 98.2,
-        findingsDocumented: 1189,
-        lastTaskCompleted: "12 mins ago",
-        overdueTasksCount: 3,
-    }), []);
+    // Maintenance Workflow - Live workflow statistics (fetched from API)
+    const [workflowStatistics, setWorkflowStatistics] = useState({
+        totalOpenTasks: 0,
+        tasksInProgress: 0,
+        tasksInspected: 0,
+        tasksClosed: 0,
+        averageCompletionTime: "—",
+        averageApprovalTime: "—",
+        supervisorApprovalRate: 0,
+        dualInspectionRate: 0,
+        documentComplianceRate: 0,
+        findingsDocumented: 0,
+        lastTaskCompleted: "Loading...",
+        overdueTasksCount: 0,
+    });
 
-    // AI Assistant recommendations for Maintenance Workflow
-    const aiWorkflowRecommendations = useMemo(() => [
+    // AI Assistant recommendations for Maintenance Workflow (hydrated from API)
+    const [aiWorkflowRecommendations, setAiWorkflowRecommendations] = useState([
         {
             id: "WF-001",
             type: "optimization",
-            title: "Enable Dual Inspection for Critical Components",
-            description: "Based on your fleet age (avg 8.5 years), enabling dual inspection for flight-critical systems reduces risk by 34%.",
+            title: "Inspection Policy Analysis",
+            description: "Analyzing fleet age and component criticality for inspection recommendations...",
             confidence: 92,
-            impact: "34% risk reduction for critical systems",
+            impact: "Risk reduction for critical systems",
             actionType: "dual-inspection",
         },
         {
             id: "WF-002",
             type: "warning",
-            title: "3 Tasks Overdue for Sign-Off",
-            description: "Tasks #1247, #1251, and #1256 have been pending supervisor approval for 24+ hours.",
+            title: "Overdue Task Analysis",
+            description: "Checking for tasks pending supervisor approval...",
             confidence: 100,
             impact: "Expedite supervisor approval",
             actionType: "overdue-alert",
@@ -569,12 +569,12 @@ export default function SettingsPage() {
         {
             id: "WF-003",
             type: "info",
-            title: "Optimal Documentation Rate",
-            description: "Your 98.2% documentation compliance exceeds FAA minimum (95%). Technician + Supervisor workflow is working well.",
+            title: "Documentation Compliance Analysis",
+            description: "Calculating documentation compliance rate against FAA minimums...",
             confidence: 97,
-            impact: "Current workflow is optimal",
+            impact: "Analyzing workflow efficiency",
         },
-    ], []);
+    ]);
 
     // Toggle for showing workflow AI recommendations
     const [showWorkflowAI, setShowWorkflowAI] = useState(true);
@@ -787,6 +787,186 @@ export default function SettingsPage() {
                                 : r
                         )
                     );
+                }
+
+                // ── Hydrate notification statistics ──────────────────────
+                if (data.notificationStats) {
+                    setNotificationStatistics(data.notificationStats);
+                    // Update NOTIF-001 with real daily volume
+                    const dailyAlerts = data.notificationStats.totalAlertsToday || 0;
+                    if (dailyAlerts > 10) {
+                        setAiNotificationRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "NOTIF-001"
+                                    ? { ...r, title: "Alert Consolidation Suggested", description: `You receive ${dailyAlerts}+ alerts daily. Enable smart grouping to reduce notification fatigue by 40%.`, impact: `Reduce notifications by 40%` }
+                                    : r
+                            )
+                        );
+                    } else {
+                        setAiNotificationRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "NOTIF-001"
+                                    ? { ...r, title: "Alert Volume Healthy", description: `Your current alert volume (${dailyAlerts}/day) is manageable. No consolidation needed.`, type: "info", impact: "Notification volume is healthy" }
+                                    : r
+                            )
+                        );
+                    }
+                    // Update NOTIF-002 with real response time
+                    const avgResponse = data.notificationStats.averageResponseTime || "—";
+                    setAiNotificationRecommendations((prev) =>
+                        prev.map((r) =>
+                            r.id === "NOTIF-002"
+                                ? { ...r, description: `Average response to critical alerts is ${avgResponse}. ${avgResponse !== "—" && parseFloat(avgResponse) > 5 ? "Consider enabling SMS for faster acknowledgment." : "Response time is within target."}` }
+                                : r
+                        )
+                    );
+                    // Update NOTIF-003 with role-based recommendation
+                    setAiNotificationRecommendations((prev) =>
+                        prev.map((r) =>
+                            r.id === "NOTIF-003"
+                                ? { ...r, title: "Optimal Severity Filter", description: `Based on your role, 'Critical + Warnings' filter provides best balance of awareness and productivity.`, impact: "Recommended: Current setting optimal" }
+                                : r
+                        )
+                    );
+                } else {
+                    setNotificationStatistics((prev) => ({
+                        ...prev,
+                        lastAlertTime: prev.lastAlertTime === "Loading..." ? "No alerts" : prev.lastAlertTime,
+                    }));
+                }
+
+                // ── Hydrate workflow / work order statistics ─────────────
+                if (data.workflowStats) {
+                    setWorkflowStatistics((prev) => ({
+                        ...prev,
+                        totalOpenTasks: data.workflowStats.totalOpenTasks ?? prev.totalOpenTasks,
+                        tasksInProgress: data.workflowStats.tasksInProgress ?? prev.tasksInProgress,
+                        tasksInspected: data.workflowStats.tasksInspected ?? prev.tasksInspected,
+                        tasksClosed: data.workflowStats.tasksClosed ?? prev.tasksClosed,
+                        averageCompletionTime: data.workflowStats.averageCompletionTime ?? prev.averageCompletionTime,
+                        supervisorApprovalRate: data.workflowStats.supervisorApprovalRate ?? prev.supervisorApprovalRate,
+                        documentComplianceRate: data.workflowStats.documentComplianceRate ?? prev.documentComplianceRate,
+                        findingsDocumented: data.workflowStats.findingsDocumented ?? prev.findingsDocumented,
+                        lastTaskCompleted: data.workflowStats.lastTaskCompleted ?? prev.lastTaskCompleted,
+                        overdueTasksCount: data.workflowStats.overdueTasksCount ?? prev.overdueTasksCount,
+                    }));
+                    // Update WF-001 with fleet-specific recommendation
+                    const totalAircraft = (data.fleet?.totalAircraft || 0);
+                    if (totalAircraft > 0) {
+                        setAiWorkflowRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "WF-001"
+                                    ? { ...r, title: "Enable Dual Inspection for Critical Components", description: `Based on your fleet of ${totalAircraft} aircraft, enabling dual inspection for flight-critical systems reduces risk by 34%.`, impact: "34% risk reduction for critical systems" }
+                                    : r
+                            )
+                        );
+                    }
+                    // Update WF-002 with real overdue count
+                    const overdueCount = data.workflowStats.overdueTasksCount || 0;
+                    const overdueDetails = data.workflowStats.overdueDetails || [];
+                    if (overdueCount > 0) {
+                        const taskIds = overdueDetails.slice(0, 3).map((d: { id: string }) => `#${d.id.slice(0, 6)}`).join(", ");
+                        setAiWorkflowRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "WF-002"
+                                    ? { ...r, title: `${overdueCount} Task${overdueCount > 1 ? "s" : ""} Overdue for Sign-Off`, description: `Task${overdueCount > 1 ? "s" : ""} ${taskIds || ""} ${overdueCount > 3 ? `and ${overdueCount - 3} more ` : ""}have been pending approval.`, type: "warning" }
+                                    : r
+                            )
+                        );
+                    } else {
+                        setAiWorkflowRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "WF-002"
+                                    ? { ...r, title: "No Overdue Tasks", description: "All tasks have been approved on time. Workflow is running smoothly.", type: "info", impact: "All tasks on schedule" }
+                                    : r
+                            )
+                        );
+                    }
+                    // Update WF-003 with real doc compliance rate
+                    const docCompRate = data.workflowStats.documentComplianceRate || 0;
+                    if (docCompRate > 0) {
+                        setAiWorkflowRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "WF-003"
+                                    ? {
+                                        ...r,
+                                        title: docCompRate >= 95 ? "Optimal Documentation Rate" : "Documentation Rate Below Target",
+                                        description: docCompRate >= 95
+                                            ? `Your ${docCompRate}% documentation compliance exceeds FAA minimum (95%). Technician + Supervisor workflow is working well.`
+                                            : `Your ${docCompRate}% documentation compliance is below FAA minimum (95%). Review documentation procedures.`,
+                                        type: docCompRate >= 95 ? "info" : "warning",
+                                        impact: docCompRate >= 95 ? "Current workflow is optimal" : "Improve documentation compliance",
+                                    }
+                                    : r
+                            )
+                        );
+                    }
+                } else {
+                    setWorkflowStatistics((prev) => ({
+                        ...prev,
+                        lastTaskCompleted: prev.lastTaskCompleted === "Loading..." ? "No tasks" : prev.lastTaskCompleted,
+                    }));
+                }
+
+                // ── Hydrate document statistics ──────────────────────────
+                if (data.documentStats) {
+                    setDocumentStatistics(data.documentStats);
+                    // Update DOC-001 with real expiring count
+                    const expiring = data.documentStats.expiringIn30Days || 0;
+                    if (expiring > 0) {
+                        setAiDocumentRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "DOC-001"
+                                    ? { ...r, title: `${expiring} Document${expiring > 1 ? "s" : ""} Expiring Soon`, description: `${expiring} certifications and compliance documents are expiring within 30 days. Review and renew to maintain compliance.` }
+                                    : r
+                            )
+                        );
+                    } else {
+                        setAiDocumentRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "DOC-001"
+                                    ? { ...r, type: "info", title: "No Documents Expiring", description: "All documents are current. No renewals needed in the next 30 days.", impact: "Document status healthy" }
+                                    : r
+                            )
+                        );
+                    }
+                    // Update DOC-002 with real certifications count
+                    const certs = data.documentStats.certifications || 0;
+                    if (certs > 0) {
+                        setAiDocumentRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "DOC-002"
+                                    ? { ...r, title: "Enable 10-Year Retention for Certifications", description: `Your ${certs} certifications category has high audit frequency. Recommend 10-year retention for regulatory protection.`, impact: "Enhanced audit readiness" }
+                                    : r
+                            )
+                        );
+                    }
+                    // Update DOC-003 with real version control coverage
+                    const total = data.documentStats.totalDocuments || 0;
+                    const vcEnabled = data.documentStats.versionControlEnabled || 0;
+                    const vcRate = total > 0 ? Math.round((vcEnabled / total) * 100) : 0;
+                    if (total > 0) {
+                        setAiDocumentRecommendations((prev) =>
+                            prev.map((r) =>
+                                r.id === "DOC-003"
+                                    ? {
+                                        ...r,
+                                        title: vcRate >= 72 ? "Version Control Coverage Optimal" : "Version Control Coverage Below Average",
+                                        description: vcRate >= 72
+                                            ? `${vcRate}% of documents have version control enabled. This exceeds industry average of 72%.`
+                                            : `${vcRate}% of documents have version control enabled. Industry average is 72%. Consider enabling for more documents.`,
+                                        impact: vcRate >= 72 ? "Current coverage is excellent" : "Improve version control adoption",
+                                        type: vcRate >= 72 ? "info" : "warning",
+                                    }
+                                    : r
+                            )
+                        );
+                    }
+                } else {
+                    setDocumentStatistics((prev) => ({
+                        ...prev,
+                        lastUpload: prev.lastUpload === "Loading..." ? "No uploads" : prev.lastUpload,
+                    }));
                 }
             } catch {
                 if (!cancelled) clearAuditLoading();
