@@ -51,6 +51,8 @@ export default function SidebarProfilePanel({
     const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [hasChanges, setHasChanges] = useState(false);
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [avatarError, setAvatarError] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
     const originalProfile = useRef<ProfileData | null>(null);
@@ -151,36 +153,89 @@ export default function SidebarProfilePanel({
         fileInputRef.current?.click();
     };
 
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validate file type and size
-        if (!file.type.startsWith("image/")) return;
-        if (file.size > 2 * 1024 * 1024) {
-            // File too large - silently reject
+        setAvatarError("");
+
+        // Validate file type
+        const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+        if (!allowedTypes.includes(file.type)) {
+            setAvatarError("Please select a JPEG, PNG, GIF, or WebP image.");
             return;
         }
 
+        // Validate file size (5 MB)
+        if (file.size > 5 * 1024 * 1024) {
+            setAvatarError("Image must be under 5 MB.");
+            return;
+        }
+
+        // Show immediate preview
         const reader = new FileReader();
-        reader.onloadend = () => {
-            const dataUrl = reader.result as string;
-            setAvatarPreview(dataUrl);
-            handleFieldChange("avatar_url", dataUrl);
-        };
+        reader.onloadend = () => setAvatarPreview(reader.result as string);
         reader.readAsDataURL(file);
+
+        // Upload to server
+        setAvatarUploading(true);
+        try {
+            const form = new FormData();
+            form.append("file", file);
+            const res = await fetch("/api/profile/avatar", {
+                method: "POST",
+                credentials: "include",
+                body: form,
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setAvatarError(data.error || "Upload failed");
+                return;
+            }
+            // Use the returned URL (Supabase Storage public URL)
+            const url = data.avatar_url || "";
+            setAvatarPreview(url);
+            handleFieldChange("avatar_url", url);
+        } catch {
+            setAvatarError("Upload failed. Please try again.");
+        } finally {
+            setAvatarUploading(false);
+        }
+    };
+
+    const handleRemoveAvatar = async () => {
+        setAvatarError("");
+        setAvatarUploading(true);
+        try {
+            const res = await fetch("/api/profile/avatar", {
+                method: "DELETE",
+                credentials: "include",
+            });
+            if (res.ok) {
+                setAvatarPreview(null);
+                handleFieldChange("avatar_url", "");
+            }
+        } catch {
+            setAvatarError("Failed to remove photo.");
+        } finally {
+            setAvatarUploading(false);
+        }
     };
 
     const handleSave = async () => {
         setIsSaving(true);
         setSaveStatus("idle");
 
-        const updatedFields = {
+        // avatar_url is saved separately via /api/profile/avatar upload endpoint
+        const updatedFields: Record<string, string> = {
             full_name: profile.full_name,
             phone: profile.phone,
             country: profile.country,
-            avatar_url: profile.avatar_url,
         };
+        // Only include avatar_url if it's a proper URL (not base64)
+        if (profile.avatar_url && !profile.avatar_url.startsWith("data:")) {
+            updatedFields.avatar_url = profile.avatar_url;
+        }
 
         // Always save to localStorage as immediate persistence
         const localProfile = { ...profile, ...updatedFields };
@@ -314,12 +369,27 @@ export default function SidebarProfilePanel({
                                     onChange={handleAvatarChange}
                                 />
                             </div>
-                            <button
-                                onClick={handleAvatarClick}
-                                className="mt-2 text-[12px] text-[#2563eb] hover:text-[#1d4ed8] transition-colors"
-                            >
-                                Change photo
-                            </button>
+                            <div className="mt-2 flex items-center gap-3">
+                                <button
+                                    onClick={handleAvatarClick}
+                                    disabled={avatarUploading}
+                                    className="text-[12px] text-[#2563eb] hover:text-[#1d4ed8] transition-colors disabled:opacity-50"
+                                >
+                                    {avatarUploading ? "Uploading…" : "Change photo"}
+                                </button>
+                                {avatarPreview && (
+                                    <button
+                                        onClick={handleRemoveAvatar}
+                                        disabled={avatarUploading}
+                                        className="text-[12px] text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
+                                    >
+                                        Remove
+                                    </button>
+                                )}
+                            </div>
+                            {avatarError && (
+                                <p className="mt-1 text-[11px] text-red-500">{avatarError}</p>
+                            )}
                         </div>
 
                         {/* Form Fields */}
