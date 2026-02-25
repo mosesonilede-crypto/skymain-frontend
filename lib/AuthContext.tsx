@@ -33,7 +33,23 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
+    // Initialize from localStorage synchronously to prevent flash of
+    // unauthenticated state when navigating between route groups (e.g.,
+    // /2fa → /app/welcome). The checkSession effect below will verify
+    // and refresh from the server-side session cookie.
+    const [user, setUser] = useState<User | null>(() => {
+        if (typeof window !== "undefined") {
+            const stored = localStorage.getItem("SKYMAINTAIN_USER");
+            if (stored) {
+                try {
+                    return JSON.parse(stored);
+                } catch {
+                    localStorage.removeItem("SKYMAINTAIN_USER");
+                }
+            }
+        }
+        return null;
+    });
     const [isLoading, setIsLoading] = useState(true);
 
     // Initialize from session API on mount

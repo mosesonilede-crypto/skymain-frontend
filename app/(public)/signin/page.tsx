@@ -102,7 +102,11 @@ export default function SignInPage() {
             setError("Failed to initialize session. Please try again.");
             return;
         }
-        await startTrialIfMissing();
+
+        // Start trial for non-super-admin users (super admin has perpetual access)
+        if (!_isSuperAdmin) {
+            await startTrialIfMissing();
+        }
 
         router.push("/2fa");
     }

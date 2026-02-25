@@ -113,19 +113,30 @@ export function ProtectedRoute({
         }
 
         if (!isLoading && !isAuthenticated) {
-            // Before redirecting, double-check localStorage. The login()
-            // function always writes here synchronously, even if the React
-            // state update hasn't propagated yet.
+            // Before redirecting, check if the user is in localStorage
+            // (session state may still be in transit after login/2FA).
             const stored = typeof window !== "undefined" ? localStorage.getItem("SKYMAINTAIN_USER") : null;
             if (stored) {
-                // Auth state is likely in transit — give React one more
-                // render cycle to commit the pending setUser.
-                redirectTimerRef.current = setTimeout(() => {
-                    // Re-read from context isn't possible inside setTimeout,
-                    // but if the component re-renders with isAuthenticated=true
-                    // the effect will re-run and clear this timer above.
+                // Verify the session is truly gone before redirecting.
+                // This prevents false redirects after 2FA when React state
+                // hasn't fully committed.
+                redirectTimerRef.current = setTimeout(async () => {
+                    try {
+                        const res = await fetch("/api/auth/session", { credentials: "include" });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.authenticated) {
+                                // Session is valid — don't redirect. React
+                                // state will catch up on next render.
+                                return;
+                            }
+                        }
+                    } catch {
+                        // Network error — don't redirect aggressively
+                        return;
+                    }
                     router.replace(redirectTo);
-                }, 150);
+                }, 500);
                 return;
             }
             router.replace(redirectTo);
