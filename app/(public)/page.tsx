@@ -54,7 +54,7 @@ export default function MainLandingPage() {
                 </p>
 
                 {/* CTA Buttons */}
-                <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                <div className="mt-10 flex flex-col flex-wrap items-center justify-center gap-4 sm:flex-row">
                     <Link
                         href="#signup"
                         className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-8 py-5 text-lg font-medium text-white transition-colors hover:bg-slate-800"
@@ -82,6 +82,13 @@ export default function MainLandingPage() {
                         className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-8 py-5 text-lg font-medium text-slate-900 transition-colors hover:bg-slate-50"
                     >
                         Request Enterprise Demo
+                    </Link>
+                    <Link
+                        href="/user-guide"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-8 py-5 text-lg font-medium text-white transition-colors hover:bg-blue-700"
+                    >
+                        <BookOpen className="h-5 w-5" />
+                        User Guide
                     </Link>
                 </div>
                 <p className="mt-3 text-xs text-slate-500">For regulated aviation organizations only</p>
