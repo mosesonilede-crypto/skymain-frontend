@@ -4,12 +4,13 @@ import path from "path";
 export default defineConfig({
   test: {
     globals: true,
-    environment: "node",
-    include: ["tests/unit/**/*.test.{ts,tsx}"],
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
+    include: ["tests/**/*.test.{ts,tsx}"],
     exclude: ["node_modules", ".next"],
     coverage: {
       provider: "v8",
-      include: ["lib/**/*.ts"],
+      include: ["lib/**/*.ts", "lib/**/*.tsx", "components/**/*.tsx"],
       exclude: ["lib/**/*.test.ts"],
     },
   },

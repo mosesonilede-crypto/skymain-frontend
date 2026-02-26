@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchAlerts } from "@/lib/integrations/acms";
 import { IntegrationNotConfiguredError, IntegrationRequestError } from "@/lib/integrations/errors";
 import { allowMockFallback } from "@/lib/runtimeFlags";
+import { requireSession } from "@/lib/apiAuth";
+import { isFeatureEnabled } from "@/lib/enforcement";
 
 // Generate mock alerts data when ACMS isn't configured
 function generateMockAlerts(aircraftReg: string) {
@@ -50,6 +52,18 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ aircraftReg: string }> }
 ) {
+    // ── Auth enforcement ──
+    const session = requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    // ── Plan enforcement: Enterprise only ──
+    if (!(await isFeatureEnabled(session.orgName, "predictive_alerts"))) {
+        return NextResponse.json(
+            { error: "Predictive Alerts requires Enterprise plan.", code: "FEATURE_LOCKED" },
+            { status: 403 },
+        );
+    }
+
     try {
         const { aircraftReg: reg } = await params;
         const aircraftReg = reg.toUpperCase();

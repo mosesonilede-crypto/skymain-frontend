@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchInsights } from "@/lib/integrations/acms";
 import { IntegrationNotConfiguredError, IntegrationRequestError } from "@/lib/integrations/errors";
 import { allowMockFallback } from "@/lib/runtimeFlags";
+import { requireSession } from "@/lib/apiAuth";
+import { isFeatureEnabled } from "@/lib/enforcement";
 
 /** Deterministic pseudo-random seeded by aircraft registration for stable mock data. */
 function seededRandom(seed: string) {
@@ -71,6 +73,18 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ aircraftReg: string }> }
 ) {
+    // ── Auth enforcement ──
+    const session = requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    // ── Plan enforcement: Professional+ ──
+    if (!(await isFeatureEnabled(session.orgName, "ai_insights_reports"))) {
+        return NextResponse.json(
+            { error: "AI Insights requires Professional or Enterprise plan.", code: "FEATURE_LOCKED" },
+            { status: 403 },
+        );
+    }
+
     const { aircraftReg: reg } = await params;
     const aircraftReg = reg.toUpperCase();
     const rand = seededRandom(aircraftReg);

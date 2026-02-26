@@ -194,12 +194,12 @@ function generateMockBillingData(pricing?: PlanPricing, priceSyncStatus: PriceSy
     const effectivePricing = pricing ?? defaultPlanPricing();
     return {
         status: "Active",
-        currentPlanLabel: "professional",
-        currentPlanPriceYear: effectivePricing.professional.yearly,
+        currentPlanLabel: "starter",
+        currentPlanPriceYear: effectivePricing.starter.yearly,
         nextBilling: "Feb 1, 2026",
         autoRenewEnabled: true,
-        teamMembers: 5,
-        teamMembersAllowed: 25,
+        teamMembers: 1,
+        teamMembersAllowed: 5,
         billingCycle: "Annual",
         plans: [
             {
@@ -217,6 +217,8 @@ function generateMockBillingData(pricing?: PlanPricing, priceSyncStatus: PriceSy
                     "1 GB cloud storage",
                     "Mobile app access",
                 ],
+                isCurrent: true,
+                badge: "Current Plan",
             },
             {
                 id: "professional",
@@ -235,8 +237,6 @@ function generateMockBillingData(pricing?: PlanPricing, priceSyncStatus: PriceSy
                     "API access",
                     "Multi-location support",
                 ],
-                isCurrent: true,
-                badge: "Current Plan",
             },
             {
                 id: "enterprise",
@@ -397,7 +397,7 @@ async function fetchStripeBillingData(customerId?: string): Promise<Subscription
         });
 
         const priceId = subscription.items.data[0]?.price.id;
-        const currentPlan: PlanId = resolvePlanFromPrice(priceId) ?? "professional";
+        const currentPlan: PlanId = resolvePlanFromPrice(priceId) ?? "starter";
         let billingCycle: BillingCycle = "Annual";
 
         // Map price ID to plan (you'll need to set these)

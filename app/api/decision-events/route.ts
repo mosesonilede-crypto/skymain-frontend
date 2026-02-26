@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { assertPolicyStampedAdvisory } from "@/lib/policy/advisory";
@@ -6,6 +6,7 @@ import { evaluateRuleEngineDecision, RuleEngineInputSchema } from "@/lib/policy/
 import { recordAuditEvent } from "@/lib/audit/logger";
 import { persistDecisionEvent } from "@/lib/audit/decisionEventStore";
 import { getUserContext, requireRole } from "@/lib/auth/rbac";
+import { requireSession } from "@/lib/apiAuth";
 
 const DecisionEventRequestSchema = z.object({
     advisory: z.unknown(),
@@ -120,6 +121,9 @@ export async function POST(req: Request) {
     }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const session = requireSession(req);
+    if (session instanceof NextResponse) return session;
+
     return NextResponse.json({ events: decisionEventStore.events });
 }

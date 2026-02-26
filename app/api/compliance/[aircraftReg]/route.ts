@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { fetchCompliance } from "@/lib/integrations/manuals";
 import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { requireSession } from "@/lib/apiAuth";
+import { isFeatureEnabled } from "@/lib/enforcement";
 
 const CACHE_HEADERS = {
     "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
@@ -28,6 +30,18 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ aircraftReg: string }> }
 ) {
+    // ── Auth enforcement ──
+    const session = requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    // ── Plan enforcement: Professional+ ──
+    if (!(await isFeatureEnabled(session.orgName, "regulatory_compliance"))) {
+        return NextResponse.json(
+            { error: "Regulatory Compliance requires Professional or Enterprise plan.", code: "FEATURE_LOCKED" },
+            { status: 403 },
+        );
+    }
+
     const { aircraftReg: rawReg } = await params;
     const aircraftReg = rawReg.toUpperCase();
 
@@ -198,6 +212,10 @@ export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ aircraftReg: string }> }
 ) {
+    // ── Auth enforcement ──
+    const session = requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     const { aircraftReg: rawReg } = await params;
     const aircraftReg = rawReg.toUpperCase();
 

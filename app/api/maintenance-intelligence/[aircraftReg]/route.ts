@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { requireSession } from "@/lib/apiAuth";
+import { isFeatureEnabled } from "@/lib/enforcement";
 
 export type MIComponent = {
     name: string;
@@ -39,6 +41,18 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ aircraftReg: string }> }
 ) {
+    // ── Auth enforcement ──
+    const session = requireSession(request);
+    if (session instanceof NextResponse) return session;
+
+    // ── Plan enforcement: Professional+ ──
+    if (!(await isFeatureEnabled(session.orgName, "advanced_ai_insights"))) {
+        return NextResponse.json(
+            { error: "Maintenance Intelligence requires Professional or Enterprise plan.", code: "FEATURE_LOCKED" },
+            { status: 403 },
+        );
+    }
+
     const { aircraftReg: reg } = await params;
     const aircraftReg = reg.toUpperCase();
 
@@ -48,6 +62,22 @@ export async function GET(
         if (!sb) {
             return NextResponse.json(
                 { components: [], upcoming: [], systems: [], live: false },
+                { status: 200, headers: { "Cache-Control": "no-store" } }
+            );
+        }
+
+        // Verify aircraft belongs to user's org before returning data
+        const { data: acCheck } = await sb
+            .from("aircraft")
+            .select("id")
+            .eq("registration_number", aircraftReg)
+            .eq("org_name", session.orgName)
+            .is("deleted_at", null)
+            .maybeSingle();
+
+        if (!acCheck) {
+            return NextResponse.json(
+                { components: [], upcoming: [], systems: [], live: true },
                 { status: 200, headers: { "Cache-Control": "no-store" } }
             );
         }

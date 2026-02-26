@@ -1,6 +1,7 @@
 import AppShellClient from "@/components/app/AppShellClient";
 import { AircraftProvider } from "@/lib/AircraftContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AppStateProvider } from "@/lib/AppStateContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const dataMode = (process.env.NEXT_PUBLIC_DATA_MODE || "live").toLowerCase();
@@ -23,7 +24,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
         <ProtectedRoute>
             <AircraftProvider>
-                <AppShellClient>{children}</AppShellClient>
+                <AppStateProvider>
+                    <AppShellClient>{children}</AppShellClient>
+                </AppStateProvider>
             </AircraftProvider>
         </ProtectedRoute>
     );
