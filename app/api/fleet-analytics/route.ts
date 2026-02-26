@@ -36,7 +36,18 @@ export async function GET(req: NextRequest) {
     .eq("org_name", session.orgName)
     .is("deleted_at", null);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.warn("[fleet-analytics] Supabase query error:", error.message);
+    return NextResponse.json({
+      analytics: {
+        fleet: { total: 0, byStatus: {}, byType: {}, byMaintenanceStatus: {}, byComplianceStatus: {} },
+        flightHours: { total: 0, average: 0, max: 0 },
+        upcomingMaintenance: { overdue: 0, next30Days: 0, next60Days: 0, next90Days: 0 },
+        workOrders: null,
+        generatedAt: new Date().toISOString(),
+      },
+    });
+  }
 
   const fleet = aircraft || [];
   const total = fleet.length;

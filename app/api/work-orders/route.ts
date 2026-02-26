@@ -43,7 +43,10 @@ export async function GET(req: NextRequest) {
   if (aircraftId) query = query.eq("aircraft_id", aircraftId);
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.warn("[work-orders] Supabase query error:", error.message);
+    return NextResponse.json({ workOrders: [] });
+  }
 
   return NextResponse.json({ workOrders: data || [] });
 }

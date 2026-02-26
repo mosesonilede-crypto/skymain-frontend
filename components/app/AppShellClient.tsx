@@ -144,6 +144,25 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     const [teamMembersUsed, setTeamMembersUsed] = useState<number | null>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
+    // Auto-fetch profile on mount to hydrate avatar & display name
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch("/api/profile");
+                if (!res.ok) return;
+                const data = await res.json();
+                if (cancelled) return;
+                if (data.avatar_url) setProfileAvatar(data.avatar_url);
+                if (data.full_name) setProfileDisplayName(data.full_name);
+                try {
+                    localStorage.setItem("skymaintain.profile", JSON.stringify(data));
+                } catch { /* quota exceeded — ignore */ }
+            } catch { /* offline or route missing — keep cached values */ }
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
     useEffect(() => {
         let cancelled = false;
 
