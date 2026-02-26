@@ -80,14 +80,31 @@ export async function POST(req: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // Delete any existing avatar files for this user (different extensions)
-        const { data: existingFiles } = await supabaseServer.storage
-            .from(BUCKET)
-            .list(hash);
+        // Ensure the storage bucket exists (auto-create if needed)
+        const { data: buckets } = await supabaseServer.storage.listBuckets();
+        if (!buckets?.find((b) => b.name === BUCKET)) {
+            const { error: createErr } = await supabaseServer.storage.createBucket(BUCKET, {
+                public: true,
+                fileSizeLimit: MAX_FILE_SIZE,
+                allowedMimeTypes: ALLOWED_TYPES,
+            });
+            if (createErr) {
+                console.error("Bucket creation error:", createErr);
+                return NextResponse.json({ error: "Storage setup failed" }, { status: 500 });
+            }
+        }
 
-        if (existingFiles && existingFiles.length > 0) {
-            const filesToDelete = existingFiles.map(f => `${hash}/${f.name}`);
-            await supabaseServer.storage.from(BUCKET).remove(filesToDelete);
+        // Delete any existing avatar files for this user (different extensions)
+        try {
+            const { data: existingFiles } = await supabaseServer.storage
+                .from(BUCKET)
+                .list(hash);
+            if (existingFiles && existingFiles.length > 0) {
+                const filesToDelete = existingFiles.map(f => `${hash}/${f.name}`);
+                await supabaseServer.storage.from(BUCKET).remove(filesToDelete);
+            }
+        } catch {
+            // Non-critical — old files may linger
         }
 
         // Upload new avatar
@@ -101,7 +118,10 @@ export async function POST(req: NextRequest) {
 
         if (uploadError) {
             console.error("Avatar upload error:", uploadError);
-            return NextResponse.json({ error: "Failed to upload avatar" }, { status: 500 });
+            return NextResponse.json(
+                { error: `Upload failed: ${uploadError.message}` },
+                { status: 500 },
+            );
         }
 
         // Get public URL
