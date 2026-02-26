@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Activity, ArrowRight, ClipboardList, FileCheck, Plane, Shield, Star, Tag, Users, Zap } from "lucide-react";
+import { Activity, ArrowRight, BookOpen, ClipboardList, FileCheck, Plane, Shield, Star, Tag, Users, Zap } from "lucide-react";
 import LandingSignupForm from "@/components/public/LandingSignupForm";
 
 export const metadata: Metadata = {
@@ -430,6 +430,34 @@ export default function MainLandingPage() {
                         It is a controlled, high-consequence environment where technology must enhance discipline, not
                         bypass it.
                     </p>
+                </div>
+            </section>
+
+            {/* User Guide Section */}
+            <section className="py-16 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50">
+                <div className="mx-auto max-w-[896px] px-8">
+                    <div className="flex flex-col items-center gap-8 md:flex-row">
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-600/20">
+                            <BookOpen className="h-10 w-10 text-white" />
+                        </div>
+                        <div className="text-center md:text-left">
+                            <h2 className="text-3xl font-bold text-slate-900">Platform User Guide</h2>
+                            <p className="mt-3 max-w-xl text-lg leading-relaxed text-slate-600">
+                                New to SkyMaintain? Our comprehensive guide walks you through every feature — from
+                                sign-in and dashboard setup to fleet management, work orders, compliance tools, and AI
+                                intelligence.
+                            </p>
+                        </div>
+                        <div className="shrink-0">
+                            <Link
+                                href="/user-guide"
+                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-4 text-lg font-semibold text-white shadow-md transition-all hover:bg-blue-700 hover:shadow-lg"
+                            >
+                                Read the Guide
+                                <ArrowRight className="h-5 w-5" />
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </section>
 
