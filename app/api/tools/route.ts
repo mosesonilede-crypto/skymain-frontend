@@ -46,9 +46,9 @@ export async function GET(req: NextRequest) {
     let tools = data || [];
     const now = new Date().toISOString();
     if (overdue) {
-        tools = tools.filter((t: any) => t.next_calibration_due && t.next_calibration_due < now);
+        tools = tools.filter((t: Record<string, unknown>) => t.next_calibration_due && (t.next_calibration_due as string) < now);
     }
-    const overdue_calibrations = tools.filter((t: any) => t.next_calibration_due && t.next_calibration_due < now).length;
+    const overdue_calibrations = tools.filter((t: Record<string, unknown>) => t.next_calibration_due && (t.next_calibration_due as string) < now).length;
 
     return NextResponse.json({ tools, stats: { total_tools: tools.length, overdue_calibrations } });
 }

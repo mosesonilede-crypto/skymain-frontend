@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { csrfFetch } from "@/lib/csrfFetch";
-import { ClipboardCheck, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 type JobCard = {
     id: string;

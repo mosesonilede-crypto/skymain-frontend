@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { csrfFetch } from "@/lib/csrfFetch";
-import { FileCode, Plus, X, AlertTriangle, Shield } from "lucide-react";
+import { Plus, X, AlertTriangle, Shield } from "lucide-react";
 
 type EngineeringOrder = {
     id: string;

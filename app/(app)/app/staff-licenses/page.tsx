@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import BackToHub from "@/components/app/BackToHub";
-import { Award, ShieldCheck, AlertTriangle, Clock } from "lucide-react";
+import { ShieldCheck, AlertTriangle, Clock } from "lucide-react";
 
 type LicenseInfo = {
     hasLicense: boolean;

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { csrfFetch } from "@/lib/csrfFetch";
-import { Scale, Plus, X, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { Scale, Plus, X } from "lucide-react";
 
 type DecisionEvent = {
     id: string;

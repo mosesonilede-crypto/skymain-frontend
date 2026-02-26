@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     }
     const events = evRes.data || [];
     const alerts = alRes.data || [];
-    const open_alerts = alerts.filter((a: any) => a.status === "open" || a.status === "under_investigation").length;
+    const open_alerts = alerts.filter((a: Record<string, unknown>) => a.status === "open" || a.status === "under_investigation").length;
 
     return NextResponse.json({ events, stats: { total_events: events.length, open_alerts } });
 }

@@ -43,10 +43,10 @@ export async function GET(req: NextRequest) {
 
     let items = data || [];
     if (lowStock) {
-        items = items.filter((i: any) => i.reorder_point && i.quantity_on_hand <= i.reorder_point);
+        items = items.filter((i: Record<string, unknown>) => i.reorder_point && (i.quantity_on_hand as number) <= (i.reorder_point as number));
     }
     const total_items = items.length;
-    const low_stock_items = items.filter((i: any) => i.reorder_point && i.quantity_on_hand <= i.reorder_point).length;
+    const low_stock_items = items.filter((i: Record<string, unknown>) => i.reorder_point && (i.quantity_on_hand as number) <= (i.reorder_point as number)).length;
 
     return NextResponse.json({ items, stats: { total_items, low_stock_items } });
 }

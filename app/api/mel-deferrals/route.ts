@@ -60,8 +60,8 @@ export async function GET(req: NextRequest) {
 
     const deferrals = data || [];
     const now = new Date().toISOString();
-    const open_deferrals = deferrals.filter((d: any) => d.status === "open" || d.status === "extended").length;
-    const overdue_deferrals = deferrals.filter((d: any) => (d.status === "open" || d.status === "extended") && d.rectification_due < now).length;
+    const open_deferrals = deferrals.filter((d: Record<string, unknown>) => d.status === "open" || d.status === "extended").length;
+    const overdue_deferrals = deferrals.filter((d: Record<string, unknown>) => (d.status === "open" || d.status === "extended") && (d.rectification_due as string) < now).length;
 
     return NextResponse.json({ deferrals, stats: { open_deferrals, overdue_deferrals } });
 }

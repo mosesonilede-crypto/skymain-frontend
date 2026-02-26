@@ -6,7 +6,7 @@ import { csrfFetch } from "@/lib/csrfFetch";
 import { BarChart3, Plus, X, AlertTriangle, TrendingUp } from "lucide-react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-    Cell, PieChart, Pie,
+    Cell,
 } from "recharts";
 
 const EVENT_TYPE_COLORS: Record<string, string> = {

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { csrfFetch } from "@/lib/csrfFetch";
-import { Search, Plus, X, AlertTriangle } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 type Finding = {
     id: string;

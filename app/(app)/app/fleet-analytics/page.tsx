@@ -6,7 +6,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell,
 } from "recharts";
-import { TrendingUp, Plane, Wrench, AlertTriangle } from "lucide-react";
+import { TrendingUp, Plane, AlertTriangle } from "lucide-react";
 
 type FleetAnalytics = {
     fleet: { total: number; byStatus: Record<string, number>; byType: Record<string, number>; byMaintenanceStatus?: Record<string, number>; byComplianceStatus?: Record<string, number> };

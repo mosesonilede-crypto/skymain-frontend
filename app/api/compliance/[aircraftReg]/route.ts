@@ -93,10 +93,9 @@ export async function GET(
         const certs = certRes.data || [];
 
         // ── map ADs ────────────────────────────────────────────
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ads = eos
-            .filter((e: any) => e.eo_type === "AD")
-            .map((e: any) => {
+            .filter((e: Record<string, unknown>) => e.eo_type === "AD")
+            .map((e: Record<string, unknown>) => {
                 const eff = Array.isArray(e.eo_effectivities)
                     ? e.eo_effectivities[0]
                     : e.eo_effectivities;
@@ -117,10 +116,9 @@ export async function GET(
             });
 
         // ── map SBs (+ EO/SIL/ASB/MOD) ────────────────────────
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const sbs = eos
-            .filter((e: any) => e.eo_type !== "AD")
-            .map((e: any) => {
+            .filter((e: Record<string, unknown>) => e.eo_type !== "AD")
+            .map((e: Record<string, unknown>) => {
                 const eff = Array.isArray(e.eo_effectivities)
                     ? e.eo_effectivities[0]
                     : e.eo_effectivities;
