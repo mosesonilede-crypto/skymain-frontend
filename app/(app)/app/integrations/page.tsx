@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useAdminGuard } from "@/lib/auth/useAdminGuard";
+import FeatureGate from "@/components/app/FeatureGate";
 import {
     Key, Trash2, Copy, Check, RefreshCw, Database, Upload,
     Link2, AlertTriangle, ChevronDown, ChevronUp, Shield,
@@ -52,7 +53,7 @@ function TierBadge({ tier, active }: { tier: number; active: boolean }) {
 
 // ─── Main Page ──────────────────────────────────────────────────
 
-export default function IntegrationsPage() {
+function IntegrationsContent() {
     useAuth(); // ensure authenticated
     const { isAdmin, isLoading: adminLoading } = useAdminGuard();
 
@@ -629,5 +630,13 @@ export default function IntegrationsPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function IntegrationsPage() {
+    return (
+        <FeatureGate feature="custom_integrations" label="Custom Integrations" requiredPlan="Enterprise">
+            <IntegrationsContent />
+        </FeatureGate>
     );
 }

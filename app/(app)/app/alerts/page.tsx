@@ -11,6 +11,7 @@ import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { Info } from "lucide-react";
 import BackToHub from "@/components/app/BackToHub";
 import { useAircraft } from "@/lib/AircraftContext";
+import FeatureGate from "@/components/app/FeatureGate";
 
 
 interface PredictedAlert {
@@ -370,7 +371,7 @@ function AlertCard({ alert, onViewDetails }: { alert: PredictedAlert; onViewDeta
     );
 }
 
-export default function PredictiveAlertsPage() {
+function PredictiveAlertsContent() {
     const { selectedAircraft, allAircraft, setSelectedAircraft } = useAircraft();
     const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.skymaintain.ai").replace(/\/+$/, "");
     const [alerts, setAlerts] = useState<PredictedAlert[]>([]);
@@ -734,5 +735,13 @@ export default function PredictiveAlertsPage() {
                 </div>
             </div>
         </section>
+    );
+}
+
+export default function PredictiveAlertsPage() {
+    return (
+        <FeatureGate feature="predictive_alerts" label="Predictive Alerts" requiredPlan="Enterprise">
+            <PredictiveAlertsContent />
+        </FeatureGate>
     );
 }

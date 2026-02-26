@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { verifyPayload } from "@/lib/twoFactor";
+import { isFeatureEnabled } from "@/lib/enforcement";
 
 export const runtime = "nodejs";
 const SESSION_COOKIE = "sm_session";
@@ -17,6 +18,14 @@ function getSession(req: NextRequest): SessionPayload | null {
 export async function GET(req: NextRequest) {
     const session = getSession(req);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // ── Plan enforcement: requires Professional or Enterprise ──
+    if (!(await isFeatureEnabled(session.orgName, "ai_insights_reports"))) {
+        return NextResponse.json(
+            { error: "Reliability Analytics requires Professional or Enterprise plan.", code: "FEATURE_LOCKED" },
+            { status: 403 },
+        );
+    }
     const sb = supabaseServer;
     if (!sb) return NextResponse.json({ events: [], alerts: [], stats: { total_events: 0, open_alerts: 0 } });
 

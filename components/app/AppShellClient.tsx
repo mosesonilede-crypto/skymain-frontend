@@ -246,26 +246,50 @@ export default function AppShellClient({ children }: AppShellClientProps) {
         router.push("/");
     }, [logout, router]);
     const navItems = useMemo(() => {
-        const hasAdvancedInsights = entitlements.features.advanced_ai_insights;
-        const hasCustomCompliance = entitlements.features.custom_compliance_reports;
-        const hasApiAccess = entitlements.features.api_access_level !== "none";
+        const f = entitlements.features;
 
         const featureRules: Record<string, { allowed: boolean; lockedReason: string }> = {
+            // ── Professional+ features ──
             "/app/insights": {
-                allowed: hasAdvancedInsights,
-                lockedReason: "Advanced AI Insights requires Professional or Enterprise.",
+                allowed: f.ai_insights_reports,
+                lockedReason: "AI Insights requires Professional or Enterprise plan.",
             },
             "/app/reports": {
-                allowed: hasCustomCompliance,
-                lockedReason: "Custom reports require Professional or Enterprise.",
+                allowed: f.custom_compliance_reports,
+                lockedReason: "Custom reports require Professional or Enterprise plan.",
             },
             "/app/compliance": {
-                allowed: hasCustomCompliance,
-                lockedReason: "Regulatory tasking requires Professional or Enterprise.",
+                allowed: f.regulatory_compliance,
+                lockedReason: "Regulatory Compliance requires Professional or Enterprise plan.",
             },
             "/app/ingestion-contracts": {
-                allowed: hasApiAccess,
-                lockedReason: "API/ingestion access requires Professional or Enterprise.",
+                allowed: f.api_ingestion_contracts,
+                lockedReason: "API & Ingestion Contracts require Professional or Enterprise plan.",
+            },
+            "/app/maintenance-intelligence": {
+                allowed: f.advanced_ai_insights,
+                lockedReason: "Maintenance Intelligence requires Professional or Enterprise plan.",
+            },
+            "/app/reliability": {
+                allowed: f.ai_insights_reports,
+                lockedReason: "Reliability Analytics requires Professional or Enterprise plan.",
+            },
+            "/app/fleet-analytics": {
+                allowed: f.ai_insights_reports,
+                lockedReason: "Fleet Analytics requires Professional or Enterprise plan.",
+            },
+            "/app/decision-events": {
+                allowed: f.advanced_ai_insights,
+                lockedReason: "Decision Events requires Professional or Enterprise plan.",
+            },
+            // ── Enterprise-only features ──
+            "/app/alerts": {
+                allowed: f.predictive_alerts,
+                lockedReason: "Predictive Alerts is an Enterprise-only feature.",
+            },
+            "/app/integrations": {
+                allowed: f.custom_integrations,
+                lockedReason: "Custom Integrations is an Enterprise-only feature.",
             },
         };
 
@@ -294,9 +318,7 @@ export default function AppShellClient({ children }: AppShellClientProps) {
             { label: "Logout", icon: <LogOut className="h-5 w-5" />, onClick: handleLogout },
         ];
     }, [
-        entitlements.features.advanced_ai_insights,
-        entitlements.features.custom_compliance_reports,
-        entitlements.features.api_access_level,
+        entitlements,
         user?.role,
         user?.email,
         roleHints.role,

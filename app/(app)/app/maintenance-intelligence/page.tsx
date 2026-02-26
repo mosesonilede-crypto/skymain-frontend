@@ -4,6 +4,7 @@ import BackToHub from "@/components/app/BackToHub";
 import { useAircraft } from "@/lib/AircraftContext";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import type { PolicyStampedAdvisory } from "@/lib/policy/advisory";
+import FeatureGate from "@/components/app/FeatureGate";
 
 type MIComponent = {
     name: string;
@@ -51,7 +52,7 @@ function componentStatus(remainingHours: number, remainingCycles: number) {
     return "On Track";
 }
 
-export default function MaintenanceIntelligencePage() {
+function MaintenanceIntelligenceContent() {
     const { selectedAircraft } = useAircraft();
     const [showDecisionModal, setShowDecisionModal] = useState(false);
     const [ackName, setAckName] = useState("");
@@ -514,5 +515,13 @@ export default function MaintenanceIntelligencePage() {
                 </div>
             )}
         </section>
+    );
+}
+
+export default function MaintenanceIntelligencePage() {
+    return (
+        <FeatureGate feature="advanced_ai_insights" label="Maintenance Intelligence" requiredPlan="Professional">
+            <MaintenanceIntelligenceContent />
+        </FeatureGate>
     );
 }

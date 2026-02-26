@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import BackToHub from "@/components/app/BackToHub";
+import FeatureGate from "@/components/app/FeatureGate";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     PieChart, Pie, Cell,
@@ -18,7 +19,7 @@ type FleetAnalytics = {
 
 const PIE_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6b7280"];
 
-export default function FleetAnalyticsPage() {
+function FleetAnalyticsContent() {
     const [analytics, setAnalytics] = useState<FleetAnalytics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -169,4 +170,12 @@ function Stat({ label, value, icon, accent }: { label: string; value: string | n
 
 function Empty({ msg = "No data available." }: { msg?: string }) {
     return <p className="py-8 text-center text-sm text-slate-500">{msg}</p>;
+}
+
+export default function FleetAnalyticsPage() {
+    return (
+        <FeatureGate feature="ai_insights_reports" label="Fleet Analytics" requiredPlan="Professional">
+            <FleetAnalyticsContent />
+        </FeatureGate>
+    );
 }

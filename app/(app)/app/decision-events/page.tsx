@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { csrfFetch } from "@/lib/csrfFetch";
 import { Scale, Plus, X } from "lucide-react";
+import FeatureGate from "@/components/app/FeatureGate";
 
 type DecisionEvent = {
     id: string;
@@ -20,7 +21,7 @@ type DecisionEvent = {
 
 const DISPOSITIONS = ["NO_ACTION", "MONITOR", "SCHEDULE", "COMPLY", "WORK_ORDER"];
 
-export default function DecisionEventsPage() {
+function DecisionEventsContent() {
     const [events, setEvents] = useState<DecisionEvent[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -213,5 +214,13 @@ function RecordDecisionModal({ onClose, onSaved }: { onClose: () => void; onSave
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function DecisionEventsPage() {
+    return (
+        <FeatureGate feature="advanced_ai_insights" label="Decision Events" requiredPlan="Professional">
+            <DecisionEventsContent />
+        </FeatureGate>
     );
 }

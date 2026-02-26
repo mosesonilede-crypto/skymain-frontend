@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { csrfFetch } from "@/lib/csrfFetch";
 import { BarChart3, Plus, X, AlertTriangle, TrendingUp } from "lucide-react";
+import FeatureGate from "@/components/app/FeatureGate";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     Cell,
@@ -54,7 +55,7 @@ const EVENT_TYPES = [
     { value: "air_turnback", label: "Air Turnback" },
 ];
 
-export default function ReliabilityPage() {
+function ReliabilityContent() {
     const [view, setView] = useState<"events" | "alerts">("events");
     const [events, setEvents] = useState<ReliabilityEvent[]>([]);
     const [alerts, setAlerts] = useState<ReliabilityAlert[]>([]);
@@ -345,5 +346,13 @@ function AlertRateChart({ alerts }: { alerts: ReliabilityAlert[] }) {
                 </BarChart>
             </ResponsiveContainer>
         </Panel>
+    );
+}
+
+export default function ReliabilityPage() {
+    return (
+        <FeatureGate feature="ai_insights_reports" label="Reliability Analytics" requiredPlan="Professional">
+            <ReliabilityContent />
+        </FeatureGate>
     );
 }
