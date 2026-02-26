@@ -477,6 +477,7 @@ export default function MainLandingPage() {
                                 <li><Link href="/platform-features" className="text-[#d1d5dc] hover:text-white">Features</Link></li>
                                 <li><Link href="/pricing" className="text-[#d1d5dc] hover:text-white">Pricing</Link></li>
                                 <li><Link href="/security" className="text-[#d1d5dc] hover:text-white">Security</Link></li>
+                                <li><Link href="/user-guide" className="text-[#d1d5dc] hover:text-white">User Guide</Link></li>
                             </ul>
                         </div>
 

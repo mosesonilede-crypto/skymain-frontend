@@ -38,6 +38,9 @@ export default function PublicHeader() {
                     <Link href="/get-started" className="text-base text-slate-600 hover:text-slate-900">
                         Partnerships
                     </Link>
+                    <Link href="/user-guide" className="text-base text-slate-600 hover:text-slate-900">
+                        User Guide
+                    </Link>
                     <Link href="/contact" className="text-base text-slate-600 hover:text-slate-900">
                         Contact
                     </Link>
