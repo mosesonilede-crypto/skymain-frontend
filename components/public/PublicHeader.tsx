@@ -16,8 +16,8 @@ export default function PublicHeader() {
 
     return (
         <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-            <div className="mx-auto flex max-w-[1148px] items-center justify-between px-8 py-4">
-                <Link href="/" className="flex items-center gap-2">
+            <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-8 px-8 py-4">
+                <Link href="/" className="flex shrink-0 items-center gap-2">
                     <img src="/brand/SkyMaintain_logo.png" alt="SkyMaintain" className="h-8 w-8" />
                     <span className="text-xl font-bold text-slate-900">SkyMaintain</span>
                 </Link>
