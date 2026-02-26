@@ -1,9 +1,18 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import BackToHub from "@/components/app/BackToHub";
 import { csrfFetch } from "@/lib/csrfFetch";
 import { BarChart3, Plus, X, AlertTriangle, TrendingUp } from "lucide-react";
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+    Cell, PieChart, Pie,
+} from "recharts";
+
+const EVENT_TYPE_COLORS: Record<string, string> = {
+    pirep: "#3b82f6", marep: "#8b5cf6", sdr: "#ef4444", mor: "#f59e0b",
+    ifsd: "#dc2626", delay: "#f97316", cancellation: "#be123c", diversion: "#e11d48", air_turnback: "#991b1b",
+};
 
 type ReliabilityEvent = {
     id: string;
@@ -92,6 +101,14 @@ export default function ReliabilityPage() {
                 <StatCard label="Cancellations" value={stats.cancellations} icon={<AlertTriangle className="h-5 w-5 text-red-600" />} accent={stats.cancellations > 0 ? "red" : undefined} />
                 <StatCard label="Total Alerts" value={stats.total_alerts} icon={<TrendingUp className="h-5 w-5 text-amber-600" />} />
                 <StatCard label="Active Alerts" value={stats.active_alerts} icon={<AlertTriangle className="h-5 w-5 text-amber-600" />} accent={stats.active_alerts > 0 ? "amber" : undefined} />
+            </div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Event Type Distribution */}
+                <EventTypeChart events={events} />
+                {/* Alert Rate vs Threshold */}
+                <AlertRateChart alerts={alerts} />
             </div>
 
             {/* View Toggle */}
@@ -265,5 +282,68 @@ function Field({ label, value, onChange, type = "text" }: { label: string; value
             <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
             <input type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
         </div>
+    );
+}
+
+function EventTypeChart({ events }: { events: ReliabilityEvent[] }) {
+    const data = useMemo(() => {
+        const counts: Record<string, number> = {};
+        events.forEach((e) => { counts[e.event_type] = (counts[e.event_type] || 0) + 1; });
+        return Object.entries(counts).map(([type, count]) => ({ type: type.toUpperCase().replace("_", " "), count, raw: type }));
+    }, [events]);
+
+    if (data.length === 0) return (
+        <Panel title="Events by Type">
+            <p className="py-8 text-center text-sm text-slate-500">No event data to chart.</p>
+        </Panel>
+    );
+
+    return (
+        <Panel title="Events by Type">
+            <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="type" fontSize={11} />
+                    <YAxis allowDecimals={false} fontSize={12} />
+                    <Tooltip />
+                    <Bar dataKey="count" name="Events" radius={[4, 4, 0, 0]}>
+                        {data.map((d, i) => <Cell key={i} fill={EVENT_TYPE_COLORS[d.raw] || "#6b7280"} />)}
+                    </Bar>
+                </BarChart>
+            </ResponsiveContainer>
+        </Panel>
+    );
+}
+
+function AlertRateChart({ alerts }: { alerts: ReliabilityAlert[] }) {
+    const data = useMemo(
+        () => alerts.map((a) => ({
+            label: `ATA ${a.ata_chapter}`,
+            rate: Number(a.alert_rate.toFixed(2)),
+            threshold: Number(a.threshold.toFixed(2)),
+        })),
+        [alerts],
+    );
+
+    if (data.length === 0) return (
+        <Panel title="Alert Rate vs Threshold">
+            <p className="py-8 text-center text-sm text-slate-500">No alert data to chart.</p>
+        </Panel>
+    );
+
+    return (
+        <Panel title="Alert Rate vs Threshold">
+            <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="label" fontSize={11} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Legend verticalAlign="top" height={28} />
+                    <Bar dataKey="rate" name="Alert Rate" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="threshold" name="Threshold" fill="#e5e7eb" radius={[4, 4, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+        </Panel>
     );
 }

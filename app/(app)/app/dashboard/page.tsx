@@ -27,9 +27,21 @@ import {
     EyeOff,
     Clock,
 } from "lucide-react";
+import {
+    PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid,
+} from "recharts";
 import { useAircraft } from "@/lib/AircraftContext";
 import { useAuth } from "@/lib/AuthContext";
 import BackToHub from "@/components/app/BackToHub";
+
+const KPI_COLORS = ["#e7000b", "#a65f00", "#008236"];
+const SYSTEM_HEALTH_COLORS: Record<string, string> = {
+    operational: "#008236",
+    degraded: "#a65f00",
+    critical: "#e7000b",
+    default: "#6b7280",
+};
 
 type DashboardSnapshot = {
     aircraft?: {
@@ -400,6 +412,37 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
+                {/* KPI Distribution Chart */}
+                {dashboardData?.kpis && (
+                    <div className="mt-6 rounded-[14px] border border-black/10 bg-white p-6 shadow-sm">
+                        <div className="text-[16px] font-medium text-[#0a0a0a] mb-4">KPI Distribution</div>
+                        <ResponsiveContainer width="100%" height={240}>
+                            <PieChart>
+                                <Pie
+                                    data={[
+                                        { name: "Critical Alerts", value: dashboardData.kpis.critical?.count ?? 0 },
+                                        { name: "Scheduled Tasks", value: dashboardData.kpis.scheduled?.count ?? 0 },
+                                        { name: "Good / Healthy", value: dashboardData.kpis.good?.count ?? 0 },
+                                    ]}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={50}
+                                    outerRadius={80}
+                                    paddingAngle={3}
+                                    dataKey="value"
+                                    label={({ name, value }) => `${name}: ${value}`}
+                                >
+                                    {KPI_COLORS.map((color, idx) => (
+                                        <Cell key={idx} fill={color} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend verticalAlign="bottom" height={36} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+
                 <div className="mt-6 grid gap-6 xl:grid-cols-[410px_410px]">
                     <div className="space-y-6">
                         <div className="rounded-[14px] border border-black/10 bg-white p-6 shadow-sm">
@@ -521,42 +564,49 @@ export default function DashboardPage() {
 
                         <div className="rounded-[14px] border border-black/10 bg-white p-6">
                             <div className="text-[20px] text-[#0a0a0a]">System Health</div>
-                            <div className="mt-6 space-y-4">
-                                {(dashboardData?.systemHealth && dashboardData.systemHealth.length > 0
-                                    ? dashboardData.systemHealth.map((s) => ({
-                                        label: s.system,
-                                        value: `${s.efficiency}%`,
-                                        status: s.status?.toUpperCase() || "OPERATIONAL",
-                                    }))
-                                    : [
-                                        { label: "Engine", value: "--", status: "—" },
-                                        { label: "Landing Gear", value: "--", status: "—" },
-                                        { label: "Hydraulic System", value: "--", status: "—" },
-                                        { label: "Fuel System", value: "--", status: "—" },
-                                        { label: "Avionics", value: "--", status: "—" },
-                                        { label: "Electrical System", value: "--", status: "—" },
-                                        { label: "APU", value: "--", status: "—" },
-                                    ]
-                                ).map((row) => (
-                                    <div key={row.label}>
-                                        <div className="flex items-center justify-between text-[14px]">
-                                            <div className="flex items-center gap-2">
-                                                <Activity className="h-4 w-4 text-slate-500" />
-                                                {row.label}
+                            {dashboardData?.systemHealth && dashboardData.systemHealth.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={280}>
+                                    <BarChart
+                                        data={dashboardData.systemHealth.map((s) => ({
+                                            system: s.system,
+                                            efficiency: s.efficiency,
+                                            status: s.status,
+                                        }))}
+                                        layout="vertical"
+                                        margin={{ top: 16, right: 20, left: 8, bottom: 0 }}
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                                        <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} fontSize={12} />
+                                        <YAxis type="category" dataKey="system" width={110} fontSize={12} />
+                                        <Tooltip formatter={(value) => [`${value}%`, "Efficiency"]} />
+                                        <Bar dataKey="efficiency" radius={[0, 6, 6, 0]}>
+                                            {dashboardData.systemHealth.map((s, idx) => (
+                                                <Cell
+                                                    key={idx}
+                                                    fill={SYSTEM_HEALTH_COLORS[s.status?.toLowerCase()] || SYSTEM_HEALTH_COLORS.default}
+                                                />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="mt-6 space-y-4">
+                                    {["Engine", "Landing Gear", "Hydraulic System", "Fuel System", "Avionics", "Electrical System", "APU"].map((label) => (
+                                        <div key={label}>
+                                            <div className="flex items-center justify-between text-[14px]">
+                                                <div className="flex items-center gap-2">
+                                                    <Activity className="h-4 w-4 text-slate-500" />
+                                                    {label}
+                                                </div>
+                                                <span className="text-[#4a5565]">--</span>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[#4a5565]">{row.value}</span>
-                                                <span className="rounded-[8px] bg-[#dcfce7] px-2 py-1 text-[12px] text-[#016630]">
-                                                    {row.status}
-                                                </span>
+                                            <div className="mt-2 h-2 rounded-full bg-[#03021333]">
+                                                <div className="h-2 rounded-full bg-[#030213]" style={{ width: "0%" }} />
                                             </div>
                                         </div>
-                                        <div className="mt-2 h-2 rounded-full bg-[#03021333]">
-                                            <div className="h-2 rounded-full bg-[#030213]" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -606,6 +656,29 @@ export default function DashboardPage() {
                                 <CalendarClock className="h-5 w-5 text-[#a65f00]" />
                                 <span className="text-[14px] text-[#0a0a0a]">Upcoming Scheduled Maintenance</span>
                             </div>
+
+                            {/* Maintenance Countdown Bar Chart */}
+                            {dashboardData?.scheduledMaintenance && dashboardData.scheduledMaintenance.length > 0 && (
+                                <div className="mt-3 mb-4">
+                                    <ResponsiveContainer width="100%" height={Math.max(140, dashboardData.scheduledMaintenance.length * 44)}>
+                                        <BarChart
+                                            data={dashboardData.scheduledMaintenance.map((m) => ({
+                                                name: m.name,
+                                                days: parseInt(m.days, 10) || 0,
+                                            }))}
+                                            layout="vertical"
+                                            margin={{ top: 8, right: 20, left: 8, bottom: 0 }}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                                            <XAxis type="number" fontSize={12} label={{ value: "Days Until Due", position: "insideBottomRight", offset: -4, fontSize: 11, fill: "#6a7282" }} />
+                                            <YAxis type="category" dataKey="name" width={110} fontSize={12} />
+                                            <Tooltip formatter={(value) => [`${value} days`, "Due In"]} />
+                                            <Bar dataKey="days" fill="#155dfc" radius={[0, 6, 6, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
+
                             <div className="mt-3 space-y-3">
                                 {dashboardData?.scheduledMaintenance && dashboardData.scheduledMaintenance.length > 0 ? (
                                     dashboardData.scheduledMaintenance.map((item) => (
