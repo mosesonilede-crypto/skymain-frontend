@@ -517,7 +517,16 @@ Manage your subscription:
 | API & Ingestion Contracts | ❌ | ✅ | ✅ |
 | Predictive Alerts | ❌ | ❌ | ✅ |
 | Dedicated Support | ❌ | ❌ | ✅ |
-| Custom Integrations | ❌ | ❌ | ✅ |`,
+| Custom Integrations | ❌ | ❌ | ✅ |
+
+### Fleet & Resource Limits
+
+| Resource | Starter | Professional | Enterprise |
+|----------|---------|-------------|------------|
+| Aircraft in fleet | Up to 5 | Up to 25 | Unlimited |
+| Team members | Up to 5 | Up to 25 | Unlimited |
+| Cloud storage | 1 GB | 50 GB | Unlimited |
+| Support level | Email | Priority | 24/7 Dedicated |`,
     },
     {
         id: "tips-best-practices",

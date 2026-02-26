@@ -405,15 +405,19 @@ export default function PricingPage(): React.ReactElement {
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
                             {[
-                                ["Aircraft", "Up to 5", "Up to 25", "Unlimited"],
-                                ["AI Insights", "Basic", "Advanced", "Advanced"],
-                                ["Cloud Storage", "1 GB", "50 GB", "Unlimited"],
-                                ["API Access", "—", "✓", "Full"],
-                                ["Compliance Reports", "Standard", "Custom", "Custom"],
-                                ["IoT Integration", "—", "✓", "✓"],
-                                ["Multi-location", "—", "✓", "✓"],
+                                ["Aircraft Fleet Management", "✓", "✓", "✓"],
+                                ["Work Orders & Job Cards", "✓", "✓", "✓"],
+                                ["Parts Inventory", "✓", "✓", "✓"],
+                                ["Maintenance Calendar", "✓", "✓", "✓"],
+                                ["AI Insights & Reports", "—", "✓", "✓"],
+                                ["Regulatory Compliance", "—", "✓", "✓"],
+                                ["API & Ingestion Contracts", "—", "✓", "✓"],
+                                ["Predictive Alerts", "—", "—", "✓"],
+                                ["Dedicated Support", "—", "—", "✓"],
                                 ["Custom Integrations", "—", "—", "✓"],
-                                ["SLA Guarantee", "—", "—", "✓"],
+                                ["Aircraft Limit", "Up to 5", "Up to 25", "Unlimited"],
+                                ["Cloud Storage", "1 GB", "50 GB", "Unlimited"],
+                                ["Team Members", "Up to 5", "Up to 25", "Unlimited"],
                                 ["Support", "Email", "Priority", "24/7 Dedicated"],
                             ].map(([feature, starter, pro, enterprise], i) => (
                                 <tr key={i} className="hover:bg-slate-50/50">
