@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { verifyPayload } from "@/lib/twoFactor";
-import { normalizeRole } from "@/lib/auth/roles";
+import { normalizeRole, isSuperAdmin } from "@/lib/auth/roles";
 import { getEntitlementsForTier, normalizeTier } from "@/lib/entitlements";
 
 type SessionPayload = {
@@ -90,19 +90,23 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Supabase admin client is not configured" }, { status: 503 });
     }
 
-    const maxTeamMembers = await resolveMaxTeamMembersLimit(request);
-    if (typeof maxTeamMembers === "number") {
-        const currentCount = await getCurrentTeamMemberCount();
-        if (typeof currentCount === "number" && currentCount >= maxTeamMembers) {
-            return NextResponse.json(
-                {
-                    error: `Team member limit reached for current plan (${currentCount}/${maxTeamMembers}). Upgrade to add more users.`,
-                    code: "TEAM_MEMBER_LIMIT_REACHED",
-                    currentCount,
-                    maxTeamMembers,
-                },
-                { status: 403 }
-            );
+    // Super admins have unlimited team members — skip limit check
+    const _isSuperAdmin = normalizedRole === "super_admin" || isSuperAdmin({ email: session.email });
+    if (!_isSuperAdmin) {
+        const maxTeamMembers = await resolveMaxTeamMembersLimit(request);
+        if (typeof maxTeamMembers === "number") {
+            const currentCount = await getCurrentTeamMemberCount();
+            if (typeof currentCount === "number" && currentCount >= maxTeamMembers) {
+                return NextResponse.json(
+                    {
+                        error: `Team member limit reached for current plan (${currentCount}/${maxTeamMembers}). Upgrade to add more users.`,
+                        code: "TEAM_MEMBER_LIMIT_REACHED",
+                        currentCount,
+                        maxTeamMembers,
+                    },
+                    { status: 403 }
+                );
+            }
         }
     }
 

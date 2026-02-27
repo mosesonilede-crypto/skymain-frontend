@@ -7,6 +7,7 @@
 
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getEntitlementsForTier, type SubscriptionEntitlements } from "@/lib/entitlements";
+import { isSuperAdmin } from "@/lib/auth/roles";
 
 export type EnforcementResult =
     | { allowed: true }
@@ -44,8 +45,10 @@ export async function getOrgEntitlements(orgName: string): Promise<SubscriptionE
 
 /**
  * Enforce aircraft limit for an org.
+ * Pass callerEmail to grant super admins unlimited fleet size.
  */
-export async function enforceAircraftLimit(orgName: string): Promise<EnforcementResult> {
+export async function enforceAircraftLimit(orgName: string, callerEmail?: string): Promise<EnforcementResult> {
+    if (callerEmail && isSuperAdmin({ email: callerEmail })) return { allowed: true };
     const entitlements = await getOrgEntitlements(orgName);
     const max = entitlements.limits.max_aircraft;
 
@@ -78,8 +81,10 @@ export async function enforceAircraftLimit(orgName: string): Promise<Enforcement
 
 /**
  * Enforce team member limit for an org.
+ * Pass callerEmail to grant super admins unlimited team size.
  */
-export async function enforceTeamMemberLimit(orgName: string): Promise<EnforcementResult> {
+export async function enforceTeamMemberLimit(orgName: string, callerEmail?: string): Promise<EnforcementResult> {
+    if (callerEmail && isSuperAdmin({ email: callerEmail })) return { allowed: true };
     const entitlements = await getOrgEntitlements(orgName);
     const max = entitlements.limits.max_team_members;
 
@@ -126,11 +131,14 @@ export async function enforceStorageLimit(orgName: string): Promise<EnforcementR
 
 /**
  * Check if a feature is enabled for an org.
+ * Super admins always have access to all features.
  */
 export async function isFeatureEnabled(
     orgName: string,
-    feature: keyof SubscriptionEntitlements["features"]
+    feature: keyof SubscriptionEntitlements["features"],
+    callerEmail?: string
 ): Promise<boolean> {
+    if (callerEmail && isSuperAdmin({ email: callerEmail })) return true;
     const entitlements = await getOrgEntitlements(orgName);
     return !!entitlements.features[feature];
 }

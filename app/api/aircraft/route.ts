@@ -5,6 +5,8 @@ import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
 import { allowMockFallback } from "@/lib/runtimeFlags";
 import { DEFAULT_MOCK_AIRCRAFT } from "@/lib/dataService";
 import { getEntitlementsForTier, normalizeTier } from "@/lib/entitlements";
+import { requireSession } from "@/lib/apiAuth";
+import { isSuperAdmin } from "@/lib/auth/roles";
 
 type BillingPlanResponse = {
     currentPlanLabel?: string;
@@ -57,7 +59,11 @@ async function getCurrentAircraftCount(): Promise<number | null> {
     return null;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+    // ── Auth enforcement ──
+    const session = requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     // Try CMMS integration first
     try {
         const data = await fetchFleet();
@@ -130,20 +136,28 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+    // ── Auth enforcement ──
+    const session = requireSession(request);
+    if (session instanceof NextResponse) return session;
+
     try {
-        const maxAircraft = await resolveMaxAircraftLimit(request);
-        if (typeof maxAircraft === "number") {
-            const currentAircraftCount = await getCurrentAircraftCount();
-            if (typeof currentAircraftCount === "number" && currentAircraftCount >= maxAircraft) {
-                return NextResponse.json(
-                    {
-                        error: `Aircraft limit reached for current plan (${currentAircraftCount}/${maxAircraft}). Upgrade to add more aircraft.`,
-                        code: "AIRCRAFT_LIMIT_REACHED",
-                        currentCount: currentAircraftCount,
-                        maxAircraft,
-                    },
-                    { status: 403 }
-                );
+        // Super admins have unlimited fleet size — skip limit check
+        const _isSuperAdmin = isSuperAdmin({ email: session.email, licenseCode: session.licenseCode });
+        if (!_isSuperAdmin) {
+            const maxAircraft = await resolveMaxAircraftLimit(request);
+            if (typeof maxAircraft === "number") {
+                const currentAircraftCount = await getCurrentAircraftCount();
+                if (typeof currentAircraftCount === "number" && currentAircraftCount >= maxAircraft) {
+                    return NextResponse.json(
+                        {
+                            error: `Aircraft limit reached for current plan (${currentAircraftCount}/${maxAircraft}). Upgrade to add more aircraft.`,
+                            code: "AIRCRAFT_LIMIT_REACHED",
+                            currentCount: currentAircraftCount,
+                            maxAircraft,
+                        },
+                        { status: 403 }
+                    );
+                }
             }
         }
 

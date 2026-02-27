@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { verifyPayload } from "@/lib/twoFactor";
 import { isFeatureEnabled } from "@/lib/enforcement";
+import { isSuperAdmin } from "@/lib/auth/roles";
 
 export const runtime = "nodejs";
 
@@ -31,7 +32,8 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // ── Plan enforcement: requires Professional or Enterprise ──
-  if (!(await isFeatureEnabled(session.orgName, "ai_insights_reports"))) {
+  // Super admins bypass feature gating
+  if (!isSuperAdmin({ email: session.email }) && !(await isFeatureEnabled(session.orgName, "ai_insights_reports", session.email))) {
     return NextResponse.json(
       { error: "Fleet Analytics requires Professional or Enterprise plan.", code: "FEATURE_LOCKED" },
       { status: 403 },

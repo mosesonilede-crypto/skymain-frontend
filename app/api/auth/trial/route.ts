@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { verifyPayload } from "@/lib/twoFactor";
 import { sendWelcomeEmail } from "@/lib/email";
+import { isSuperAdmin } from "@/lib/auth/roles";
 
 export const runtime = "nodejs";
 
@@ -37,6 +38,17 @@ export async function GET(req: NextRequest) {
     const session = getSession(req);
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Super admins are never restricted by trial or subscription
+    if (isSuperAdmin({ email: session.email })) {
+        return NextResponse.json<TrialStatusResponse>({
+            status: "active",
+            daysRemaining: 0,
+            trialStartedAt: null,
+            trialExpiresAt: null,
+            hasActiveSubscription: true,
+        });
     }
 
     if (!supabaseServer) {
