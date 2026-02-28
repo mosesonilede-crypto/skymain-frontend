@@ -135,6 +135,7 @@ function generateUpcomingTasks(aircraftReg: string) {
 }
 
 
+export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ aircraftReg: string }> }
 ) {
