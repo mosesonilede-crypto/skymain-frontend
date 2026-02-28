@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { fetchCompliance } from "@/lib/integrations/manuals";
-import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { getIntegrationConfig } from "@/lib/integrations/config";
 import { requireSession } from "@/lib/apiAuth";
 import { isFeatureEnabled } from "@/lib/enforcement";
 
@@ -46,11 +46,11 @@ export async function GET(
     const aircraftReg = rawReg.toUpperCase();
 
     // 1. Try external manuals integration first (if configured)
-    try {
-        const data = await fetchCompliance(aircraftReg);
-        return NextResponse.json(data, { headers: CACHE_HEADERS });
-    } catch (err) {
-        if (!(err instanceof IntegrationNotConfiguredError)) {
+    if (getIntegrationConfig("manuals")) {
+        try {
+            const data = await fetchCompliance(aircraftReg);
+            return NextResponse.json(data, { headers: CACHE_HEADERS });
+        } catch (err) {
             console.error("Manuals integration error (falling back to Supabase):", err);
         }
     }

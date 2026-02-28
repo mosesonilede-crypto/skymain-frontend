@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchMaintenanceLogs } from "@/lib/integrations/cmms";
-import { IntegrationNotConfiguredError } from "@/lib/integrations/errors";
+import { getIntegrationConfig } from "@/lib/integrations/config";
 
 // Realistic maintenance log data generator
 function generateMaintenanceLogs(aircraftReg: string) {
@@ -139,36 +139,35 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ aircraftReg: string }> }
 ) {
-    let aircraftReg = "";
-    try {
-        const { aircraftReg: reg } = await params;
-        aircraftReg = reg.toUpperCase();
+    const { aircraftReg: reg } = await params;
+    const aircraftReg = reg.toUpperCase();
 
+    // If no CMMS integration is configured, serve demo data immediately
+    // instead of calling fetchMaintenanceLogs (which would throw).
+    const cmmsConfig = getIntegrationConfig("cmms");
+    if (!cmmsConfig) {
+        const mockData = {
+            aircraftReg,
+            logs: generateMaintenanceLogs(aircraftReg),
+            upcomingTasks: generateUpcomingTasks(aircraftReg),
+            lastUpdated: new Date().toISOString(),
+            source: "mock",
+            fallback: true,
+        };
+        return NextResponse.json(mockData, {
+            headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
+        });
+    }
+
+    try {
         const data = await fetchMaintenanceLogs(aircraftReg);
         return NextResponse.json({ ...data, source: "live" }, {
             headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
         });
     } catch (error) {
-        // No CMMS system configured yet — always serve demo data so the page
-        // is functional rather than showing a "connector not configured" error.
-        if (error instanceof IntegrationNotConfiguredError) {
-            const mockData = {
-                aircraftReg,
-                logs: generateMaintenanceLogs(aircraftReg),
-                upcomingTasks: generateUpcomingTasks(aircraftReg),
-                lastUpdated: new Date().toISOString(),
-                source: "mock",
-                fallback: true,
-            };
-
-            return NextResponse.json(mockData, {
-                headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1200" },
-            });
-        }
-
-        console.error("Error fetching logs:", error);
+        console.error("Error fetching logs from CMMS:", error);
         return NextResponse.json(
-            { error: "CMMS connector is not configured" },
+            { error: "Failed to fetch maintenance logs from CMMS" },
             { status: 503 }
         );
     }
