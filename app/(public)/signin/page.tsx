@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useAuth, type UserRole } from "@/lib/AuthContext";
 import { isSuperAdmin, resolveSessionRole } from "@/lib/auth/roles";
-import { getTrialStatus, startTrialIfMissing } from "@/lib/trial";
+import { getTrialStatus, startTrialIfMissing, clearTrial } from "@/lib/trial";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function SignInPage() {
@@ -24,6 +24,14 @@ export default function SignInPage() {
     const [submitting, setSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
 
+    // Proactively clear any stale/expired trial data from localStorage
+    // whenever the super admin email is typed — same pattern as LandingSignupForm.
+    React.useEffect(() => {
+        if (isSuperAdmin({ email: email.trim() })) {
+            clearTrial();
+        }
+    }, [email]);
+
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
@@ -34,6 +42,11 @@ export default function SignInPage() {
 
         // Super admins bypass all trial and license checks
         const _isSuperAdmin = isSuperAdmin({ email: eTrim, licenseCode: lTrim });
+
+        // Belt-and-suspenders: clear any stale trial state for super admin
+        if (_isSuperAdmin) {
+            clearTrial();
+        }
 
         if (!_isSuperAdmin) {
             const trial = getTrialStatus();

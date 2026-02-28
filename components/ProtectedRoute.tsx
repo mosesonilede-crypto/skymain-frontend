@@ -43,7 +43,7 @@ export function ProtectedRoute({
     skipTrialCheck?: boolean;
 }) {
     const router = useRouter();
-    const { isAuthenticated, isLoading, user } = useAuth();
+    const { isAuthenticated, isLoading, user, refreshAuth } = useAuth();
     const [trialState, dispatchTrial] = useReducer(trialReducer, {
         trialStatus: null,
         trialChecked: false,
@@ -122,21 +122,22 @@ export function ProtectedRoute({
                 // hasn't fully committed.
                 redirectTimerRef.current = setTimeout(async () => {
                     try {
-                        const res = await fetch("/api/auth/session", { credentials: "include" });
-                        if (res.ok) {
-                            const data = await res.json();
-                            if (data.authenticated) {
-                                // Session is valid — don't redirect. React
-                                // state will catch up on next render.
-                                return;
-                            }
+                        // refreshAuth() re-checks the server session AND
+                        // updates AuthContext user state. This fixes the
+                        // post-2FA navigation race: if the session is valid
+                        // but setUser hasn't committed yet, refreshAuth()
+                        // will set isAuthenticated=true so children render
+                        // normally without any redirect.
+                        const sessionValid = await refreshAuth();
+                        if (sessionValid) {
+                            return; // auth state restored — no redirect
                         }
                     } catch {
                         // Network error — don't redirect aggressively
                         return;
                     }
                     router.replace(redirectTo);
-                }, 500);
+                }, 300);
                 return;
             }
             router.replace(redirectTo);
@@ -163,7 +164,7 @@ export function ProtectedRoute({
                 redirectTimerRef.current = null;
             }
         };
-    }, [isAuthenticated, isLoading, isRoleAllowed, redirectTo, router, trialChecked, trialStatus, isSuperAdmin]);
+    }, [isAuthenticated, isLoading, isRoleAllowed, redirectTo, refreshAuth, router, trialChecked, trialStatus, isSuperAdmin]);
 
     if (isLoading || (isAuthenticated && !trialChecked)) {
         return (

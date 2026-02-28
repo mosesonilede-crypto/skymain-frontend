@@ -28,6 +28,10 @@ interface AuthContextType {
     isLoading: boolean;
     login: (user: User) => Promise<boolean>;
     logout: () => void;
+    /** Re-checks the server session and re-hydrates user state.
+     *  Called by ProtectedRoute when it detects a valid session but
+     *  React state hasn't committed yet (post-2FA navigation race). */
+    refreshAuth: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -125,12 +129,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const refreshAuth = async (): Promise<boolean> => {
+        try {
+            const res = await fetch("/api/auth/session", { credentials: "include" });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.authenticated && data.user) {
+                    setUser(data.user);
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.error("refreshAuth failed", e);
+        }
+        return false;
+    };
+
     const value: AuthContextType = {
         user,
         isAuthenticated: user !== null,
         isLoading,
         login,
         logout,
+        refreshAuth,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
