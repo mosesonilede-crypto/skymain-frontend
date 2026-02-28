@@ -108,6 +108,13 @@ type AppShellClientProps = {
 export default function AppShellClient({ children }: AppShellClientProps) {
     const [sidebarVisible, setSidebarVisible] = useState(true);
     const [aiOpen, setAiOpen] = useState(false);
+
+    // Close sidebar by default on mobile screens
+    useEffect(() => {
+        if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+            setSidebarVisible(false);
+        }
+    }, []);
     const [aiInitialQuery, setAiInitialQuery] = useState<string | undefined>(undefined);
     const [aiContext, setAiContext] = useState<string | undefined>(undefined);
     const [profileOpen, setProfileOpen] = useState(false);
@@ -350,6 +357,13 @@ export default function AppShellClient({ children }: AppShellClientProps) {
         window.scrollTo({ top: 0, behavior: "instant" });
     }, [pathname]);
 
+    // Auto-close sidebar on navigation on mobile
+    useEffect(() => {
+        if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+            setSidebarVisible(false);
+        }
+    }, [pathname]);
+
     useEffect(() => {
         const openHandler = (event: Event) => {
             const detail = (event as CustomEvent<{ query?: string; context?: string }>).detail;
@@ -388,6 +402,14 @@ export default function AppShellClient({ children }: AppShellClientProps) {
     return (
         <div className="h-dvh overflow-hidden bg-white text-[#0a0a0a]">
             <div className="flex h-full">
+                {/* Dark backdrop — mobile only, dismisses sidebar on tap */}
+                {sidebarVisible && (
+                    <div
+                        className="fixed inset-0 z-10 bg-black/40 md:hidden"
+                        onClick={() => setSidebarVisible(false)}
+                        aria-hidden="true"
+                    />
+                )}
                 {sidebarVisible && (
                     <aside className="fixed left-0 top-0 z-20 h-dvh w-64 shrink-0 flex flex-col border-r border-[#e5e7eb] bg-white">
                         <div className="border-b border-[#e5e7eb]">
@@ -435,6 +457,11 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                         <div className="flex-1 overflow-y-auto">
                             <AppSidebarNav
                                 items={navItems}
+                                onNavigate={() => {
+                                    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+                                        setSidebarVisible(false);
+                                    }
+                                }}
                                 onLockedClick={(item) => {
                                     setLockedModal({
                                         label: item.label,
@@ -484,7 +511,7 @@ export default function AppShellClient({ children }: AppShellClientProps) {
                 {/* Main content area - scrollable, with left margin when sidebar is visible */}
                 <div
                     ref={contentRef}
-                    className={`relative flex-1 overflow-y-auto bg-[#f9fafb] ${sidebarVisible ? "ml-64" : ""}`}
+                    className={`relative flex-1 overflow-y-auto bg-[#f9fafb] ${sidebarVisible ? "md:ml-64" : ""}`}
                     style={{ height: "100dvh" }}
                 >
                     {!sidebarVisible && (
