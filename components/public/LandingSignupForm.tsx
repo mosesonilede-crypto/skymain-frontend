@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { useAuth, type UserRole } from "@/lib/AuthContext";
 import { resolveSessionRole, isSuperAdmin } from "@/lib/auth/roles";
-import { getTrialStatus, startTrialIfMissing } from "@/lib/trial";
+import { getTrialStatus, startTrialIfMissing, clearTrial } from "@/lib/trial";
 import { supabase } from "@/lib/supabaseClient";
 import { getPublicSiteUrl } from "@/lib/siteUrl";
 import { PasswordStrengthIndicator } from "@/components/ui/PasswordStrengthIndicator";
@@ -26,6 +26,16 @@ export default function LandingSignupForm() {
     const [error, setError] = React.useState<string | null>(null);
     const [verificationSent, setVerificationSent] = React.useState(false);
 
+    // Proactively clear any stale/expired trial data from localStorage
+    // whenever the super admin email is present. This ensures that even if
+    // an old expired-trial entry lingers in localStorage it never blocks
+    // the super admin from signing in — the fix persists across refreshes.
+    React.useEffect(() => {
+        if (isSuperAdmin({ email: email.trim() })) {
+            clearTrial();
+        }
+    }, [email]);
+
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
@@ -37,6 +47,12 @@ export default function LandingSignupForm() {
 
             // Super admins bypass all trial and license checks
             const _isSuperAdmin = isSuperAdmin({ email: eTrim, licenseCode: lTrim });
+
+            // Belt-and-suspenders: clear any stale trial state immediately
+            // so the check below can never fire for a super admin.
+            if (_isSuperAdmin) {
+                clearTrial();
+            }
 
             if (!_isSuperAdmin) {
                 const trial = getTrialStatus();
