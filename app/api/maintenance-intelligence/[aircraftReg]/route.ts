@@ -46,7 +46,7 @@ export async function GET(
     if (session instanceof NextResponse) return session;
 
     // ── Plan enforcement: Professional+ ──
-    if (!(await isFeatureEnabled(session.orgName, "advanced_ai_insights"))) {
+    if (!(await isFeatureEnabled(session.orgName, "advanced_ai_insights", session.email))) {
         return NextResponse.json(
             { error: "Maintenance Intelligence requires Professional or Enterprise plan.", code: "FEATURE_LOCKED" },
             { status: 403 },

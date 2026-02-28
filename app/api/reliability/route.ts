@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // ── Plan enforcement: requires Professional or Enterprise ──
-    if (!(await isFeatureEnabled(session.orgName, "ai_insights_reports"))) {
+    if (!(await isFeatureEnabled(session.orgName, "ai_insights_reports", session.email))) {
         return NextResponse.json(
             { error: "Reliability Analytics requires Professional or Enterprise plan.", code: "FEATURE_LOCKED" },
             { status: 403 },

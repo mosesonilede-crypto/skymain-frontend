@@ -35,7 +35,7 @@ export async function GET(
     if (session instanceof NextResponse) return session;
 
     // ── Plan enforcement: Professional+ ──
-    if (!(await isFeatureEnabled(session.orgName, "regulatory_compliance"))) {
+    if (!(await isFeatureEnabled(session.orgName, "regulatory_compliance", session.email))) {
         return NextResponse.json(
             { error: "Regulatory Compliance requires Professional or Enterprise plan.", code: "FEATURE_LOCKED" },
             { status: 403 },

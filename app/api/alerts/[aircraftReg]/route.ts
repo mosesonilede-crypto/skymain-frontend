@@ -57,7 +57,7 @@ export async function GET(
     if (session instanceof NextResponse) return session;
 
     // ── Plan enforcement: Enterprise only ──
-    if (!(await isFeatureEnabled(session.orgName, "predictive_alerts"))) {
+    if (!(await isFeatureEnabled(session.orgName, "predictive_alerts", session.email))) {
         return NextResponse.json(
             { error: "Predictive Alerts requires Enterprise plan.", code: "FEATURE_LOCKED" },
             { status: 403 },
